@@ -693,4 +693,4 @@ def compare(request, initiative, version_id):
 @can_access_initiative(STATES.VOTING) # must be in voting
 def reset_vote(request, init):
     Vote.objects.filter(initiative=init, user_id=request.user).delete()
-    return get_voting_fragments(None, init, request
+    return get_voting_fragments(None, init, request)
