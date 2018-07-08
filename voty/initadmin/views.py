@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# ==============================================================================
+# Voty initadmin views/actions
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
+
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
@@ -25,6 +33,8 @@ import csv
 class UploadFileForm(forms.Form):
     file = forms.FileField()
 
+def is_in_multiple_groups(user):
+    return user.groups.filter(name__in=['Policy Team Member', 'Policy Team Lead']).exists()
 
 def invite_em(file):
     site = Site.objects.get_current()
@@ -90,7 +100,7 @@ class LoginView(account.views.LoginView):
 
 # download imported files
 @login_required
-@user_passes_test(lambda u: u.is_staff)
+@user_passes_test(lambda u: is_in_multiple_groups(u))
 def download_csv(request, id):
     batch = get_object_or_404(InviteBatch, pk=id)
     response = HttpResponse(batch.payload, content_type='text/csv')
@@ -99,7 +109,7 @@ def download_csv(request, id):
 
 # (mass) invite users to the platform
 @login_required
-@user_passes_test(lambda u: u.is_staff)
+@user_passes_test(lambda u: is_in_multiple_groups(u))
 def invite_users(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
@@ -113,7 +123,7 @@ def invite_users(request):
 
 # active users (recently logged in first)
 @login_required
-@user_passes_test(lambda u: u.is_staff)
+@user_passes_test(lambda u: is_in_multiple_groups(u))
 def active_users(request):
     users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
     return render(request, "initadmin/active_users.html", dict(users=users_q))
