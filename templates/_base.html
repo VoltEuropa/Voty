@@ -89,8 +89,8 @@
             <div class="dropdown-menu dropdown-menu-right profile" aria-labelledby="navbarDropdownMenuLink">
                 <a class="dropdown-item" href="{% url 'profile_edit' %}">{% trans "Settings" %}</a>
                 {% if request.user|has_group:"PLATFORM_GROUP_VALUE_LIST" %}
-                  <a class="dropdown-item" href="{% url 'invite_users' %}">{% trans "Invite Users" %}</a>
-                  <a class="dropdown-item" href="{% url 'active_users' %}">{% trans "Activity" %}</a>
+                  <a class="dropdown-item" href="{% url 'initiatives' %}">{% trans "Initiatives" %}</a>
+                  <a class="dropdown-item" href="{% url 'users' %}">{% trans "Users" %}</a>
                 {% endif %}
                 {% if user.is_superuser %}
                   <div class="dropdown-divider"></div>
