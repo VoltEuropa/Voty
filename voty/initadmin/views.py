@@ -10,28 +10,30 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
-from account.models import SignupCodeResult, SignupCode
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.contrib import messages
 from django.conf import settings
-from datetime import datetime, timedelta
-from django import forms
-import account.forms
-import account.views
+from django.utils.translation import ugettext as _
 
+import account.views
+from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
+from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm
+
+from datetime import datetime, timedelta
 from uuid import uuid4
 from io import StringIO, TextIOWrapper
-from django.utils.translation import ugettext as _
 import csv
 
 
-class UploadFileForm(forms.Form):
-    file = forms.FileField()
+
+
+
+# ------------------------------------------------------------------------------
 
 def is_in_multiple_groups(user):
     return user.groups.filter(name__in=['Policy Team Member', 'Policy Team Lead']).exists()
@@ -85,16 +87,9 @@ def invite_em(file):
     return total, newly_added
 
 
-
-
-class LoginEmailOrUsernameForm(account.forms.LoginEmailForm):
-
-    email = forms.CharField(label=_("Email or Username"), max_length=50) 
-
 class LoginView(account.views.LoginView):
 
     form_class = LoginEmailOrUsernameForm
-
 
 
 
@@ -127,11 +122,6 @@ def invite_users(request):
 def active_users(request):
     users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
     return render(request, "initadmin/active_users.html", dict(users=users_q))
-
-class UserEditForm(forms.ModelForm):
-    class Meta:
-        model = get_user_model()
-        fields = ['first_name', 'last_name']
 
 # edit own profile
 @login_required
