@@ -25,35 +25,35 @@ def delete_group(name):
 def init_teams_and_permissions(apps, schema_editor):
     print ()
 
-    board = create_group('Bundesvorstand')
-    team  = create_group('Pr√ºfungsteam')
+    #board = create_group('Bundesvorstand')
+    #team  = create_group('Pr√fungsteam')
 
-    if team:
-        for user in User.objects.filter(is_staff=True, is_active=True):
-            user.groups.add (team)
-            print ('... added all staff members to group "Pr√ºfungsteam"')
-
-        permission = Permission.objects.get(content_type__app_label='initproc', codename='add_moderation')
-        team.permissions.add (permission)
-        print ('... added permission for group "Pr√ºfungsteam" to add moderations')
+    #if team:
+    #    for user in User.objects.filter(is_staff=True, is_active=True):
+    #        user.groups.add (team)
+    #        print ('... added all staff members to group "Pr√fungsteam"')
+    #    # migrations fail here because permission does not exist
+    #    permission = Permission.objects.get(content_type__app_label='initproc', codename='add_moderation')
+    #    team.permissions.add (permission)
+    #    print ('... added permission for group "Pr√ºfungsteam" to add moderations')
 
 def reverse_teams_and_permissions(apps, schema_editor):
     print ()
 
-    for user in User.objects.filter(groups__name='Pr√ºfungsteam', is_active=True):
-        user.is_staff = True
-        user.save()
-    print ('... made all members of group "Pr√ºfungsteam" staff members')
-
-    delete_group('Pr√ºfungsteam')
-    delete_group('Bundesvorstand')
+    #for user in User.objects.filter(groups__name='Pr√fungsteam', is_active=True):
+    #    user.is_staff = True
+    #    user.save()
+    #print ('... made all members of group "Pr√fungsteam" staff members')
+    #
+    #delete_group('Pr√fungsteam')
+    #delete_group('Bundesvorstand')
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('initproc', '0024_merge_20180510_1558'),
     ]
-
+    # skip this for now, it throws errors on migrations and tests
     operations = [
         migrations.RunPython(init_teams_and_permissions,
                              reverse_code=reverse_teams_and_permissions),
