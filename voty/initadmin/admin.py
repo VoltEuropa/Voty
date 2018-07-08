@@ -74,14 +74,16 @@ def create_custom_groups_and_permissions():
       perm_list = []
       for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
         perm_code, perm_model = perm_code_model.split(",")
-        perm = Permission(
-          name=settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key],
-          codename=perm_code,
-          content_type=ContentType.objects.get(app_label="initproc", model=perm_model)
-        )
-        perm_list.append(perm)
-        perm.save()
-      new_group.permissions = perm_list
+        perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
+        if not Permission.objects.get(name=perm_name).exists():
+          perm = Permission(
+            name=perm_name,
+            codename=perm_code,
+            content_type=ContentType.objects.get(app_label="initproc", model=perm_model)
+          )
+          perm_list.append(perm)
+          perm.save()
+      new_group.permissions.add(perm_list)
 
 # backcompat - move existing staff to custom group and custom group to staff
 backcompat_init_teams_and_permissions()
