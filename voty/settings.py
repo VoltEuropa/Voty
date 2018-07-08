@@ -155,10 +155,14 @@ USE_TZ = True
 LOCALE_PATHS = (
   os.path.join( BASE_DIR, "locale"),
 )
+
+# translate-able text from the .ini file will not be handled by external libs,
+# so it needs to be translated manually here
+# XXX get an array and call tuple versus redoing a tuple
+ACCOUNT_LANGUAGES = tuple([(x[0], _(x[1].partition('{% trans "')[2].partition('" %}')[0])) for x in raw_parser.items("alternative_language_list")])
 LANGUAGE_CODE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
-ACCOUNT_LANGUAGES = raw_parser.items("alternative_language_list")
 TIME_ZONE = raw_parser.get("settings", "DEFAULT_TIMEZONE")
-LANGUAGES = tuple(ACCOUNT_LANGUAGES)
+LANGUAGES = ACCOUNT_LANGUAGES
 
 NOTIFICATIONS_USE_JSONFIELD=True
 
