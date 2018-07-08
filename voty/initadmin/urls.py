@@ -19,7 +19,7 @@ urlpatterns = [
   url(r"^account/login/$", views.LoginView.as_view(), name="account_signup"),
   url(r"^account/language$", TemplateView.as_view(template_name="account/language.html")),
   url(r"^account/delete$", views.profile_delete, name="profile_delete"),
-  url(r"^account/localise", views.profile_localise, name="profile_localise"),
+  url(r"^account/localise", views.profile_localise, name="account_localise"),
 
   # moderators
   url(r"^backoffice/users/", views.user_list, name="users"),
