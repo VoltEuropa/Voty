@@ -1,11 +1,20 @@
-{% extends "site_base.html" %}
+{% extends "_base.html" %}
 {% load i18n %}
 {% load site_defaults %}
 {% block head_title %}{% trans "Email confirmation sent" %}{% endblock %}
 
-{% block body %}
-  <h2>{% trans "Email confirmation sent" %}</h2>
-    
-  <p>{% blocktrans with email=confirmation.email_address.email %}A message was sent to <b>{{ email }}</b>. Please follow the link contained in the message to complete the registration process. In case you did not receive the email (please verify it is not in your spam folder), please contact us at the following email adress: {% endblocktrans %}<a href="mailto:{{ 'THEME_CONTACT_EMAIL'|get_setting }}">{{ 'THEME_CONTACT_EMAIL'|get_setting }}</a>.</p>
-    <p><a href="{{ success_url }}">{% trans "Go back" %}</a></p>
+{% block content %}
+  {% block body %}
+    <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <h2>{% trans "Email confirmation sent" %}</h2>
+            <p>{% blocktrans with email=confirmation.email_address.email %}A message was sent to <b>{{ email }}</b>. Please follow the link contained in the message to complete the registration process. In case you did not receive the email (please verify it is not in your spam folder), please contact us at the following email adress: {% endblocktrans %}<a href="mailto:{{ 'THEME_CONTACT_EMAIL'|get_setting }}">{{ 'THEME_CONTACT_EMAIL'|get_setting }}</a>.</p>
+            <p><a href="{{ success_url }}">{% trans "Go back" %}</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endblock %}
 {% endblock %}

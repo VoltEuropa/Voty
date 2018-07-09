@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+{% load bootstrap %}
+{% load i18n %}
+
+{% block content %}
+  {% block body %}
+    <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <h2>{% trans "Settings" %}</h2>
+            <form method="POST" action="{% url "profile_edit" %}">
+              {% csrf_token %}
+              {{ form|bootstrap }}
+              <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+            </form>
+            <h3>{% trans "Additional Settings" %}</h3>
+            <ul>
+              <li><a href="{% url 'notification_notice_settings' %}">{% trans "Change Email Notifications" %}</a></li>
+              <li><a href="{% url 'avatar_change' %}">{% trans "Change Profile Picture" %}</a></li>
+              <li><a href="{% url 'account_password' %}">{% trans "Change Password" %}</a></li>
+              <li><a href="{% url 'account_localise' %}">{% trans "Set Account Location" %}</a></li> 
+              <li><a href="{% url 'account_language' %}">{% trans "Set Language" %}</a></li>
+              <li><a href="{% url 'account_delete' %}">{% trans "Delete Account" %}</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endblock %}
+{% endblock %}

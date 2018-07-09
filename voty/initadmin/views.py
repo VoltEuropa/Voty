@@ -137,11 +137,11 @@ def profile_edit(request):
   else:
     form = UserEditForm(instance=user)
 
-  return render(request, "initadmin/profile_edit.html", context=dict(form=form))
+  return render(request, "account/profile_edit.html", context=dict(form=form))
 
 # --------------------------- Profile Delete -----------------------------------
 def profile_delete(request):
-    return render(request, "Hello Profile Delete", context={})
+  return render(request, "initadmin/delete.html", context={})
 
 # download imported files
 #@login_required
@@ -172,5 +172,3 @@ def user_invite(request):
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
-
-

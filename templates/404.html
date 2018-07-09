@@ -1,7 +1,17 @@
-{% extends 'in_box.html' %}
+{% extends '_base.html' %}
 {% load i18n %}
-{% block body %}
 
-<div>{% trans "Sorry, nothing to see here." %}</div>
-
+{% block content %}
+  {% block body %}
+    <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <p>{% trans "Sorry, nothing to see here." %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}
 {% endblock %}
+

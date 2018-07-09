@@ -1,22 +1,22 @@
-{% extends "site_base.html" %}
+{% extends "_base.html" %}
 {% load i18n %}
 {% block head_title %}{% trans "Plenum: Logout" %}{% endblock %}
 
-{% block body %}
-<div class="container-fluid">
+{% block content %}
+  {% block body %}
+  <div class="container-fluid">
     <div class="container">
-        <div class="row">
-            <div class="col">
-                <form method="POST" action="{% url "account_logout" %}">
-                    <h2>{% trans "Logout" %}</h2>
-                    <fieldset>
-                        {% csrf_token %}
-                        <p>{% trans "Please confirm you want to logout?" %}</p>
-                        <button type="submit" class="btn btn-primary">{% trans "Logout" %}</button>
-                    </fieldset>
-                </form>
-            </div>
+      <div class="row">
+        <div class="col">
+          <form method="POST" action="{% url "account_logout" %}">
+            <h2>{% trans "Logout" %}</h2>
+            {% csrf_token %}
+            <p>{% trans "Please confirm you want to logout?" %}</p>
+            <button type="submit" class="btn btn-primary">{% trans "Logout" %}</button>
+          </form>
         </div>
+      </div>
     </div>
-</div>
+  </div>
+  {% endblock %}
 {% endblock %}

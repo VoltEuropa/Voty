@@ -1,8 +1,18 @@
-{% extends "site_base.html" %}
+{% extends "_base.html" %}
 {% load i18n %}
 {% block head_title %}{% trans "Email address confirmed" %}{% endblock %}
 
-{% block body %}
-    <h1>{% trans "Email address confirmed" %}</h1>
-    <p>{% blocktrans with email=confirmation.email_address.email %}The following Email was confirmed: <b>{{ email }}</b>{% endblocktrans %}</p>
+{% block content %}
+  {% block body %}
+  <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <h2>{% trans "Email address confirmed" %}</h2>
+            <p>{% blocktrans with email=confirmation.email_address.email %}The following Email was confirmed: <b>{{ email }}</b>{% endblocktrans %}</p>
+            </div>
+        </div>
+      </div>
+    </div>
+ {% endblock %}
 {% endblock %}
