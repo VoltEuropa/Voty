@@ -10,14 +10,17 @@
 
 import os
 import dj_database_url
+from types import SimpleNamespace
 from six.moves import configparser
 from django.utils.translation import ugettext_lazy as _
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Retrieve initialization configuration, use raw parser i18n-texts
 raw_parser = configparser.RawConfigParser()
+raw_parser.optionxform=str
 raw_parser.read(os.path.join(BASE_DIR, "init.ini"))
 
 # Quick-start development settings - unsuitable for production
@@ -235,3 +238,13 @@ PLATFORM_GROUP_VALUE_LIST = raw_parser._sections["platform_group_value_list"]
 PLATFORM_USER_PERMISSION_LIST = raw_parser.items("platform_user_permission_list")
 PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permission_value_list"]
 PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")
+
+# XXX why do those have to be classes? Nothing will ever change.
+# XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
+# Possibilities for casting a vote
+VOTED = raw_parser._sections["initiative_vote_state_list"]
+
+NOTIFICATIONS = SimpleNamespace(**{
+  "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
+  "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_status_list"])
+})

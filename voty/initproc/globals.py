@@ -1,27 +1,6 @@
 from datetime import date
 from django.utils.translation import ugettext_lazy as _
 
-class NOTIFICATIONS:
-    """
-    All internal notifications
-    """
-    class INVITE:
-        SEND = "inivited"
-        ACCEPTED = "invite_accepted"
-        REJECTED = "invite_rejected"
-
-    class INITIATIVE:
-        EDITED = "init_edited"
-        SUBMITTED = "init_submitted"
-        PUBLISHED = "init_published"
-        WENT_TO_DISCUSSION = "init_discussion"
-        DISCUSSION_CLOSED = "init_discussion_closed"
-        WENT_TO_VOTE = 'init_vote'
-        ACCEPTED = 'init_accepted'
-        REJECTED = 'init_rejected'
-        NEW_ARGUMENT = 'init_new_arg'
-
-
 class STATES:
     """
     The states an initiative can have

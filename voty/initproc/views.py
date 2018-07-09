@@ -28,7 +28,7 @@ import reversion
 from functools import wraps
 import json
 
-from .globals import NOTIFICATIONS, STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
+from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
 from .guard import can_access_initiative
 from .models import (Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
 from .forms import (simple_form_verifier, InitiativeForm, NewArgumentForm, NewCommentForm,
@@ -319,7 +319,7 @@ def edit(request, initiative):
             initiative.supporting.filter(initiator=True).update(ack=False)
 
             messages.success(request, _("Initiative saved."))
-            initiative.notify_followers(NOTIFICATIONS.INITIATIVE.EDITED, subject=request.user)
+            initiative.notify_followers(settings.NOTIFICATIONS.INITIATIVE.EDITED, subject=request.user)
             return redirect('/initiative/{}'.format(initiative.id))
         else:
             messages.warning(request, _("Please correct the following problems:"))
@@ -338,12 +338,12 @@ def submit_to_committee(request, initiative):
         initiative.moderations.update(stale=True)
 
         messages.success(request, _("The Initiative was received and is being validated."))
-        initiative.notify_initiators(NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
+        initiative.notify_initiators(settings.NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
         # To notify the review team, we notify all members of groups with moderation permission,
         # which doesn't include superusers, though they individually have moderation permission.
         moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
         initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(),
-                          NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
+                          settings.NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
         return redirect('/initiative/{}'.format(initiative.id))
     else:
         messages.warning(request, _("The requirements for submission have not been met."))
@@ -384,7 +384,7 @@ def invite(request, form, initiative, invite_type):
         
         supporting.save()
 
-        notify([user], NOTIFICATIONS.INVITE.SEND, {"target": initiative}, sender=request.user)
+        notify([user], settings.NOTIFICATIONS.INVITE.SEND, {"target": initiative}, sender=request.user)
 
     messages.success(request, _("Initiators invited.") if invite_type == 'initiators' else _("Supporters invited."))
     return redirect("/initiative/{}-{}".format(initiative.id, initiative.slug))
@@ -409,7 +409,7 @@ def ack_support(request, initiative):
     sup.save()
 
     messages.success(request, _("Thank you for the confirmation"))
-    initiative.notify_initiators(NOTIFICATIONS.INVITE.ACCEPTED, subject=request.user)
+    initiative.notify_initiators(settings.NOTIFICATIONS.INVITE.ACCEPTED, subject=request.user)
 
     return redirect('/initiative/{}'.format(initiative.id))
 
@@ -422,7 +422,7 @@ def rm_support(request, initiative):
     sup.delete()
 
     messages.success(request, _("Your support has been retracted"))
-    initiative.notify_initiators(NOTIFICATIONS.INVITE.REJECTED, subject=request.user)
+    initiative.notify_initiators(settings.NOTIFICATIONS.INVITE.REJECTED, subject=request.user)
 
     if initiative.state == 's':
         return redirect('/initiative/{}'.format(initiative.id))
@@ -445,7 +445,7 @@ def new_argument(request, form, initiative):
 
     arg.save()
 
-    initiative.notify_followers(NOTIFICATIONS.INITIATIVE.NEW_ARGUMENT, dict(argument=arg), subject=request.user)
+    initiative.notify_followers(settings.NOTIFICATIONS.INITIATIVE.NEW_ARGUMENT, dict(argument=arg), subject=request.user)
 
     return {
         'fragments': {'#no-arguments': ""},
@@ -504,8 +504,8 @@ def moderate(request, form, initiative):
             initiative.save()
 
             messages.success(request, _("Initiative published"))
-            initiative.notify_followers(NOTIFICATIONS.INITIATIVE.PUBLISHED)
-            initiative.notify_moderators(NOTIFICATIONS.INITIATIVE.PUBLISHED, subject=request.user)
+            initiative.notify_followers(settings.NOTIFICATIONS.INITIATIVE.PUBLISHED)
+            initiative.notify_moderators(settings.NOTIFICATIONS.INITIATIVE.PUBLISHED, subject=request.user)
             return redirect('/initiative/{}'.format(initiative.id))
 
         elif initiative.state == STATES.MODERATION:
@@ -525,8 +525,8 @@ def moderate(request, form, initiative):
                     init.went_to_voting_at = datetime.now()
                     init.state = STATES.VOTING
                     init.save()
-                    init.notify_followers(NOTIFICATIONS.INITIATIVE.WENT_TO_VOTE)
-                    init.notify_moderators(NOTIFICATIONS.INITIATIVE.WENT_TO_VOTE, subject=request.user)
+                    init.notify_followers(settings.NOTIFICATIONS.INITIATIVE.WENT_TO_VOTE)
+                    init.notify_moderators(settings.NOTIFICATIONS.INITIATIVE.WENT_TO_VOTE, subject=request.user)
 
                 messages.success(request, _("Initiative activated for Voting."))
                 return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
