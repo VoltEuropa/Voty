@@ -248,3 +248,10 @@ NOTIFICATIONS = SimpleNamespace(**{
   "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
   "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_status_list"])
 })
+
+scope_value_list = dict(raw_parser.items('scope_value_list'))
+CATEGORIES = SimpleNamespace(**{
+  #"SCOPE_CHOICES": [(code_tuple[1], _(scope_value_list[code_tuple[0]])) for code_tuple in raw_parser.items('scope_list')]
+  "SCOPE_CHOICES": [(code_tuple[1], _(scope_value_list[code_tuple[0]].partition('{% trans "')[2].partition('" %}')[0])) for code_tuple in raw_parser.items('scope_list')]
+})
+

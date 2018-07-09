@@ -54,7 +54,7 @@ class Initiative(models.Model):
     init_argument = models.TextField(blank=True)
 
     einordnung = models.CharField(max_length=50, choices=[(_("Single Initiative"), _("Single Initiative"))])
-    ebene = models.CharField(max_length=50, choices=[(_("Federal Level"), _("Federal Level"))])
+    ebene = models.CharField(max_length=100, choices=settings.CATEGORIES.SCOPE_CHOICES)
     bereich = models.CharField(max_length=60, choices=[(item,item) for item in SUBJECT_CATEGORIES])
 
     went_public_at = models.DateField(blank=True, null=True)

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-07-08 23:10+0200\n"
+"POT-Creation-Date: 2018-07-09 23:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,15 +25,143 @@ msgstr ""
 msgid "English"
 msgstr ""
 
-#: templates/403.html:5
+#: init.ini:153
+msgid "Europe"
+msgstr ""
+
+#: init.ini:154
+msgid "Europe/Austria"
+msgstr ""
+
+#: init.ini:155
+msgid "Europe/Belgium"
+msgstr ""
+
+#: init.ini:156
+msgid "Europe/Bulgaria"
+msgstr ""
+
+#: init.ini:157
+msgid "Europe/Croatia"
+msgstr ""
+
+#: init.ini:158
+msgid "Europe/Cyprus"
+msgstr ""
+
+#: init.ini:159
+msgid "Europe/Czech Republic"
+msgstr ""
+
+#: init.ini:160
+msgid "Europe/Denmark"
+msgstr ""
+
+#: init.ini:161
+msgid "Europe/Estonia"
+msgstr ""
+
+#: init.ini:162
+msgid "Europe/Finland"
+msgstr ""
+
+#: init.ini:163
+msgid "Europe/France"
+msgstr ""
+
+#: init.ini:164
+msgid "Europe/France/Paris"
+msgstr ""
+
+#: init.ini:165
+msgid "Europe/France/Lille"
+msgstr ""
+
+#: init.ini:166
+msgid "Europe/France/Toulouse"
+msgstr ""
+
+#: init.ini:167
+msgid "Europe/Germany"
+msgstr ""
+
+#: init.ini:168
+msgid "Europe/Greece"
+msgstr ""
+
+#: init.ini:169
+msgid "Europe/Hungary"
+msgstr ""
+
+#: init.ini:170
+msgid "Europe/Ireland"
+msgstr ""
+
+#: init.ini:171
+msgid "Europe/Italy"
+msgstr ""
+
+#: init.ini:172
+msgid "Europe/Latvia"
+msgstr ""
+
+#: init.ini:173
+msgid "Europe/Lithuania"
+msgstr ""
+
+#: init.ini:174
+msgid "Europe/Luxembourg"
+msgstr ""
+
+#: init.ini:175
+msgid "Europe/Malta"
+msgstr ""
+
+#: init.ini:176
+msgid "Europe/Netherlands"
+msgstr ""
+
+#: init.ini:177
+msgid "Europe/Poland"
+msgstr ""
+
+#: init.ini:178
+msgid "Europe/Portugal"
+msgstr ""
+
+#: init.ini:179
+msgid "Europe/Romania"
+msgstr ""
+
+#: init.ini:180
+msgid "Europe/Slovakia"
+msgstr ""
+
+#: init.ini:181
+msgid "Europe/Slovenia"
+msgstr ""
+
+#: init.ini:182
+msgid "Europe/Spain"
+msgstr ""
+
+#: init.ini:183
+msgid "Europe/Sweden"
+msgstr ""
+
+#: init.ini:184
+msgid "Europe/United Kingdom"
+msgstr ""
+
+#: templates/403.html:10
 msgid "You are not authorized to view this page."
 msgstr ""
 
-#: templates/403.html:5
+#: templates/403.html:10
 msgid "Please login first."
 msgstr ""
 
-#: templates/404.html:5
+#: templates/404.html:10
 msgid "Sorry, nothing to see here."
 msgstr ""
 
@@ -58,7 +186,7 @@ msgstr ""
 msgid "Data Protection"
 msgstr ""
 
-#: templates/_base.html:70 templates/static/about.html:20
+#: templates/_base.html:70 templates/static/about.html:21
 msgid "Legal Notice"
 msgstr ""
 
@@ -66,9 +194,8 @@ msgstr ""
 msgid "New Initiative"
 msgstr ""
 
-#: templates/_base.html:90 templates/account/base.html:4
-#: templates/account/base.html:8 templates/account/settings.html:7
-#: templates/account/settings.html:13 templates/initadmin/profile_edit.html:6
+#: templates/_base.html:90 templates/account/profile_edit.html:11
+#: templates/account/settings.html:7 templates/account/settings.html:16
 msgid "Settings"
 msgstr ""
 
@@ -84,7 +211,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-#: templates/_base.html:100 templates/account/logout.html:11
+#: templates/_base.html:100 templates/account/logout.html:12
 #: templates/account/logout.html:15
 msgid "Logout"
 msgstr ""
@@ -97,8 +224,8 @@ msgstr ""
 msgid "Menu"
 msgstr ""
 
-#: templates/_base.html:112 templates/account/login.html:14
-#: templates/account/login.html:20
+#: templates/_base.html:112 templates/account/login.html:15
+#: templates/account/login.html:21
 msgid "Login"
 msgstr ""
 
@@ -162,24 +289,12 @@ msgstr ""
 msgid "has published a new Argument on:"
 msgstr ""
 
-#: templates/account/base.html:11
-msgid "Account"
-msgstr ""
-
-#: templates/account/base.html:14 templates/initadmin/profile_edit.html:18
-msgid "Change Password"
-msgstr ""
-
-#: templates/account/base.html:17 templates/initadmin/profile_edit.html:20
-msgid "Set Language"
-msgstr ""
-
-#: templates/account/base.html:20 templates/account/delete.html:6
-#: templates/account/delete.html:9 templates/initadmin/profile_edit.html:21
+#: templates/account/delete.html:6 templates/account/delete.html:15
+#: templates/account/profile_edit.html:24
 msgid "Delete Account"
 msgstr ""
 
-#: templates/account/delete.html:11
+#: templates/account/delete.html:16
 #, python-format
 msgid ""
 "Please note, once you delete your account, all account related data will be "
@@ -187,33 +302,38 @@ msgid ""
 "%('ACCOUNT_DELETION_EXPUNGE_HOURS'|get_setting)s hours."
 msgstr ""
 
-#: templates/account/delete.html:15
+#: templates/account/delete.html:18
 msgid "Delete my account"
+msgstr ""
+
+#: templates/account/delete.html:24 templates/account/language.html:39
+#: templates/account/password_change.html:23
+msgid "Return to settings"
 msgstr ""
 
 #: templates/account/email_confirm.html:3
 msgid "Confirm Email address"
 msgstr ""
 
-#: templates/account/email_confirm.html:9
+#: templates/account/email_confirm.html:12
 msgid "Confirm Email"
 msgstr ""
 
-#: templates/account/email_confirm.html:12
+#: templates/account/email_confirm.html:14
 #, python-format
 msgid "Confirm Email address <b>%(email)s</b>?"
 msgstr ""
 
-#: templates/account/email_confirm.html:13
+#: templates/account/email_confirm.html:15
 msgid "Confirm"
 msgstr ""
 
 #: templates/account/email_confirmation_sent.html:4
-#: templates/account/email_confirmation_sent.html:7
+#: templates/account/email_confirmation_sent.html:12
 msgid "Email confirmation sent"
 msgstr ""
 
-#: templates/account/email_confirmation_sent.html:9
+#: templates/account/email_confirmation_sent.html:13
 #, python-format
 msgid ""
 "A message was sent to <b>%(email)s</b>. Please follow the link contained in "
@@ -222,26 +342,26 @@ msgid ""
 "contact us at the following email adress: "
 msgstr ""
 
-#: templates/account/email_confirmation_sent.html:10
+#: templates/account/email_confirmation_sent.html:14
 msgid "Go back"
 msgstr ""
 
 #: templates/account/email_confirmed.html:3
-#: templates/account/email_confirmed.html:6
+#: templates/account/email_confirmed.html:11
 msgid "Email address confirmed"
 msgstr ""
 
-#: templates/account/email_confirmed.html:7
+#: templates/account/email_confirmed.html:12
 #, python-format
 msgid "The following Email was confirmed: <b>%(email)s</b>"
 msgstr ""
 
-#: templates/account/language.html:7 templates/account/language.html:15
+#: templates/account/language.html:7 templates/account/language.html:16
 msgid "Set Account Language"
 msgstr ""
 
-#: templates/account/language.html:32
-#: templates/pinax/notifications/notice_settings.html:49
+#: templates/account/language.html:33
+#: templates/pinax/notifications/notice_settings.html:51
 msgid "Change"
 msgstr ""
 
@@ -249,15 +369,15 @@ msgstr ""
 msgid "Plenum: Login"
 msgstr ""
 
-#: templates/account/login.html:26
+#: templates/account/login.html:27
 msgid "Lost password"
 msgstr ""
 
-#: templates/account/login.html:31
+#: templates/account/login.html:32
 msgid "You don't have an account?"
 msgstr ""
 
-#: templates/account/login.html:31
+#: templates/account/login.html:32
 msgid "Register here!"
 msgstr ""
 
@@ -273,17 +393,14 @@ msgstr ""
 msgid "Plenum: Password Change"
 msgstr ""
 
-#: templates/account/password_change.html:11
+#: templates/account/password_change.html:14
 msgid "Password Change"
 msgstr ""
 
-#: templates/account/password_change.html:15 templates/account/settings.html:16
-#: templates/initadmin/profile_edit.html:11 templates/initproc/new.html:29
+#: templates/account/password_change.html:17
+#: templates/account/profile_edit.html:15 templates/account/settings.html:19
+#: templates/initproc/new.html:29
 msgid "Save"
-msgstr ""
-
-#: templates/account/password_change.html:22
-msgid "Return to settings"
 msgstr ""
 
 #: templates/account/password_reset.html:7
@@ -291,22 +408,22 @@ msgstr ""
 msgid "Plenum: Password Reset"
 msgstr ""
 
-#: templates/account/password_reset.html:17
+#: templates/account/password_reset.html:18
 msgid "Password Reset"
 msgstr ""
 
-#: templates/account/password_reset.html:18
+#: templates/account/password_reset.html:19
 msgid ""
 "You forgot your password? Please enter the Email address you used to "
 "register below. You will receive a message with a link to reset your "
 "password."
 msgstr ""
 
-#: templates/account/password_reset.html:24
+#: templates/account/password_reset.html:23
 msgid "Send recovery link"
 msgstr ""
 
-#: templates/account/password_reset.html:29
+#: templates/account/password_reset.html:26
 #, python-format
 msgid ""
 "In case resetting your password does not work, please contact us at  <a href="
@@ -317,11 +434,11 @@ msgstr ""
 msgid "Plenum: Email sent"
 msgstr ""
 
-#: templates/account/password_reset_sent.html:14
+#: templates/account/password_reset_sent.html:15
 msgid "Email sent."
 msgstr ""
 
-#: templates/account/password_reset_sent.html:15
+#: templates/account/password_reset_sent.html:16
 #, python-format
 msgid ""
 "A message to reset your password has been sent. If you do not receive it "
@@ -346,7 +463,7 @@ msgid ""
 "%(email)s</a>."
 msgstr ""
 
-#: templates/account/password_reset_token.html:12
+#: templates/account/password_reset_token.html:13
 msgid "Please choose a new password"
 msgstr ""
 
@@ -358,11 +475,11 @@ msgstr ""
 msgid "Plenum: Invalid Link"
 msgstr ""
 
-#: templates/account/password_reset_token_fail.html:10
+#: templates/account/password_reset_token_fail.html:11
 msgid "Invalid Link"
 msgstr ""
 
-#: templates/account/password_reset_token_fail.html:12
+#: templates/account/password_reset_token_fail.html:13
 #, python-format
 msgid ""
 "This link is no longer valid. It has been already used or expired. If you "
@@ -370,65 +487,89 @@ msgid ""
 "a>."
 msgstr ""
 
+#: templates/account/profile_edit.html:17
+msgid "Additional Settings"
+msgstr ""
+
+#: templates/account/profile_edit.html:19
+msgid "Change Email Notifications"
+msgstr ""
+
+#: templates/account/profile_edit.html:20
+msgid "Change Profile Picture"
+msgstr ""
+
+#: templates/account/profile_edit.html:21
+msgid "Change Password"
+msgstr ""
+
+#: templates/account/profile_edit.html:22
+msgid "Set Account Location"
+msgstr ""
+
+#: templates/account/profile_edit.html:23
+msgid "Set Language"
+msgstr ""
+
 #: templates/account/signup.html:6 templates/account/signup_closed.html:3
 msgid "Plenum: Create Account"
 msgstr ""
 
-#: templates/account/signup.html:14 templates/account/signup.html:20
-#: templates/account/signup_closed.html:14 templates/static/help.html:17
+#: templates/account/signup.html:15 templates/account/signup.html:21
+#: templates/account/signup_closed.html:15 templates/static/help.html:18
 msgid "Create Account"
 msgstr ""
 
-#: templates/account/signup.html:23
+#: templates/account/signup.html:24
 msgid "Already have a registered account?"
 msgstr ""
 
-#: templates/account/signup.html:23
+#: templates/account/signup.html:24
 msgid "Please login here."
 msgstr ""
 
-#: templates/account/signup_closed.html:10
+#: templates/account/signup_closed.html:11
 msgid "Welcome to the Plenum"
 msgstr ""
 
-#: templates/account/signup_closed.html:11
+#: templates/account/signup_closed.html:12
 msgid "Please enter your registration code:"
 msgstr ""
 
-#: templates/account/signup_closed.html:13
+#: templates/account/signup_closed.html:14
 msgid "Registration Code"
 msgstr ""
 
-#: templates/avatar/change.html:8
+#: templates/avatar/change.html:9
 msgid "Avatar Settings"
 msgstr ""
 
-#: templates/avatar/change.html:14
+#: templates/avatar/change.html:15
 msgid "Your current avatar:"
 msgstr ""
 
-#: templates/avatar/change.html:21
+#: templates/avatar/change.html:22
 msgid "Select Avatar"
 msgstr ""
 
-#: templates/avatar/change.html:23
+#: templates/avatar/change.html:24
 msgid "You haven't uploaded an avatar yet. Please upload one now."
 msgstr ""
 
-#: templates/avatar/change.html:28
+#: templates/avatar/change.html:29
 msgid "Select"
 msgstr ""
 
-#: templates/avatar/change.html:35
+#: templates/avatar/change.html:36
 msgid "Upload Avatar"
 msgstr ""
 
-#: templates/avatar/change.html:38
+#: templates/avatar/change.html:39
 msgid "Upload Image"
 msgstr ""
 
-#: templates/avatar/change.html:44
-#: templates/pinax/notifications/notice_settings.html:56
+#: templates/avatar/change.html:45
+#: templates/pinax/notifications/notice_settings.html:58
 msgid "Back to Settings"
 msgstr ""
 
@@ -601,7 +742,7 @@ msgid "In Discussion"
 msgstr ""
 
 #: templates/fragments/initiative/card.html:53
-#: templates/initproc/blocks/filter.html:60 templates/static/help.html:47
+#: templates/initproc/blocks/filter.html:60 templates/static/help.html:48
 msgid "Final Review"
 msgstr ""
 
@@ -865,22 +1006,6 @@ msgstr ""
 msgid "No invitiations uploaded"
 msgstr ""
 
-#: templates/initadmin/profile_edit.html:14
-msgid "Additional Settings"
-msgstr ""
-
-#: templates/initadmin/profile_edit.html:16
-msgid "Change Email Notifications"
-msgstr ""
-
-#: templates/initadmin/profile_edit.html:17
-msgid "Change Profile Picture"
-msgstr ""
-
-#: templates/initadmin/profile_edit.html:19
-msgid "Set Account Location"
-msgstr ""
-
 #: templates/initproc/blocks/content.html:16 voty/initproc/forms.py:128
 msgid "Initiators' Argument"
 msgstr ""
@@ -893,7 +1018,7 @@ msgstr ""
 msgid "In Review"
 msgstr ""
 
-#: templates/initproc/blocks/filter.html:36 templates/static/help.html:36
+#: templates/initproc/blocks/filter.html:36 templates/static/help.html:37
 msgid "Seeking Supporters"
 msgstr ""
 
@@ -1289,80 +1414,84 @@ msgstr ""
 msgid "More information on how to create an Initiative"
 msgstr ""
 
-#: templates/pinax/notifications/notice_settings.html:5
+#: templates/pinax/notifications/notice_settings.html:6
 msgid "Plenum: Notification Settings"
 msgstr ""
 
-#: templates/pinax/notifications/notice_settings.html:10
+#: templates/pinax/notifications/notice_settings.html:14
 msgid "Notification Settings"
 msgstr ""
 
-#: templates/pinax/notifications/notice_settings.html:16
+#: templates/pinax/notifications/notice_settings.html:19
+msgid "Note"
+msgstr ""
+
+#: templates/pinax/notifications/notice_settings.html:20
 msgid "You do not have a verified email address to which notices can be sent"
 msgstr ""
 
-#: templates/pinax/notifications/notice_settings.html:16
+#: templates/pinax/notifications/notice_settings.html:20
 msgid "Add Email"
 msgstr ""
 
-#: templates/pinax/notifications/notice_settings.html:24
+#: templates/pinax/notifications/notice_settings.html:28
 msgid "Notification Purpose"
 msgstr ""
 
-#: templates/static/about.html:10
+#: templates/static/about.html:11
 msgid "About this Voting Platform"
 msgstr ""
 
-#: templates/static/about.html:12
+#: templates/static/about.html:13
 msgid "Quorum"
 msgstr ""
 
-#: templates/static/about.html:13
+#: templates/static/about.html:14
 msgid ""
 "According to the Voting regulations for Initiatives, the Quorum is "
 "determined on each 1st of the month on the Basis of registered participants. "
 "The latest Quorum is the binding one. "
 msgstr ""
 
-#: templates/static/about.html:21
+#: templates/static/about.html:22
 msgid "This tool is run by "
 msgstr ""
 
-#: templates/static/about.html:22
+#: templates/static/about.html:23
 msgid "The corresponding legal notice can be found here"
 msgstr ""
 
-#: templates/static/about.html:24
+#: templates/static/about.html:25
 msgid "Licence"
 msgstr ""
 
-#: templates/static/about.html:26
+#: templates/static/about.html:27
 msgid "Initiators have full copyright for their Initiatives."
 msgstr ""
 
-#: templates/static/about.html:28
+#: templates/static/about.html:29
 msgid "Software"
 msgstr ""
 
-#: templates/static/about.html:30
+#: templates/static/about.html:31
 msgid ""
 "This software is written with Python/Django and Postgres. It is Open Source "
 "and licenced under AGPL 3.0"
 msgstr ""
 
-#: templates/static/about.html:31
+#: templates/static/about.html:32
 msgid "The source code has been published on Github"
 msgstr ""
 
-#: templates/static/help.html:10
+#: templates/static/help.html:11
 msgid "Frequently Asked Questions"
 msgstr ""
 
-#: templates/static/help.html:12
+#: templates/static/help.html:13
 msgid "What is this platform about?"
 msgstr ""
 
-#: templates/static/help.html:13
+#: templates/static/help.html:14
 #, python-format
 msgid ""
 "On this platform we collaboratively work on what "
@@ -1371,31 +1500,31 @@ msgid ""
 "approved, become part of the political program."
 msgstr ""
 
-#: templates/static/help.html:15
+#: templates/static/help.html:16
 msgid "How can I participate?"
 msgstr ""
 
-#: templates/static/help.html:16
+#: templates/static/help.html:17
 msgid "By joining:"
 msgstr ""
 
-#: templates/static/help.html:18
+#: templates/static/help.html:19
 msgid "Everyone can participate!"
 msgstr ""
 
-#: templates/static/help.html:20
+#: templates/static/help.html:21
 msgid "I have registered but my account has not been activated yet."
 msgstr ""
 
-#: templates/static/help.html:21
+#: templates/static/help.html:22
 msgid "Account validation may take up to 5 days. Please be patient."
 msgstr ""
 
-#: templates/static/help.html:23
+#: templates/static/help.html:24
 msgid "Do I have to use my actual name?"
 msgstr ""
 
-#: templates/static/help.html:24
+#: templates/static/help.html:25
 msgid ""
 "When registering, yes. We need to be able to verify if you actually exist to "
 "prevent multiple registrations. Your name will only shown publicly on the "
@@ -1403,17 +1532,17 @@ msgid ""
 "can be done under a pseudonym."
 msgstr ""
 
-#: templates/static/help.html:25
+#: templates/static/help.html:26
 msgid ""
 "However, when it is possible for you, we appreciate when participants use "
 "their actual names."
 msgstr ""
 
-#: templates/static/help.html:27
+#: templates/static/help.html:28
 msgid "What is an Initiative?"
 msgstr ""
 
-#: templates/static/help.html:28
+#: templates/static/help.html:29
 #, python-format
 msgid ""
 "An Initiative is a proposal for the politica programm of "
@@ -1422,19 +1551,19 @@ msgid ""
 "cost and means of financing."
 msgstr ""
 
-#: templates/static/help.html:30
+#: templates/static/help.html:31
 msgid "How does the voting process work?"
 msgstr ""
 
-#: templates/static/help.html:31
+#: templates/static/help.html:32
 msgid "An Initiative will go through different phases throughout the Plenum:"
 msgstr ""
 
-#: templates/static/help.html:33
+#: templates/static/help.html:34
 msgid "Validation"
 msgstr ""
 
-#: templates/static/help.html:34
+#: templates/static/help.html:35
 #, python-format
 msgid ""
 "Intially the governance team will verify that a new Initiative meets all "
@@ -1442,7 +1571,7 @@ msgid ""
 "%('PLATFORM_TITLE_ACRONYM'|get_setting)s as well as meeting formal criteria."
 msgstr ""
 
-#: templates/static/help.html:37
+#: templates/static/help.html:38
 #, python-format
 msgid ""
 "In this phase at least 1%% of registered participants have to support the "
@@ -1451,18 +1580,18 @@ msgid ""
 "is below 5000, a different, lower Quorum is applied. "
 msgstr ""
 
-#: templates/static/help.html:38
+#: templates/static/help.html:39
 msgid ""
 "The support phase will last between two weeks and six months at a maximum. "
 "If an Initiative does noch reach the required number of supporters after six "
 "months, it will be deleted."
 msgstr ""
 
-#: templates/static/help.html:40
+#: templates/static/help.html:41
 msgid "Discussion"
 msgstr ""
 
-#: templates/static/help.html:41
+#: templates/static/help.html:42
 msgid ""
 "In this Phase you can give your opinion on Initiatives and propose "
 "improvements. You can leave comments in favor or against an Initiative. The "
@@ -1471,44 +1600,44 @@ msgid ""
 "Initiative."
 msgstr ""
 
-#: templates/static/help.html:42
+#: templates/static/help.html:43
 msgid ""
 "The discussion phase will last three weeks. Afterwards, the discussion will "
 "be closed."
 msgstr ""
 
-#: templates/static/help.html:44
+#: templates/static/help.html:45
 msgid "Modifications"
 msgstr ""
 
-#: templates/static/help.html:45
+#: templates/static/help.html:46
 msgid ""
 "In this phase, the Initiator(s) can modify or amend the Initiative based on "
 "proposals and arguments gathered during the discussion phase."
 msgstr ""
 
-#: templates/static/help.html:48
+#: templates/static/help.html:49
 msgid ""
 "In case an Initiative was modified, the governance teams will re-validate it "
 "afterwards."
 msgstr ""
 
-#: templates/static/help.html:50
+#: templates/static/help.html:51
 msgid "Vote"
 msgstr ""
 
-#: templates/static/help.html:51
+#: templates/static/help.html:52
 msgid ""
 "In this phase a vote on the Initiative is held. The vote will last at least "
 "three weeks. If an Intiative is accepted, it will become part of the "
 "official political programm once it is validated on a party convention."
 msgstr ""
 
-#: templates/static/help.html:55
+#: templates/static/help.html:56
 msgid "What can be demanded in an Initiative and what not?"
 msgstr ""
 
-#: templates/static/help.html:56
+#: templates/static/help.html:57
 #, python-format
 msgid ""
 "All Intiatives have to conform with the basic values of "
@@ -1516,23 +1645,23 @@ msgid ""
 "%('PLATFORM_TITLE_ACRONYM'|get_setting)s-values are:"
 msgstr ""
 
-#: templates/static/help.html:58
+#: templates/static/help.html:59
 msgid "democracy, participation and transparency"
 msgstr ""
 
-#: templates/static/help.html:59
+#: templates/static/help.html:60
 msgid "Fairness in social, political, economical and ecological aspects"
 msgstr ""
 
-#: templates/static/help.html:60
+#: templates/static/help.html:61
 msgid "Openness and diversity"
 msgstr ""
 
-#: templates/static/help.html:61
+#: templates/static/help.html:62
 msgid "Forward and sustainable thinking"
 msgstr ""
 
-#: templates/static/help.html:63
+#: templates/static/help.html:64
 msgid ""
 "Put differently: Support for single parents, protecting the environment and "
 "installing a lobbying register are topics we consider on par with our vaues "
@@ -1540,7 +1669,7 @@ msgid ""
 "on line with our agenda."
 msgstr ""
 
-#: templates/static/help.html:64
+#: templates/static/help.html:65
 msgid ""
 "An Initiative also has to refer to the actual political program and not for "
 "example on the organisational structure or processes with the movement. An "
@@ -1548,7 +1677,7 @@ msgid ""
 "during the last six months."
 msgstr ""
 
-#: templates/static/help.html:65
+#: templates/static/help.html:66
 msgid ""
 "If the governance team comes to the conclusion, that an Initiative does not "
 "meet the requirements, it can reject the Initiative outright. Whenever "
@@ -1560,11 +1689,11 @@ msgid ""
 "decides finally whether an Initiative is permitted or not."
 msgstr ""
 
-#: templates/static/help.html:67
+#: templates/static/help.html:68
 msgid "How can I start an Initiative?"
 msgstr ""
 
-#: templates/static/help.html:68
+#: templates/static/help.html:69
 #, python-format
 msgid ""
 "You can propose your idea on the <a href="
@@ -1577,42 +1706,42 @@ msgid ""
 "Initiative."
 msgstr ""
 
-#: templates/static/help.html:70
+#: templates/static/help.html:71
 msgid "What happens when there are multiple Initiatives on the same topic?"
 msgstr ""
 
-#: templates/static/help.html:71
+#: templates/static/help.html:72
 msgid ""
 "The governancen teams can identify Initiatives as mutual alternatives. These "
 "Initiatives will be voted on together."
 msgstr ""
 
-#: templates/static/help.html:73
+#: templates/static/help.html:74
 msgid ""
 "I want to know more about the principles of Initiatives. Do you have more "
 "information?"
 msgstr ""
 
-#: templates/static/help.html:74
+#: templates/static/help.html:75
 msgid "See here:"
 msgstr ""
 
-#: templates/static/help.html:74
+#: templates/static/help.html:75
 msgid "How does the Initiative process work?"
 msgstr ""
 
-#: templates/static/help.html:75
+#: templates/static/help.html:76
 #, python-format
 msgid ""
 "Should you require additional information, please have a look at the <a href="
 "\"%('PLATFORM_VOTING_REGULATION_URL'|get_setting)s\">voting regulartions</a>."
 msgstr ""
 
-#: templates/static/help.html:77
+#: templates/static/help.html:78
 msgid "I would like to launch an Initiative and could use some help."
 msgstr ""
 
-#: templates/static/help.html:78
+#: templates/static/help.html:79
 #, python-format
 msgid ""
 "For technical, formal or organisational help, send a message to: <a href="
@@ -1620,11 +1749,11 @@ msgid ""
 "%('INITIATIVE_SUPPORT_EMAIL'|get_setting)s</a>."
 msgstr ""
 
-#: templates/static/help.html:80
+#: templates/static/help.html:81
 msgid "Something is not working/I have suggestions/Further enquiries"
 msgstr ""
 
-#: templates/static/help.html:81
+#: templates/static/help.html:82
 #, python-format
 msgid ""
 "Tell us about your problem, suggestion or question in <a href="
@@ -1633,11 +1762,11 @@ msgid ""
 "registered on the marketplace in order to access categories."
 msgstr ""
 
-#: templates/static/help.html:83
+#: templates/static/help.html:84
 msgid "I'm developer/graphic designer and like your prjoect. Can I help you?"
 msgstr ""
 
-#: templates/static/help.html:84
+#: templates/static/help.html:85
 #, python-format
 msgid ""
 "Yes, of course! Write us on <a href="
@@ -1649,15 +1778,15 @@ msgid ""
 "a>."
 msgstr ""
 
-#: templates/static/register.html:10
+#: templates/static/register.html:7
 msgid "Time to Participate"
 msgstr ""
 
-#: templates/static/register.html:11
+#: templates/static/register.html:8
 msgid "Submit Initiatives for discussion and voting"
 msgstr ""
 
-#: templates/static/register.html:12
+#: templates/static/register.html:9
 msgid ""
 "is a political movement like no other. It is a place where everyone can "
 "Initiatives, discuss them collaboratively and cast votes. As a participant "
@@ -1667,8 +1796,88 @@ msgid ""
 "Voting platform."
 msgstr ""
 
-#: templates/static/register.html:13
+#: templates/static/register.html:10
 msgid "Register Now!"
+msgstr ""
+
+#: voty/initadmin/admin.py:28
+msgid "Invitation to Initiative"
+msgstr ""
+
+#: voty/initadmin/admin.py:29
+msgid "You have been invitied to a new Initiative"
+msgstr ""
+
+#: voty/initadmin/admin.py:31
+msgid "Invitation accepted"
+msgstr ""
+
+#: voty/initadmin/admin.py:32
+msgid "The Invitation was accepted"
+msgstr ""
+
+#: voty/initadmin/admin.py:34
+msgid "Invitation declined"
+msgstr ""
+
+#: voty/initadmin/admin.py:35
+msgid "The Invitation was declined"
+msgstr ""
+
+#: voty/initadmin/admin.py:39
+msgid "Initiative modified"
+msgstr ""
+
+#: voty/initadmin/admin.py:40
+msgid "The Initiative was modified"
+msgstr ""
+
+#: voty/initadmin/admin.py:42
+msgid "Initiative submitted"
+msgstr ""
+
+#: voty/initadmin/admin.py:43
+msgid "The Initiative was submitted"
+msgstr ""
+
+#: voty/initadmin/admin.py:45 voty/initproc/views.py:506
+msgid "Initiative published"
+msgstr ""
+
+#: voty/initadmin/admin.py:46
+msgid "The Initiative was published"
+msgstr ""
+
+#: voty/initadmin/admin.py:48
+msgid "Initiative in discussion"
+msgstr ""
+
+#: voty/initadmin/admin.py:49
+msgid "The Initiative has been moved to the discussion phase"
+msgstr ""
+
+#: voty/initadmin/admin.py:51
+msgid "Discussion for Initiative ended"
+msgstr ""
+
+#: voty/initadmin/admin.py:52
+msgid "The Initiative can now be finally modified"
+msgstr ""
+
+#: voty/initadmin/admin.py:54
+msgid "Initiative in Vote"
+msgstr ""
+
+#: voty/initadmin/admin.py:55
+msgid "The Initiative has been put to Vote"
+msgstr ""
+
+#: voty/initadmin/admin.py:59
+msgid "New Argument in Discussion for Initiative"
+msgstr ""
+
+#: voty/initadmin/admin.py:60
+msgid "A new Argument was postet in the Discussion for the Initiative"
 msgstr ""
 
 #: voty/initadmin/forms.py:19
@@ -1681,86 +1890,6 @@ msgstr ""
 
 #: voty/initadmin/views.py:163
 msgid "invitations were sent"
-msgstr ""
-
-#: voty/initproc/apps.py:14
-msgid "Invitation to Initiative"
-msgstr ""
-
-#: voty/initproc/apps.py:15
-msgid "You have been invitied to a new Initiative"
-msgstr ""
-
-#: voty/initproc/apps.py:17
-msgid "Invitation accepted"
-msgstr ""
-
-#: voty/initproc/apps.py:18
-msgid "The Invitation was accepted"
-msgstr ""
-
-#: voty/initproc/apps.py:20
-msgid "Invitation declined"
-msgstr ""
-
-#: voty/initproc/apps.py:21
-msgid "The Invitation was declined"
-msgstr ""
-
-#: voty/initproc/apps.py:25
-msgid "Initiative modified"
-msgstr ""
-
-#: voty/initproc/apps.py:26
-msgid "The Initiative was modified"
-msgstr ""
-
-#: voty/initproc/apps.py:28
-msgid "Initiative submitted"
-msgstr ""
-
-#: voty/initproc/apps.py:29
-msgid "The Initiative was submitted"
-msgstr ""
-
-#: voty/initproc/apps.py:31 voty/initproc/views.py:506
-msgid "Initiative published"
-msgstr ""
-
-#: voty/initproc/apps.py:32
-msgid "The Initiative was published"
-msgstr ""
-
-#: voty/initproc/apps.py:34
-msgid "Initiative in discussion"
-msgstr ""
-
-#: voty/initproc/apps.py:35
-msgid "The Initiative has been moved to the discussion phase"
-msgstr ""
-
-#: voty/initproc/apps.py:37
-msgid "Discussion for Initiative ended"
-msgstr ""
-
-#: voty/initproc/apps.py:38
-msgid "The Initiative can now be finally modified"
-msgstr ""
-
-#: voty/initproc/apps.py:40
-msgid "Initiative in Vote"
-msgstr ""
-
-#: voty/initproc/apps.py:41
-msgid "The Initiative has been put to Vote"
-msgstr ""
-
-#: voty/initproc/apps.py:45
-msgid "New Argument in Discussion for Initiative"
-msgstr ""
-
-#: voty/initproc/apps.py:46
-msgid "A new Argument was postet in the Discussion for the Initiative"
 msgstr ""
 
 #: voty/initproc/forms.py:107
@@ -1953,47 +2082,47 @@ msgstr ""
 msgid "Can you justifiy your decision?"
 msgstr ""
 
-#: voty/initproc/globals.py:68
+#: voty/initproc/globals.py:47
 msgid "Global Politics & International Cooperation"
 msgstr ""
 
-#: voty/initproc/globals.py:69
+#: voty/initproc/globals.py:48
 msgid "Education, Research & Culture"
 msgstr ""
 
-#: voty/initproc/globals.py:70
+#: voty/initproc/globals.py:49
 msgid "Interior Politics"
 msgstr ""
 
-#: voty/initproc/globals.py:71
+#: voty/initproc/globals.py:50
 msgid "Net- & Media Politics"
 msgstr ""
 
-#: voty/initproc/globals.py:72
+#: voty/initproc/globals.py:51
 msgid "Gender Equality"
 msgstr ""
 
-#: voty/initproc/globals.py:73
+#: voty/initproc/globals.py:52
 msgid "Diversity & Integration"
 msgstr ""
 
-#: voty/initproc/globals.py:74
+#: voty/initproc/globals.py:53
 msgid "Democracy & Transparency"
 msgstr ""
 
-#: voty/initproc/globals.py:75
+#: voty/initproc/globals.py:54
 msgid "Health, Nutrition, Consumer Protection"
 msgstr ""
 
-#: voty/initproc/globals.py:76
+#: voty/initproc/globals.py:55
 msgid "Environment, Mobility, Infrastructural Development"
 msgstr ""
 
-#: voty/initproc/globals.py:77
+#: voty/initproc/globals.py:56
 msgid "Social Justice, Economy, Work & Finance"
 msgstr ""
 
-#: voty/initproc/globals.py:78
+#: voty/initproc/globals.py:57
 msgid "Other"
 msgstr ""
 
@@ -2015,10 +2144,6 @@ msgstr ""
 
 #: voty/initproc/models.py:56
 msgid "Single Initiative"
-msgstr ""
-
-#: voty/initproc/models.py:57
-msgid "Federal Level"
 msgstr ""
 
 #: voty/initproc/models.py:331
