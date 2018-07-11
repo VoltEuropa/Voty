@@ -235,6 +235,7 @@ BACKCOMPAT_PERMISSION_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_PER
 # XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
 PLATFORM_GROUP_LIST = raw_parser.items("platform_group_list")
 PLATFORM_GROUP_VALUE_LIST = raw_parser._sections["platform_group_value_list"]
+PLATFORM_GROUP_VALUE_TITLE_LIST = ["{0}".format(v) for k,v in PLATFORM_GROUP_VALUE_LIST.items() if not k.startswith("__")]
 PLATFORM_USER_PERMISSION_LIST = raw_parser.items("platform_user_permission_list")
 PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permission_value_list"]
 PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")

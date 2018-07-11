@@ -18,6 +18,8 @@ from django.contrib import messages
 from django.conf import settings
 from django.utils.translation import ugettext as _
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 import account.views
 from account.models import SignupCodeResult, SignupCode
 
@@ -29,6 +31,9 @@ from uuid import uuid4
 from io import StringIO, TextIOWrapper
 import csv
 
+
+def is_team_member(user):
+  return user.groups.filter(name__in=[settings.PLATFORM_GROUP_VALUE_TITLE_LIST]).exists()
 
 def invite_single_user(first_name, last_name, email, site):
   
@@ -94,11 +99,6 @@ def invite_batch_users(file):
 
     return total, newly_added
 
-
-def is_in_multiple_groups(user):
-    return user.groups.filter(name__in=['Policy Team Member', 'Policy Team Lead']).exists()
-
-
 #
 # ____    ____  __   ___________    __    ____   _______.
 # \   \  /   / |  | |   ____\   \  /  \  /   /  /       |
@@ -115,8 +115,28 @@ class LoginView(account.views.LoginView):
   form_class = LoginEmailOrUsernameForm
 
 # ---------------------------- User List  --------------------------------------
+@login_required
+@user_passes_test(lambda u: is_team_member(u))
 def user_list(request):
-  return render(request, "Hello User List", context={})
+
+  user_list = get_user_model().objects.filter(is_active=True).order_by('username')
+  paginator = Paginator(user_list, 25)
+  page = request.GET.get("page")
+
+  try:
+    users = paginator.page(page)
+  except PageNotAnInteger:
+    users = paginator.page(1)
+  except EmptyPage:
+    users = paginator.page(paginator.num_pages)
+
+  return render(request, "initadmin/list_users.html", dict(users=users))
+
+#@login_required
+#@user_passes_test(lambda u: is_team_member(u))
+#def active_users(request):
+#    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
+#    return render(request, "initadmin/active_users.html", dict(users=users_q))
 
 # -------------------------- Initiative List  ----------------------------------
 def initiative_list(request):
@@ -145,7 +165,7 @@ def profile_delete(request):
 
 # download imported files
 #@login_required
-#@user_passes_test(lambda u: is_in_multiple_groups(u))
+#@user_passes_test(lambda u: is_team_member(u))
 #def download_csv(request, id):
 #    batch = get_object_or_404(InviteBatch, pk=id)
 #    response = HttpResponse(batch.payload, content_type='text/csv')
@@ -154,7 +174,7 @@ def profile_delete(request):
 
 # --------------------------- Invite Users -------------------------------------
 @login_required
-@user_passes_test(lambda u: is_in_multiple_groups(u))
+@user_passes_test(lambda u: is_team_member(u))
 def user_invite(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
@@ -168,7 +188,7 @@ def user_invite(request):
 
 # active users (recently logged in first)
 #@login_required
-#@user_passes_test(lambda u: is_in_multiple_groups(u))
+#@user_passes_test(lambda u: is_team_member(u))
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
