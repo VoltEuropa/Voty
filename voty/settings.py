@@ -45,7 +45,6 @@ INSTALLED_APPS = [
   # 3rd party
   "account",
   "avatar",
-  "django_filters",
   "mathfilters",
   "mailer",
   "pinax.notifications",
