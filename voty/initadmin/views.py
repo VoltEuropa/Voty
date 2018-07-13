@@ -116,11 +116,11 @@ class LoginView(account.views.LoginView):
 
 # ---------------------------- User List  --------------------------------------
 @login_required
-@user_passes_test(lambda u: is_team_member(u))
+#@user_passes_test(lambda u: is_team_member(u))
 def user_list(request):
 
   user_list = get_user_model().objects.filter(is_active=True).order_by('username')
-  paginator = Paginator(user_list, 25)
+  paginator = Paginator(user_list, 1)
   page = request.GET.get("page")
 
   try:
@@ -130,7 +130,11 @@ def user_list(request):
   except EmptyPage:
     users = paginator.page(paginator.num_pages)
 
-  return render(request, "initadmin/list_users.html", dict(users=users))
+  return render(request, "initadmin/list_users.html", {
+    "paginator": paginator,
+    "users" :users,
+    }
+  )
 
 #@login_required
 #@user_passes_test(lambda u: is_team_member(u))
@@ -174,7 +178,6 @@ def profile_delete(request):
 
 # --------------------------- Invite Users -------------------------------------
 @login_required
-@user_passes_test(lambda u: is_team_member(u))
 def user_invite(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
