@@ -12,10 +12,13 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
+from django.utils.html import escape, strip_tags
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.contrib import messages
 from django.conf import settings
+from django.db.models import Q
+from django.db.models.functions import Upper
 from django.utils.translation import ugettext as _
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -24,13 +27,12 @@ import account.views
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
-from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm
+from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, ListboxSearchForm
 
 from datetime import datetime, timedelta
 from uuid import uuid4
 from io import StringIO, TextIOWrapper
 import csv
-
 
 def is_team_member(user):
   return user.groups.filter(name__in=[settings.PLATFORM_GROUP_VALUE_TITLE_LIST]).exists()
@@ -109,20 +111,97 @@ def invite_batch_users(file):
 #
 #                                                       
 
-# ---------------------------- LoginView ---------------------------------------
-# XXX why is it a class? can't this be just a form?
-class LoginView(account.views.LoginView):
-  form_class = LoginEmailOrUsernameForm
-
 # ---------------------------- User List  --------------------------------------
+# XXX make this generic! works for Initiative, too
 @login_required
 #@user_passes_test(lambda u: is_team_member(u))
 def user_list(request):
 
-  user_list = get_user_model().objects.filter(is_active=True).order_by('username')
-  paginator = Paginator(user_list, 1)
-  page = request.GET.get("page")
+  user_values = {}
+  user_list = get_user_model().objects.filter()
+  user_filters = {
+    "glossary_active_all": True,
+    "glossary_char_list": settings.LISTBOX_OPTION_DICT.GLOSSARY_CHAR_LIST
+  }
+  number_of_records = settings.LISTBOX_OPTION_DICT.NUMBER_OF_RECORDS_DEFAULT
 
+  if "scope" in request.GET:
+    request_scope = request.GET["scope"]
+    for scope in settings.CATEGORIES.SCOPE_CHOICES:
+      if scope[0] == request_scope:
+        user_list = user_list.filter(config__scope__istartswith=request_scope).distinct()
+        user_values["scope"] = request_scope
+
+  if "search" in request.GET:
+    request_search = escape(strip_tags(request.GET["search"]))
+    user_list = user_list.filter(
+      Q(first_name__icontains=request_search) |
+      Q(last_name__icontains=request_search) |
+      Q(username__icontains=request_search) |
+      Q(email__icontains=request_search)
+    ).distinct()
+    user_values["search"] = request_search
+
+  # XXX glossary assumes we are searching for username, should be settable
+  # XXX missing summarizing all $%&/( into #
+  # by now we have the relevant user set, flag available characters
+  glossary_candidate_list = [getattr(x[1], "username", None) for x in enumerate(user_list)]
+  glossary_candidate_list = list(set([x[0].upper() for x in glossary_candidate_list if x is not None]))
+
+  for glossy_character in glossary_candidate_list:
+    try:
+      user_filters["glossary_char_list"][glossy_character]["avail"] = True
+    except:
+      user_filters["glossary_char_list"]["#"]["avail"] = True
+
+  # filter user_list if a glossary is passed in the request
+  if "glossary" in request.GET:
+    request_glossy_character = request.GET["glossary"]
+    if request_glossy_character != "":
+      regex_azAZ = r"^[a-zA-Z]"
+    
+      # XXX refactor
+      # XXX why are active chars sticky and a reload does not remove them?
+      for glossy_character in glossary_candidate_list:
+        if glossy_character == request_glossy_character:
+          if request_glossy_character == "#":
+            user_list = user_list.exclude(username__regex=regex_azAZ)
+            del user_filters["glossary_char_list"]["#"]["avail"]
+            del user_filters["glossary_active_all"]
+          else:
+            user_list = user_list.filter(username__istartswith=glossy_character)
+            del user_filters["glossary_char_list"][glossy_character]["avail"]
+            del user_filters["glossary_active_all"]
+
+  # always convert glossary_char_list into parseable format
+  user_filters["glossary_char_list"] = [user_filters["glossary_char_list"][x] for x in user_filters["glossary_char_list"]]
+
+  # XXX sorting defaults to username, add sorting, add default/asc/desc to settings
+  if "sort" in request.GET:
+    pass
+    #request_sort = request.GET["sort"]
+    #for sortation in settings.SORT_OPITION_LIST:
+    #  if request_sort["field"] == sortation
+    #    if request_sort["dir"] == "DESC":
+    #      user_list.order_by(request_sort).reverse()
+    #    else:
+    #      user_list.order_by(request_sort)
+    #user_values["sort"] = request_sort
+  else:
+    user_list = user_list.order_by("username")
+
+  if "records" in request.GET:
+    request_records = request.GET["records"]
+    if request_records.isdigit():
+      for record_opt in settings.LISTBOX_OPTION_DICT.NUMBER_OF_RECORDS_OPTION_LIST:
+        if record_opt[0] == request_records:
+          number_of_records = request_records
+          user_values["records"] = request_records
+
+  paginator = Paginator(user_list, number_of_records)
+  page = request.GET.get("page")
+  form = ListboxSearchForm(initial=user_values)
+    
   try:
     users = paginator.page(page)
   except PageNotAnInteger:
@@ -133,6 +212,8 @@ def user_list(request):
   return render(request, "initadmin/list_users.html", {
     "paginator": paginator,
     "users" :users,
+    "user_filters": user_filters,
+    "form": form
     }
   )
 
@@ -149,6 +230,12 @@ def initiative_list(request):
 # -------------------------- Profile Localise ----------------------------------
 def profile_localise(request):
   return render(request, "Hello Localise Profile", context={})
+
+
+# ---------------------------- LoginView ---------------------------------------
+# XXX why is it a class? can't this be just a form?
+class LoginView(account.views.LoginView):
+  form_class = LoginEmailOrUsernameForm
 
 # --------------------------- Profile Edit -------------------------------------
 @login_required

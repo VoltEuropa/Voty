@@ -45,6 +45,7 @@ INSTALLED_APPS = [
   # 3rd party
   "account",
   "avatar",
+  "django_filters",
   "mathfilters",
   "mailer",
   "pinax.notifications",
@@ -252,7 +253,17 @@ NOTIFICATIONS = SimpleNamespace(**{
 
 scope_value_list = dict(raw_parser.items('scope_value_list'))
 CATEGORIES = SimpleNamespace(**{
-  #"SCOPE_CHOICES": [(code_tuple[1], _(scope_value_list[code_tuple[0]])) for code_tuple in raw_parser.items('scope_list')]
   "SCOPE_CHOICES": [(code_tuple[1], _(scope_value_list[code_tuple[0]].partition('{% trans "')[2].partition('" %}')[0])) for code_tuple in raw_parser.items('scope_list')]
+})
+
+# listbox options
+# XXX improve
+char_dict = {}
+for x in ("#","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"):
+  char_dict[x] = {"value": x}
+LISTBOX_OPTION_DICT = SimpleNamespace(**{
+  "GLOSSARY_CHAR_LIST": char_dict,
+  "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
+  "NUMBER_OF_RECORDS_DEFAULT": 2
 })
 

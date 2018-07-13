@@ -1561,9 +1561,86 @@ textarea#id_title:-moz-placeholder, textarea#id_text:-moz-placeholder { /* Firef
   opacity: .7;
 }
 
+/* =========================== CUSTOMIZATIONS =============================== */
 /* Fixes - prevent navbar icons leaking into page width */
 .navbar .navbar-nav li a i {
   overflow-x: hidden;
   max-width: 1.625rem;
 }
+
+/* ------------------------------ form-listbox ------------------------------ */
+.form-listbox table thead tr th {
+  text-align: center;
+}
+.form-listbox .form-listbox-top .form-group label {
+  display: none;
+}
+.form-listbox .form-listbox-top {
+  margin-bottom: 1.5em;
+}
+.form-listbox .form-listbox-bottom {
+  margin-top: .5em;
+}
+.form-listbox .form-listbox-top .form-group,
+.form-listbox .form-listbox-bottom .form-group {
+  display: inline-block;
+  vertical-align: bottom;
+}
+.form-listbox .form-listbox-top,
+.form-listbox .form-listbox-bottom,
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(1),
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(1) {
+  width: 100%;
+}
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(2),
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(2) ~ .form-group,
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(2),
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(2) ~ .form-group {
+  width: 50%;
+}
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(3),
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(3) ~ .form-group,
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(3),
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(3) ~ .form-group {
+  width: 42%;
+}
+form.form-listbox .form-listbox-top .form-group-last,
+form.form-listbox .form-listbox-bottom .form-group-last {
+  width: auto !important; /* meh */
+  float: right;
+}
+form.form-listbox .form-listbox-bottom .form-group:last-child label,
+form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
+  display: inline-block;
+}
+
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(4),
+.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(4) ~ .form-group,
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(4),
+.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(4) ~ .form-group {
+  width: 25%;
+}
+
+.form-listbox .form-listbox-glossary {
+  list-style: none;
+  padding: 0;
+  margin: 0 .5em;
+}
+.form-listbox .form-listbox-glossary li {
+  display: inline-block;
+  padding: .25em;
+  opacity: .15;
+}
+.form-listbox .form-listbox-glossary li:not(.form-listbox-glossary-avail) {
+  pointer-events: none;
+}
+.form-listbox .form-listbox-glossary .form-listbox-glossary-avail {
+  opacity: 1;
+  text-decoration: underline;
+}
+.form-listbox .form-listbox-glossary .form-listbox-glossary-active {
+  opacity: 1;
+  pointer-events: none;
+}
+
 
