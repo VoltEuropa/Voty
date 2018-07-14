@@ -1602,7 +1602,7 @@ textarea#id_title:-moz-placeholder, textarea#id_text:-moz-placeholder { /* Firef
 .form-listbox .form-listbox-top .form-group:first-child:nth-last-child(3) ~ .form-group,
 .form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(3),
 .form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(3) ~ .form-group {
-  width: 42%;
+  width: 38%;
 }
 form.form-listbox .form-listbox-top .form-group-last,
 form.form-listbox .form-listbox-bottom .form-group-last {
@@ -1614,11 +1614,12 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   display: inline-block;
 }
 
-.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(4),
-.form-listbox .form-listbox-top .form-group:first-child:nth-last-child(4) ~ .form-group,
-.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(4),
-.form-listbox .form-listbox-bottom .form-group:first-child:nth-last-child(4) ~ .form-group {
-  width: 25%;
+/* prevent selects from overextending */
+.form-listbox .form-listbox-top .form-group label ~ div {
+  width: 100%; 
+}
+.form-listbox .form-listbox-top .form-group label ~ div select {
+  width: inherit;
 }
 
 .form-listbox .form-listbox-glossary {
@@ -1643,4 +1644,72 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   pointer-events: none;
 }
 
+/* --------------------------- form-inline-group ---------------------------- */
+.form-inline-group .form-group {
+  display: inline-block;
+  vertical-align: top;
+}
+.form-inline-group .form-group:first-child:nth-last-child(1) {
+  width: 100%;
+}
+.form-inline-group .form-group:first-child:nth-last-child(2),
+.form-inline-group .form-group:first-child:nth-last-child(2) ~ .form-group {
+  width: 49.5%;
+}
+.form-inline-group .form-group:first-child:nth-last-child(3),
+.form-inline-group .form-group:first-child:nth-last-child(3) ~ .form-group {
+  width: 32.5%;
+}
+.form-inline-group .form-group span {
+  margin-bottom: .5rem;
+  display: inline-block;
+}
+.form-inline-group .form-group button {
+  height: 2.25em;
+}
+.form-inline-group .form-group button .material-icons {
+  line-height: 1.25rem;
+}
+/* ---------------------------- form-input-group ---------------------------- */
+.form-input-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.form-input-group ul li {
+  margin-bottom: .25em;
+}
+.form-input-group ul li label {
+  display: block;
+  margin-bottom: 0;
+  height: 2.5em;
+  padding: .5em 0 .5em 0;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.25rem;
+}
+/* copied from input-group-addon */
+.form-input-group ul li label:before {
+  padding: 0.6rem 1.15rem .59rem;
+  margin-bottom: 0;
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.25;
+  color: #464a4c;
+  text-align: center;
+  background-color: #eceeef;
+  border-right: 1px solid rgba(0, 0, 0, 0.15);
+  border-top-left-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+  content: ""
+}
+.form-input-group ul li label .form-control {
+  display: inline-block;
+  width: 3em;
+  vertical-align: middle;
+  margin-left: -2.55em;
+  margin-right: 1em;
+}
 

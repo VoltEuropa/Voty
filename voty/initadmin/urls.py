@@ -8,6 +8,7 @@
 from django.conf.urls import url, include
 from django.views.generic.base import TemplateView
 from django.contrib import admin
+
 from . import views
 
 urlpatterns = [
@@ -22,7 +23,8 @@ urlpatterns = [
   url(r"^account/localise", views.profile_localise, name="account_localise"),
 
   # moderators
-  url(r"^backoffice/users/", views.user_list, name="users"),
+  url(r"^backoffice/users/$", views.user_list, name="users"),
+  url(r"^backoffice/users/(?P<user_id>\d+)/$", views.user_view, name="user_moderate"),
   url(r"^backoffice/invite/", views.user_invite, name="user_invite"),
   url(r"^backoffice/initiatives/", views.initiative_list, name="initiatives"),
   

@@ -1,6 +1,7 @@
 {% extends "_base.html" %}
 
 {% load i18n %}
+{% load fullurl %}
 {% load bootstrap %}
 {% block head_title %}{% trans "User List" %}{% endblock %}
 
@@ -11,7 +12,7 @@
         <div class="row">
           <div class="col">
             <h2>{% trans "User List" %}</h2>
-            <form class="form-inline form-listbox" method="GET" action="?page={{users.number}}">
+            <form class="form-inline form-listbox" method="GET" action="?page={{ users.number }}">
               {{ form.non_field_errors }}
               {{ form.source.errors }}
               {{ form.source }}
@@ -31,6 +32,7 @@
                   </div>
                 </div>
                 <div class="form-group form-group-last">
+                  <a class="btn btn-default btn-secondary" role="button" href="?page={{ users.number }}">Clear</a>
                   <button class="btn btn-primary" type="submit">{% trans "Load" %}</button>
                 </div>
               </div>
@@ -54,15 +56,17 @@
                     <th>{% trans "First Name" %}</th>
                     <th>{% trans "Last Name" %}</th>
                     <th>{% trans "Email" %}</th>
+                    <th>{% trans "Action" %}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for user in users.object_list  %}
                     <tr>
-                      <td>{{ user.username }}</td>
-                      <td>{{ user.first_name }}</td>
-                      <td>{{ user.last_name }}</td>
-                      <td>{{ user.email }}</td>
+                      <td><a href="{% fullurl 'user_moderate' user_id=user.id %}">{{ user.username }}</a></td>
+                      <td><a href="{% fullurl 'user_moderate' user_id=user.id %}">{{ user.first_name }}</a></td>
+                      <td><a href="{% fullurl 'user_moderate' user_id=user.id %}">{{ user.last_name }}</a></td>
+                      <td><a href="{% fullurl 'user_moderate' user_id=user.id %}">{{ user.email }}</a></td>
+                      <td></td>
                     </tr>
                   {% endfor %}
                 </tbody>

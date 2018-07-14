@@ -9,6 +9,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.views.decorators.http import require_POST
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
@@ -27,7 +28,7 @@ import account.views
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
-from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, ListboxSearchForm
+from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, UserModerateForm, ListboxSearchForm
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -110,6 +111,37 @@ def invite_batch_users(file):
 #     \__/     |__| |_______|   \__/  \__/  |_______/    
 #
 #                                                       
+
+
+# ------------------------------ User  -----------------------------------------
+@login_required
+def user_view(request, user_id):
+
+  user_values = {"groups": []}
+  user = get_object_or_404(get_user_model(), pk=user_id)
+
+  if request.method == "GET":
+
+    for group in Group.objects.all():
+      if user.groups.filter(name=group.name).exists():
+        user_values["groups"].append(group.id)
+
+    user_values["username"] = user.username
+    user_values["first_name"] = user.first_name
+    user_values["last_name"] = user.last_name
+    user_values["last_login"] = user.last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)")
+    user_values["email"] = user.email
+    user_values["scope"] = user.config.scope
+    user_values["is_scope_confirmed"] = user.config.is_scope_confirmed
+
+  form = UserModerateForm(initial=user_values)
+
+  # confirm allocation
+
+  return render(request, "initadmin/moderate_user.html", context=dict(
+    form=form,
+    user=user
+  ))
 
 # ---------------------------- User List  --------------------------------------
 # XXX make this generic! works for Initiative, too

@@ -26,3 +26,4 @@ class UserConfig(models.Model):
   is_diverse_mod = models.BooleanField(default=False)
   is_female_mod = models.BooleanField(default=False)
   scope = models.CharField(choices=settings.CATEGORIES.SCOPE_CHOICES,max_length=100,default="eu")
+  is_scope_confirmed = models.BooleanField(default=True)

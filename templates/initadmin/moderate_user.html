@@ -1,0 +1,133 @@
+{% extends "_base.html" %}
+
+{% load i18n %}
+{% load bootstrap %}
+{% load fullurl %}
+{% load avatar_full_url %}
+
+{% block head_title %}{% trans "Moderate User" %}{% endblock %}
+
+{% block content %}
+  {% block body %}
+   <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <h2>{{ user.username }}</h2>
+            <form method="POST" action="">
+              {{ form.non_field_errors }}
+              {{ form.source.errors }}
+              {{ form.source }}
+
+              <div class="form-inline-group">
+                <div class="form-group">
+                  <img src="{% avatar_full_url user size %}" alt="{{user.firstname|default:user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
+                </div>
+                <div class="form-group">
+                  {{ form.first_name.label_tag }}
+                  <div class="">
+                    {{ form.first_name }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form.last_name.label_tag }}
+                  <div class="">
+                    {{ form.last_name }}
+                  </div>
+                </div>
+              </div>
+
+              <h3>{% trans "Add Email/Send Reset Link" %}</h3>
+              <div class="form-group">
+                {{ form.email.label_tag }}
+                <div class="">
+                  {{ form.email.errors }}
+                  {{ form.email }}
+                  {{ form.email.help_text }}
+                </div>
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Send user a link to reset his password" %}</a>
+              </div>
+
+              <h3>{% trans "Group Membership" %}</h3>
+              <div class="form-group form-input-group">
+                {{ form.groups.label_tag }}
+                {{ form.groups.errors }}
+                {{ form.groups }}
+                {{ form.groups.help_text }}
+              </div>
+              
+              <h3>{% trans "Participation Permission" %}</h3>
+              <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of EU/France/Paris will permit the user to vote on European, French and Paris-based initiatives." %}
+              <div class="form-inline-group">
+                <div class="form-group">
+                  <span>{% trans "Current status:" %}</span>
+                  <div class="">
+                    <button type="button" disabled class="btn btn-default {% if user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
+                      <i class="material-icons {% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}">{% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}</i>{% if user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form.scope.label_tag }}
+                  <div class="">
+                    {{ form.scope.errors }}
+                    {{ form.scope }}
+                    {{ form.scope.help_text }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form.is_scope_confirmed.label_tag }}
+                  <div class="">
+                    {{ form.is_scope_confirmed.errors }}
+                    {{ form.is_scope_confirmed }}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save" %}</button>
+              </div>
+
+              <h3>{% trans "Activate/Disable Account" %}</h3>
+              <div class="form-inline-group">
+                <div class="form-group">
+                  <span>{% trans "Current status:" %}</span>
+                  <div class="">
+                    <button type="button" disabled class="btn btn-default {% if user.is_active %}btn-success{% else %}btn-warning{% endif %}">
+                      <i class="material-icons {% if user.is_active %}done{% else %}failure{% endif %}">{% if user.is_active %}done{% else %}failure{% endif %}</i>{% if user.is_active %}Active{% else %}Disabled{% endif %}
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form.last_login.label_tag }}
+                  <div class="">
+                    {{ form.last_login }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form.status.label_tag }}
+                  <div class="">
+                    {{ form.status.errors }}
+                    {{ form.status }}
+                  </div>
+                </div>
+              </div>
+
+              <h3>{% trans "Delete Account and anonymize contributions" %}</h3>
+              <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
+              <button type="submit" class="btn btn-danger" name="user_delete">Permanently delete account</button>
+            </form>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col row mt-4 mb-4">
+            <a href="{% url 'users' %}"><i class="material-icons chevron-left">chevron_left</i>{% trans "Return to user list" %}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endblock %}
+{% endblock %}
+
