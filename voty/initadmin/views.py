@@ -55,7 +55,7 @@ def group_required(group, login_url=None, raise_exception=False):
     return False
   return user_passes_test(check_perms, login_url=login_url)
 
-def _invite_single_user(first_name, last_name, email_address, site):
+def _invite_single_user(first_name, email_address, site):
    
   try:
     code = SignupCode.objects.get(email=email_address)
@@ -111,7 +111,7 @@ def _invite_batch_users(csv_file):
     last_name = row[1]
     email_address = row[2]
 
-    sent_with_code, new_addition = _invite_single_user(first_name, last_name, email_address, site)
+    sent_with_code, new_addition = _invite_single_user(first_name, email_address, site)
 
     if new_addition:
       newly_added += 1
@@ -144,8 +144,6 @@ def _invite_batch_users(csv_file):
 # ---------------------- SignupCode (Autocomplete) Users -----------------------
 class SignupCodeAutocomplete(autocomplete.Select2QuerySetView):
 
-  # XXX if the form field definition already has the full qs, why build it
-  # here again and filter?
   def get_queryset(self):
     if not self.request.user.is_authenticated():
       return SignupCode.objects.none()
@@ -167,10 +165,38 @@ class SignupCodeAutocomplete(autocomplete.Select2QuerySetView):
 def user_invite(request):
 
   if request.method == "POST":
-    form = UploadFileForm(request.POST, request.FILES)
-    if form.is_valid():
-      total, sent = _invite_batch_users(TextIOWrapper(request.FILES['file'].file, encoding=request.encoding))
-      messages.success(request, "".join(["{}/{} ".format(sent, total), _("invitations were sent (sent/total)")]))
+
+    # inviting single user
+    if request.POST.get("action", None) == "invite_user":
+      form = UserInviteForm(request.POST)
+      if form.is_valid():
+        email_address = request.POST.get("email")
+        code, is_new = _invite_single_user(
+          request.POST.get("first_name"),
+          email_address,
+          Site.objects.get_current()
+        )
+        if is_new == True:
+          messages.success(request, "".join([_("Invitation sent to"), ": ", "{}".format(email_address)]))
+        else:
+          messages.warning(request, _("Could not send invitation. Please remove existing signup code first."))
+
+    # inviting batch user
+    elif request.POST.get("action", None) == "invite_batch":
+      form = UploadFileForm(request.POST, request.FILES)
+      if form.is_valid():
+        total, sent = _invite_batch_users(TextIOWrapper(request.FILES['file'].file, encoding=request.encoding))
+        messages.success(request, "".join(["{}/{} ".format(sent, total), _("(sent/total) invitations were sent.")]))
+
+    # removing single signup code
+    elif  request.POST.get("action", None) == "delete_signup":
+      form = DeleteSignupCodeForm(request.POST)
+      if form.is_valid():
+        id = request.POST.get("id")
+        signup = SignupCode.objects.get(id=id)
+        email = signup.email
+        signup.delete()
+        messages.success(request, "".join([_("Removed Signup Code for"), ": ", "{}".format(email)]))
 
     return redirect("/backoffice/invite/")
   else:
@@ -205,9 +231,9 @@ def delete_csv(request, batch_id):
   batch.delete()
   messages.success(request, "".join([
     "{} ".format(total_count),
-    _("signup codes cleared. Batch deleted."),
+    _("Signup Codes removed. Batch file deleted."),
     " ({} ".format(err_count),
-    _("codes not found"),
+    _("Codes could not be found"),
     ")"
   ]))
 

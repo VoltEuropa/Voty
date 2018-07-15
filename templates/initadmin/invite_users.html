@@ -41,6 +41,8 @@
           <p>{% trans "Please upload a .csv file, one user per line with <i>first name</i>, <i>last name</i> and <i>email</i> separated by semicolon (eg John;Doe;john.doe@example.com)." %}</p>
           <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
+            {{ form_upload.action }}
+
             {{ form_upload.non_field_errors }}
             {{ form_upload.source.errors }}
             {{ form_upload.source }}
@@ -120,3 +122,4 @@
   })(document);
 </script>
 {% endblock %}
+

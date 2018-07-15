@@ -14,6 +14,11 @@ import account.forms
 # ----------------------------- UploadFileForm ---------------------------------
 class UploadFileForm(forms.Form):
   file = forms.FileField()
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="invite_batch"
+  )
 
 # ---------------------------- UserInviteForm ----------------------------------
 class UserInviteForm(forms.ModelForm):
@@ -24,16 +29,21 @@ class UserInviteForm(forms.ModelForm):
 
   first_name = forms.CharField(required=True)
   email = forms.CharField(required=True)
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="invite_user"
+  )
 
 # -------------------------- DeleteSignupCodeForm ------------------------------
 class DeleteSignupCodeForm(forms.ModelForm):
 
   class Meta:
     model = SignupCode
-    fields = ["email"]
+    fields = ["id"]
 
   # XXX docs say this is bad if >100 entries to query
-  email = forms.ModelChoiceField(
+  id = forms.ModelChoiceField(
     label=_("Search by Email address"),
     queryset=SignupCode.objects.all(),
     required=False,
@@ -44,6 +54,11 @@ class DeleteSignupCodeForm(forms.ModelForm):
         "data-html": True
       }
     )
+  )
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="delete_signup"
   )
 
 # ------------------------ LoginEmailOrUsernameForm ----------------------------

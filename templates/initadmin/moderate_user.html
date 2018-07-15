@@ -13,7 +13,12 @@
       <div class="container">
         <div class="row">
           <div class="col">
-            <h2>{{ user.username }}</h2>
+            <h2>{% trans "Moderate User Settings" %}</h2>
+            <p>{% trans "This page is for helping users reset their password and modifying user access permissions" %}</p>
+
+            <hr/>
+
+            <h3>{{ user.username }}</h3>
             <form method="POST" action="">
               {% csrf_token %}
               {{ form.non_field_errors }}
@@ -38,6 +43,8 @@
                 </div>
               </div>
 
+              <hr/>
+
               <h3>{% trans "Add Email/Send Reset Link" %}</h3>
               <div class="form-group">
                 {{ form.email.label_tag }}
@@ -51,6 +58,8 @@
                 <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Send user a link to reset his password" %}</a>
               </div>
 
+              <hr />
+
               <h3>{% trans "Group Membership" %}</h3>
               <div class="form-group form-input-group">
                 {{ form.groups.label_tag }}
@@ -58,9 +67,12 @@
                 {{ form.groups }}
                 {{ form.groups.help_text }}
               </div>
-              
+
+              <hr />
+
               <h3>{% trans "Participation Permission" %}</h3>
-              <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of EU/France/Paris will permit the user to vote on European, French and Paris-based initiatives." %}
+              <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of <i>EU/France/Paris</i> will permit the user to vote on European, French and Paris-based initiatives." %}
+              <p>{% trans "When a user requests to change this setting, it has to be validated by a moderator to come into effect" %}</p>
               <div class="form-inline-group">
                 <div class="form-group">
                   <span>{% trans "Current status:" %}</span>
@@ -87,6 +99,8 @@
                 </div>
               </div>
 
+              <hr />
+
               <h3>{% trans "Activate/Disable Account" %}</h3>
               <div class="form-inline-group">
                 <div class="form-group">
@@ -112,9 +126,13 @@
                 </div>
               </div>
 
+              <hr />
+
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save" %}</button>
+                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save all changes" %}</button>
               </div>
+
+              <hr />
 
               <h3>{% trans "Delete Account and anonymize contributions" %}</h3>
               <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
