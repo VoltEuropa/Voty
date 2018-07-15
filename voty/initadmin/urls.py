@@ -19,7 +19,7 @@ urlpatterns = [
   url(r"^account/", include("account.urls")),
   url(r"^avatar/", include("avatar.urls")),
   url(r"^account/edit$", views.profile_edit, name="profile_edit"),
-  url(r"^account/login/$", views.LoginView.as_view(), name="account_signup"),
+  url(r"^account/signup/$", views.LoginView.as_view(), name="account_signup"),
   url(r"^account/language$", TemplateView.as_view(template_name="account/language.html")),
   url(r"^account/delete$", views.profile_delete, name="profile_delete"),
   url(r"^account/localise", views.profile_localise, name="account_localise"),
