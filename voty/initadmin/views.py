@@ -6,23 +6,24 @@
 # parameters (*default)
 # ------------------------------------------------------------------------------
 
-from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.views.decorators.http import require_POST
-from django.contrib.sites.models import Site
-from django.http import HttpResponse
-from django.utils.html import escape, strip_tags
-from django.template.loader import render_to_string
-from django.core.mail import EmailMessage
 from django.contrib import messages
+from django.contrib.sites.models import Site
+from django.core.exceptions import PermissionDenied
+from django.core.mail import EmailMessage
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.conf import settings
 from django.db.models import Q
 from django.db.models.functions import Upper
+from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.translation import ugettext as _
-
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils import six
+from django.utils.html import escape, strip_tags
+from django.views.decorators.http import require_POST
 
 import account.views
 from account.models import SignupCodeResult, SignupCode
@@ -35,14 +36,33 @@ from uuid import uuid4
 from io import StringIO, TextIOWrapper
 import csv
 
-def is_team_member(user):
-  return user.groups.filter(name__in=[settings.PLATFORM_GROUP_VALUE_TITLE_LIST]).exists()
 
-def invite_single_user(first_name, last_name, email, site):
+# Decorator for views that checks whether a user has group permission,
+# redirecting to the log-in page if necessary, if the raise_exception 
+# parameter is given the PermissionDenied exception is raised.
+# use: @group_required("[group-name]")
+# https://djangosnippets.org/snippets/10508/
+def group_required(group, login_url=None, raise_exception=False):
+  def check_perms(user):
+    if isinstance(group, six.string_types):
+      groups = (group, )
+    else:
+      groups = group
+
+    if user.groups.filter(name__in=groups).exists():
+      return True
+
+    if raise_exception:
+        raise PermissionDenied
+    return False
+  return user_passes_test(check_perms, login_url=login_url)
+
+def _invite_single_user(first_name, last_name, email_address, site):
   
   # find already invited users by existing signup codes    
   try:
-    code = SignupCode.objects.get(email=email)
+    code = SignupCode.objects.get(email=email_address)
+    new_addition = False
   except SignupCode.DoesNotExist:
     code = SignupCode(
       email=email,
@@ -51,7 +71,7 @@ def invite_single_user(first_name, last_name, email, site):
       sent=datetime.utcnow(),
       expiry=datetime.utcnow() + timedelta(days=14)
     )
-    newly_added += 1
+    new_addition = True
     code.save()
 
     EmailMessage(
@@ -65,42 +85,51 @@ def invite_single_user(first_name, last_name, email, site):
         )
       ),
       settings.DEFAULT_FROM_EMAIL,
-      [email]
+      [email_address]
     ).send()
 
-  return code
+  return code, new_addition
 
-def invite_batch_users(file):
+def _invite_batch_users(csv_file):
   site = Site.objects.get_current()
   total = newly_added = 0
-  reader = csv.DictReader(file, delimiter=";")
+  reader = list(csv.reader(csv_file, delimiter=";"))
   results = StringIO()
-  writer = csv.DictWriter(results, fieldnames=["first_name", "last_name", "email_address", "invite_code"])
 
+  # create file for InviteBatch
+  writer = csv.DictWriter(
+    results,
+    delimiter=";",
+    fieldnames=["first_name", "last_name", "email_address", "invite_code"]
+  )
   writer.writeheader()
 
-  for item in reader:
+  for row in reader:
     total += 1
-    email = item["email_address"]
-    first_name = item["first_name"]
-    last_name = item["last_name"]
+    first_name = row[0]
+    last_name = row[1]
+    email_address = row[2]
 
-    sent_with_code = invite_single_user(first_name, last_name, email, site)
+    sent_with_code, new_addition = _invite_single_user(first_name, last_name, email_address, site)
+
+    if new_addition:
+      newly_added += 1
 
     writer.writerow({
       "first_name": first_name,
       "last_name": last_name,
-      "email_address": email,
+      "email_address": email_address,
       "invite_code": sent_with_code.code
     })
 
-    InviteBatch(
-      payload=results.getvalue(),
-      total_found=total,
-      new_added=newly_added
-    ).save()
+  raise Exception(results.getvalue())
+  InviteBatch(
+    payload=results.getvalue(),
+    total_found=total,
+    new_added=newly_added
+  ).save()
 
-    return total, newly_added
+  return total, newly_added
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -113,8 +142,59 @@ def invite_batch_users(file):
 #                                                       
 
 
-# ------------------------------ User  -----------------------------------------
+# ---------------------------- Invite Users ------------------------------------
 @login_required
+def user_invite(request):
+
+  if request.method == "POST":
+    form = UploadFileForm(request.POST, request.FILES)
+    if form.is_valid():
+      total, sent = _invite_batch_users(TextIOWrapper(request.FILES['file'].file, encoding=request.encoding))
+      messages.success(request, "".join(["{}/{} ".format(sent, total), _("invitations were sent (sent/total)")]))
+  else:
+    form = UploadFileForm()
+  return render(request, 'initadmin/invite_users.html', context=dict(form=form,
+      invitebatches=InviteBatch.objects.order_by("-created_at")))
+
+# -------------------------- Delete Invitations --------------------------------
+# if we cannot delete, it will be possible to re-invite someone. The whole 
+# batch/signup code handling isn't very flexible
+@login_required
+def delete_csv(request, batch_id):
+  batch = get_object_or_404(InviteBatch, pk=batch_id)
+  if batch:
+    err_count = 0
+    total_count = 0
+    for invite in batch.payload.splitlines()[1:]:
+      total_count += 1
+      try:
+        SignupCode.objects.get(email=invite.split(";")[2]).delete()
+      except SignupCode.DoesNotExist:
+        err_count += 1
+        pass
+
+  batch.delete()
+  messages.success(request, "".join([
+    "{} ".format(total_count),
+    _("signup codes cleared. Batch deleted."),
+    " ({} ".format(err_count),
+    _("codes not found"),
+    ")"
+  ]))
+
+  return redirect("/backoffice/invite/")
+  
+# ------------------------- Download Invitations -------------------------------
+@login_required
+def download_csv(request, batch_id):
+  batch = get_object_or_404(InviteBatch, pk=batch_id)
+  response = HttpResponse(batch.payload, content_type="text/csv")
+  response["Content-Disposition"] = "attachment; filename=invited_users.csv"
+  return response
+
+# -------------------------- Moderate User  ------------------------------------
+@login_required
+@group_required("Policy Team", "Policy Team Lead")
 def user_view(request, user_id):
 
   user_values = {"groups": []}
@@ -249,12 +329,6 @@ def user_list(request):
     }
   )
 
-#@login_required
-#@user_passes_test(lambda u: is_team_member(u))
-#def active_users(request):
-#    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
-#    return render(request, "initadmin/active_users.html", dict(users=users_q))
-
 # -------------------------- Initiative List  ----------------------------------
 def initiative_list(request):
   return render(request, "Hello Initiative List", context={})
@@ -286,31 +360,9 @@ def profile_edit(request):
 def profile_delete(request):
   return render(request, "initadmin/delete.html", context={})
 
-# download imported files
-#@login_required
-#@user_passes_test(lambda u: is_team_member(u))
-#def download_csv(request, id):
-#    batch = get_object_or_404(InviteBatch, pk=id)
-#    response = HttpResponse(batch.payload, content_type='text/csv')
-#    response['Content-Disposition'] = 'attachment; filename=invited_users.csv'
-#    return response
-
-# --------------------------- Invite Users -------------------------------------
-@login_required
-def user_invite(request):
-    if request.method == 'POST':
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            total, send = invite_batch_users(TextIOWrapper(request.FILES['file'].file, encoding=request.encoding))
-            messages.success(request, "".join(["{}/{}".format(send, total), _("invitations were sent")]))
-    else:
-        form = UploadFileForm()
-    return render(request, 'initadmin/invite_users.html', context=dict(form=form,
-        invitebatches=InviteBatch.objects.order_by("-created_at")))
 
 # active users (recently logged in first)
 #@login_required
-#@user_passes_test(lambda u: is_team_member(u))
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))

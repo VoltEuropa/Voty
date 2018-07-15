@@ -5,42 +5,57 @@
 {% load i18n %}
 
 {% block content %}
-<div class="container init-index">
-	<div class="card">
-		<div class="card-header">
-		  <h2>{% trans "Upload Invitations" %}</h2>
-		</div>
-		<form method="POST" enctype="multipart/form-data">
-			 {% csrf_token %}
-			<div class="card-body">
-				{{form|bootstrap_horizontal}}
-			</div>
-			<div class="card-footer">
-				<button type="submit" class="btn btn-primary">{% trans "Invite" %}</button>
-			</div>
-		</form>
-	</div>
-	<div class="card">
-		<div class="card-header">
-		  <h3>{% trans "Previous Invitations" %}</h3>
-		</div>
-		<form method="POST">
-			<div class="card-body">
-				<ul>
-					{% for batch in invitebatches %}
-						<li><a href="{% url 'download_invited_users' id=batch.id %}">{{batch.created_at}}: {{batch.new_added}} / {{batch.total_found}}</a></li>
-					{% empty %}
-						<li><em>{% trans "No invitiations uploaded" %}</em></li>
-					{% endfor %}
-				</ul>
-			</div>
-		</form>
-	</div>
-</div>
+  {% block body %}
+  <div class="container-fluid">
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <h2>{% trans "Upload Invitations" %}</h2>
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{form|bootstrap_horizontal}}
+            <button type="submit" class="btn btn-primary">{% trans "Invite" %}</button>
+          </form>
+        
+          <h3>{% trans "Previous Invitations" %}</h3>
+          <table class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>{% trans "Batch Timestamp" %}</th>
+                <th>{% trans "New Invitations" %}</th>
+                <th>{% trans "Total Found" %}</th>
+                <th>{% trans "Delete" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for batch in invitebatches %}
+              <tr>
+                <td><a href="{% url 'download_user_batch_invite' batch_id=batch.id %}">{{batch.created_at}}</a></td>
+                <td>{{batch.new_added}}</td>
+                <td>{{batch.total_found}}</td>
+                <td><a class="btn btn-danger" href="{% url 'delete_user_batch_invite' batch_id=batch.id %}"><i class="material-icons delete">delete</i></a></td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4"><em>{% trans "No invitiations uploaded" %}</em></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col row mt-4 mb-4">
+          <a href="{% url 'users' %}"><i class="material-icons chevron-left">chevron_left</i>{% trans "Return to user list" %}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}
 {% endblock %}
-
 
 {% block body-javascript %}
   <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
   {{ form.media }}
 {% endblock %}
+

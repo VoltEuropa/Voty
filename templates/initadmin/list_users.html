@@ -12,6 +12,7 @@
         <div class="row">
           <div class="col">
             <h2>{% trans "User List" %}</h2>
+            <p>{% trans "List of users accessible for moderation." %} <a class="btn btn-secondary" href="{% url 'user_invite' %}">{% trans "Add Users" %}</a></p>
             <form class="form-inline form-listbox" method="GET" action="?page={{ users.number }}">
               {{ form.non_field_errors }}
               {{ form.source.errors }}
@@ -111,4 +112,3 @@
     </div>
   {% endblock %}
 {% endblock %}
-
