@@ -1,2 +1,2 @@
 {% load i18n %}
-{% blocktrans with site_name=current_site.name %}[{{ site_name }}] Vote Feedback %}
+[{{ current_site.name }}] {% trans "Vote Feedback" %}

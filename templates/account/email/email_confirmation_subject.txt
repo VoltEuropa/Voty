@@ -1,2 +1,2 @@
 {% load i18n %}
-{% blocktrans with site_name=current_site.name %}[{{ site_name }}] Confirm Email address{% endblocktrans %}
+[{{ current_site.name }}] {% trans "Confirm Email address" %}
