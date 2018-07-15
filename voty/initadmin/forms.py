@@ -1,8 +1,3 @@
-# ==============================================================================
-# Voty Initadmin Forms
-# ==============================================================================
-#
-# parameters (*default)
 # ------------------------------------------------------------------------------
 from django import forms
 from django.contrib.auth import get_user_model
@@ -10,12 +5,46 @@ from django.contrib.auth.models import Group
 from django.utils.translation import ugettext as _
 from django.conf import settings
 
+from account.models import SignupCode
+from dal import autocomplete
+
 from .models import UserConfig
 import account.forms
 
 # ----------------------------- UploadFileForm ---------------------------------
 class UploadFileForm(forms.Form):
   file = forms.FileField()
+
+# ---------------------------- UserInviteForm ----------------------------------
+class UserInviteForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["first_name", "email"]
+
+  first_name = forms.CharField(required=True)
+  email = forms.CharField(required=True)
+
+# -------------------------- DeleteSignupCodeForm ------------------------------
+class DeleteSignupCodeForm(forms.ModelForm):
+
+  class Meta:
+    model = SignupCode
+    fields = ["email"]
+
+  # XXX docs say this is bad if >100 entries to query
+  email = forms.ModelChoiceField(
+    label=_("Search by Email address"),
+    queryset=SignupCode.objects.all(),
+    required=False,
+    widget=autocomplete.ModelSelect2(
+      url='signupcode_autocomplete',
+     attrs={
+        "data-placeholder": _("Type to search"),
+        "data-html": True
+      }
+    )
+  )
 
 # ------------------------ LoginEmailOrUsernameForm ----------------------------
 class LoginEmailOrUsernameForm(account.forms.LoginEmailForm):
@@ -60,7 +89,7 @@ class UserModerateForm(forms.ModelForm):
   scope = forms.ChoiceField(
     required=True,
     label=_("Scope"),
-    choices=settings.CATEGORIES.SCOPE_CHOICES,
+    choices=sorted(settings.CATEGORIES.SCOPE_CHOICES, key=lambda x: x[1]),
     help_text=_("User participation scope.")
   )
   is_scope_confirmed = forms.ChoiceField(

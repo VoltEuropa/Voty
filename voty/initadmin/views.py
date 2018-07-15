@@ -29,18 +29,16 @@ import account.views
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
-from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, UserModerateForm, ListboxSearchForm
+from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, UserModerateForm, ListboxSearchForm, UserInviteForm, DeleteSignupCodeForm
 
 from datetime import datetime, timedelta
 from uuid import uuid4
+from dal import autocomplete
 from io import StringIO, TextIOWrapper
 import csv
 
 
-# Decorator for views that checks whether a user has group permission,
-# redirecting to the log-in page if necessary, if the raise_exception 
-# parameter is given the PermissionDenied exception is raised.
-# use: @group_required("[group-name]")
+# Poor man's decorator, use: @group_required("[group-name]")
 # https://djangosnippets.org/snippets/10508/
 def group_required(group, login_url=None, raise_exception=False):
   def check_perms(user):
@@ -58,18 +56,19 @@ def group_required(group, login_url=None, raise_exception=False):
   return user_passes_test(check_perms, login_url=login_url)
 
 def _invite_single_user(first_name, last_name, email_address, site):
-  
-  # find already invited users by existing signup codes    
+   
   try:
     code = SignupCode.objects.get(email=email_address)
     new_addition = False
-  except SignupCode.DoesNotExist:
+
+  # XXX a bit lame to catchall including invalid (expired) codes. For now...
+  except (SignupCode.DoesNotExist, SignupCode.InvalidCode):
     code = SignupCode(
-      email=email,
+      email=email_address,
       code=uuid4().hex[:20],
       max_uses=1,
       sent=datetime.utcnow(),
-      expiry=datetime.utcnow() + timedelta(days=14)
+      expiry=datetime.utcnow() + timedelta(days=1)
     )
     new_addition = True
     code.save()
@@ -81,12 +80,14 @@ def _invite_single_user(first_name, last_name, email_address, site):
         context=dict(
           domain=site.domain,
           code=code,
-          first_name=first_name
+          first_name=first_name,
+          platform_title=settings.PLATFORM_TITLE
         )
       ),
       settings.DEFAULT_FROM_EMAIL,
       [email_address]
     ).send()
+  
 
   return code, new_addition
 
@@ -122,7 +123,6 @@ def _invite_batch_users(csv_file):
       "invite_code": sent_with_code.code
     })
 
-  raise Exception(results.getvalue())
   InviteBatch(
     payload=results.getvalue(),
     total_found=total,
@@ -141,8 +141,28 @@ def _invite_batch_users(csv_file):
 #
 #                                                       
 
+# ---------------------- SignupCode (Autocomplete) Users -----------------------
+class SignupCodeAutocomplete(autocomplete.Select2QuerySetView):
+
+  # XXX if the form field definition already has the full qs, why build it
+  # here again and filter?
+  def get_queryset(self):
+    if not self.request.user.is_authenticated():
+      return SignupCode.objects.none()
+
+    qs = SignupCode.objects.all()
+    if self.q:
+      qs = qs.filter(email__icontains=self.q)
+    return qs
+
+  def get_result_label(self, item):
+    return render_to_string(
+      "fragments/autocomplete/signupcode_item.html",
+      context=dict(item=item)
+    )
 
 # ---------------------------- Invite Users ------------------------------------
+# XXX improve handling of multiple forms
 @login_required
 def user_invite(request):
 
@@ -151,10 +171,19 @@ def user_invite(request):
     if form.is_valid():
       total, sent = _invite_batch_users(TextIOWrapper(request.FILES['file'].file, encoding=request.encoding))
       messages.success(request, "".join(["{}/{} ".format(sent, total), _("invitations were sent (sent/total)")]))
+
+    return redirect("/backoffice/invite/")
   else:
-    form = UploadFileForm()
-  return render(request, 'initadmin/invite_users.html', context=dict(form=form,
-      invitebatches=InviteBatch.objects.order_by("-created_at")))
+    form_upload = UploadFileForm()
+    form_invite = UserInviteForm()
+    form_remove = DeleteSignupCodeForm()
+
+  return render(request, "initadmin/invite_users.html", context={
+    "form_upload": form_upload,
+    "form_invite": form_invite,
+    "form_remove": form_remove,
+    "invitebatches": InviteBatch.objects.order_by("-created_at")
+  })
 
 # -------------------------- Delete Invitations --------------------------------
 # if we cannot delete, it will be possible to re-invite someone. The whole 
@@ -194,7 +223,7 @@ def download_csv(request, batch_id):
 
 # -------------------------- Moderate User  ------------------------------------
 @login_required
-@group_required("Policy Team", "Policy Team Lead")
+#@group_required("Policy Team", "Policy Team Lead")
 def user_view(request, user_id):
 
   user_values = {"groups": []}
@@ -366,3 +395,4 @@ def profile_delete(request):
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
+

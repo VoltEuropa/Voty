@@ -14,7 +14,6 @@ from types import SimpleNamespace
 from six.moves import configparser
 from django.utils.translation import ugettext_lazy as _
 
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -178,6 +177,8 @@ EMAIL_BACKEND = "mailer.backend.DbBackend"
 
 if DEBUG:
   EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+  EMAIL_HOST = "localhost"
+  EMAIL_PORT = 1025
 elif os.environ.get("SPARKPOST_API_KEY", None):
   SPARKPOST_API_KEY = os.environ.get("SPARKPOST_API_KEY")
   MAILER_EMAIL_BACKEND = "sparkpost.django.email_backend.SparkPostEmailBackend"
@@ -225,12 +226,16 @@ MEDIA_ROOT = os.path.join( BASE_DIR, "public", "media")
 CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST").split(","))
 CORS_ALLOW_CREDENTIALS = True
 
+# ----------------------------- Customizations ---------------------------------
 #  CUSTOM (GLOBALS)
 MIN_SEARCH_LENGTH = raw_parser.getint("settings", "MIN_SEARCH_LENGTH")
+
+PLATFORM_TITLE = raw_parser.get("settings", "PLATFORM_TITLE")
 
 # Roles and Permission imports
 BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
 BACKCOMPAT_PERMISSION_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
+
 
 # XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
 PLATFORM_GROUP_LIST = raw_parser.items("platform_group_list")

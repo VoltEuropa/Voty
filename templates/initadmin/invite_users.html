@@ -10,14 +10,58 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h2>{% trans "Upload Invitations" %}</h2>
+          <h2>{% trans "Add Users" %}</h2>
+          <p>{% trans "You can send invitation links to individual users or upload a batch file to send invitations to." %}</p>
+
+          <hr />
+
+          <h3>{% trans "Invite User" %}</h3>
+          <p>{% trans "Send an invitation link and sign-up code (valid for 24 hours) to a user." %}</p>
+          <form method="POST">
+            {% csrf_token %}
+            <div class="form-inline-group">
+              {{ form_invite|bootstrap }}
+            </div>
+            <button type="submit" class="btn btn-primary">{% trans "Send invitation to this user" %}</button>
+          </form>
+
+          <hr />
+
+          <h3>{% trans "Delete User Signup Code" %}</h3>
+          <p>{% trans "If you need to invite a user again, please remove his sign-up code first" %}</p>
+          <form method="POST" class="form-autocomplete-select">
+            {% csrf_token %}
+            {{ form_remove|bootstrap }}
+            <button type="submit" class="btn btn-primary">{% trans "Remove Signup Code" %}</button>
+          </form>
+
+          <hr />
+
+          <h3>{% trans "Invite Multiple Users" %}</h3>
+          <p>{% trans "Please upload a .csv file, one user per line with <i>first name</i>, <i>last name</i> and <i>email</i> separated by semicolon (eg John;Doe;john.doe@example.com)." %}</p>
           <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-            {{form|bootstrap_horizontal}}
+            {{ form_upload.non_field_errors }}
+            {{ form_upload.source.errors }}
+            {{ form_upload.source }}
+            {{ form_upload.file.errors }}
+            <div class="input-group form-input-group-fileupload">
+              <label for="id_file" class="input-group-btn">
+                <span class="btn btn-secondary">
+                Browse...<input type="file" id="id_file" name="file" required="" style="display: none;" multiple="">
+                </span>
+              </label>
+              <input type="text" class="form-control" readonly="">
+            </div>
+            {{ form_upload.file.help_text }}
+            
             <button type="submit" class="btn btn-primary">{% trans "Invite" %}</button>
           </form>
-        
-          <h3>{% trans "Previous Invitations" %}</h3>
+
+          <hr />
+
+          <h3>{% trans "Invitation Batch File Archive" %}</h3>
+          <p>{% trans "Deleting a batch file will enable re-inviting all users invited with this file (Download the file to see which users were included)." %}</p>
           <table class="table table-striped table-bordered">
             <thead>
               <tr>
@@ -42,6 +86,9 @@
               {% endfor %}
             </tbody>
           </table>
+
+          <hr />
+
         </div>
       </div>
       <div class="row">
@@ -55,7 +102,21 @@
 {% endblock %}
 
 {% block body-javascript %}
-  <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
-  {{ form.media }}
-{% endblock %}
+<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 
+{{ form_remove.media }}
+
+<script type="text/javascript">
+  (function (document) {
+    var file_input = document.querySelector("input[type=file]");
+    var file_output = file_input.parentNode.parentNode.nextElementSibling;
+    file_input.addEventListener("change", function() {
+      file_output.value = [].slice.call(
+        file_input.files ? file_input.files : []
+      ).map(function (el) {
+        return el.name;
+      }).join(", ")
+    });
+  })(document);
+</script>
+{% endblock %}

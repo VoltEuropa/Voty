@@ -298,10 +298,6 @@ em {
   margin-bottom: 0;
 }
 
-.init-index .card {
-  margin: 1rem 0 3rem 0;
-}
-
 #filters {
   background-color: rgba(255, 255, 255, 1);
   padding: 0.5rem 1rem;
@@ -702,11 +698,6 @@ h6.classification {
 header .alert {
   border-radius: 0;
   margin-bottom: 0;
-}
-
-.init-index-header .display-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem
 }
 
 .typefilter {
@@ -1462,10 +1453,6 @@ orange: #D2892B;
     padding-left: 0;
     padding-right: 0;
   }
-  .container.init-index {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
   .display-4 {
     padding-top: 1.875rem;
     font-size: 2rem;
@@ -1712,4 +1699,19 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   margin-left: -2.55em;
   margin-right: 1em;
 }
+/* ----------------------- autocomplete corrections ------------------------- */
+.form-autocomplete-select .select2 select2-container,
+.form-autocomplete-select .selection,
+.form-autocomplete-select .select2-selection,
+.form-autocomplete-select .select2-selection__rendered,
+.form-autocomplete-select .select2-selection__arrow {
+  height: 2.25em !important;
+  line-height: 2.25em !important;
+}
+.form-input-group-fileupload .form-control {
+  height: 2.4em;
+  margin-bottom: .5em;
+  
+}
+
 

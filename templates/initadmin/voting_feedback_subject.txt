@@ -1,2 +1,1 @@
-{% load i18n %}
-[{{ current_site.name }}] {% trans "Vote Feedback" %}
+{% load i18n %}[{{ current_site.name }}] {% trans "Vote Feedback" %}

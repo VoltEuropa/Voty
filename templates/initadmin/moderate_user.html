@@ -15,6 +15,7 @@
           <div class="col">
             <h2>{{ user.username }}</h2>
             <form method="POST" action="">
+              {% csrf_token %}
               {{ form.non_field_errors }}
               {{ form.source.errors }}
               {{ form.source }}
@@ -85,10 +86,6 @@
                   </div>
                 </div>
               </div>
-              
-              <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save" %}</button>
-              </div>
 
               <h3>{% trans "Activate/Disable Account" %}</h3>
               <div class="form-inline-group">
@@ -113,6 +110,10 @@
                     {{ form.status }}
                   </div>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save" %}</button>
               </div>
 
               <h3>{% trans "Delete Account and anonymize contributions" %}</h3>

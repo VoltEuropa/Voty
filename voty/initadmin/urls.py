@@ -12,6 +12,9 @@ from . import views
 
 urlpatterns = [
 
+  # autocomplete for signup codes
+  url(r"^signupcode_autocomplete$", views.SignupCodeAutocomplete.as_view(), name="signupcode_autocomplete"),
+
   # all users
   url(r"^account/", include("account.urls")),
   url(r"^avatar/", include("avatar.urls")),
