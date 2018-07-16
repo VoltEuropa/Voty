@@ -8,6 +8,8 @@ from django.conf.urls import url, include
 from django.views.generic.base import TemplateView
 from django.contrib import admin
 
+import notifications.urls
+
 from . import views
 
 urlpatterns = [
@@ -17,12 +19,16 @@ urlpatterns = [
 
   # all users
   url(r"^account/", include("account.urls")),
-  url(r"^avatar/", include("avatar.urls")),
   url(r"^account/edit$", views.profile_edit, name="profile_edit"),
   url(r"^account/signup/$", views.LoginView.as_view(), name="account_signup"),
   url(r"^account/language$", TemplateView.as_view(template_name="account/language.html")),
   url(r"^account/delete$", views.profile_delete, name="profile_delete"),
   url(r"^account/localise", views.profile_localise, name="account_localise"),
+
+  url(r"^avatar/", include("avatar.urls")),
+  url(r"^worklist/", include(notifications.urls, namespace="notifications")),
+  url(r"^worklist/", include("pinax.notifications.urls")),
+  url(r"^worklist/", views.notification_list, name="notifications"),
 
   # moderators
   url(r"^backoffice/users/$", views.user_list, name="users"),

@@ -143,7 +143,7 @@ def _invite_batch_users(csv_file):
 #
 #                                                       
 
-# ---------------------- SignupCode (Autocomplete) Users -----------------------
+# ---------------------- SignupCode (Autocomplete) -----------------------------
 class SignupCodeAutocomplete(autocomplete.Select2QuerySetView):
 
   def get_queryset(self):
@@ -214,8 +214,8 @@ def user_invite(request):
   })
 
 # -------------------------- Delete Invitations --------------------------------
-# if we cannot delete, it will be possible to re-invite someone. The whole 
-# batch/signup code handling isn't very flexible
+# XXX if we cannot delete, it will be impossible to re-invite someone. The whole 
+# batch/signup code handling isn't very flexible.
 @login_required
 def delete_csv(request, batch_id):
   batch = get_object_or_404(InviteBatch, pk=batch_id)
@@ -281,7 +281,7 @@ def user_view(request, user_id):
   ))
 
 # ---------------------------- User List  --------------------------------------
-# XXX make this generic! works for Initiative, too
+# XXX make generic so it can be used for initiatives, too
 @login_required
 #@user_passes_test(lambda u: is_team_member(u))
 def user_list(request):
@@ -386,23 +386,39 @@ def user_list(request):
     }
   )
 
+# -------------------------- Notification List  --------------------------------
+def notification_list(request):
+  return render(request)
+
 # -------------------------- Initiative List  ----------------------------------
 def initiative_list(request):
   return render(request, "Hello Initiative List", context={})
 
-# -------------------------- Profile Localise ----------------------------------
+# --------------------------- Localise User ------------------------------------
 @login_required
 def profile_localise(request):
 
   user = get_object_or_404(get_user_model(), id=request.user.id)
 
-  if request.method == "GET":
+  if request.method == "POST":
+    form = UserLocaliseForm(request.POST)
+    if form.is_valid():
+
+      # XXX explicitly unset?
+      form = UserLocaliseForm(request.POST, instance=user.config)
+      form.save()
+
+      # trigger a notification which only custom groups can see
+      # notification should be like worklist = localisations to validate (13)
+      # flag this user in the user list
+      # make a filter for flagged users
+  else:
     user_values = {
       "scope": user.config.scope,
       "is_scope_confirmed": user.config.is_scope_confirmed
     }
     form = UserLocaliseForm(initial=user_values)
-    
+
   return render(request, "account/localise.html", {"form":form, "user": user})
 
 
@@ -434,3 +450,4 @@ def profile_delete(request):
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
+
