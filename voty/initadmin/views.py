@@ -29,7 +29,9 @@ import account.views
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
-from .forms import UploadFileForm, LoginEmailOrUsernameForm, UserEditForm, UserModerateForm, ListboxSearchForm, UserInviteForm, DeleteSignupCodeForm
+from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
+  UserModerateForm, ListboxSearchForm, UserLocaliseForm, UserInviteForm,
+  DeleteSignupCodeForm)
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -389,8 +391,19 @@ def initiative_list(request):
   return render(request, "Hello Initiative List", context={})
 
 # -------------------------- Profile Localise ----------------------------------
+@login_required
 def profile_localise(request):
-  return render(request, "Hello Localise Profile", context={})
+
+  user = get_object_or_404(get_user_model(), id=request.user.id)
+
+  if request.method == "GET":
+    user_values = {
+      "scope": user.config.scope,
+      "is_scope_confirmed": user.config.is_scope_confirmed
+    }
+    form = UserLocaliseForm(initial=user_values)
+    
+  return render(request, "account/localise.html", {"form":form, "user": user})
 
 
 # ---------------------------- LoginView ---------------------------------------
@@ -421,4 +434,3 @@ def profile_delete(request):
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
-
