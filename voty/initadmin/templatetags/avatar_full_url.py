@@ -6,14 +6,17 @@ from django.conf import settings
 
 register = template.Library()
 
-@cache_result()
+# XXX this is why it never updates
+# @cache_result()
 @register.simple_tag(takes_context=True)
 def avatar_full_url(context, user, size=settings.AVATAR_DEFAULT_SIZE):
-	url = avatar_url(user, size)
-	if url.startswith("http"):
-		return url
-	if getattr(context, "request", None):
-		return context.request.build_absolute_uri(url)
-	## YAK!!!
-	site = Site.objects.get_current()
-	return "http://" + site.domain + url
+  url = avatar_url(user, size)
+
+  if url.startswith("http"):
+    return url
+  if getattr(context, "request", None):
+    return context.request.build_absolute_uri(url)
+
+  ## YAK!!! why?
+  site = Site.objects.get_current()
+  return "http://" + site.domain + url
