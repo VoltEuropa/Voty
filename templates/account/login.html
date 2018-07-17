@@ -8,39 +8,39 @@
 {% block content %}
   {% block body %}
   <div class="container-fluid">
-      <div class="container">
-          <div class="row">
-              <div class="col">
-                  <form method="POST" action="{% url "account_login" %}" autocapitalize="off" {% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>
-                      <h2>{% trans "Login" %}</h2>
-                      {% csrf_token %}
-                      {{ form |bootstrap }}
-                      {% if redirect_field_value %}
-                          <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-                      {% endif %}
-                      <button type="submit" class="btn btn-primary">{% trans "Login" %}</button>
-                  </form>
-              </div>
-          </div>
-          <div class="row mt-2">
-              <div class="col">
-                  <a href="{% url "account_password_reset" %}">{% trans "Lost password" %}</a>
-              </div>
-          </div>
-          <div class="row mt-3">
-              <div class="col">
-                  <p class="login-signup">{% trans "You don't have an account?" %}<strong><a href="/register/"> {% trans  "Register here!" %}</a></strong></p>
-              </div>
-          </div>
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <form method="POST" action="{% url "account_login" %}" autocapitalize="off" {% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>
+            <h2>{% trans "Login" %}</h2>
+            {% csrf_token %}
+            {{ form |bootstrap }}
+            {% if redirect_field_value %}
+              <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+            {% endif %}
+            <button type="submit" class="btn btn-primary">{% trans "Login" %}</button>
+          </form>
+        </div>
       </div>
+      <div class="row mt-2">
+        <div class="col">
+          <a href="{% url "account_password_reset" %}">{% trans "Lost password" %}</a>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col">
+          <p class="login-signup">{% trans "You don't have an account?" %}<strong><a href="/register/"> {% trans  "Register here!" %}</a></strong></p>
+        </div>
+      </div>
+    </div>
   </div>
   {% endblock %}
   
   {% block scripts %}
       {{ block.super }}
       <script type="text/javascript">
-          $(document).ready(function() {
-              $('#id_username').focus();
+          document.addEventListener("DOMContentLoaded", function(event) {
+            document.querySelector("#id_username").focus();
           });
       </script>
   {% endblock %}
