@@ -151,39 +151,6 @@
     <script src="{% static 'js/vendor/hyphenator-loader.js' %}" type="text/javascript"></script>
     <script type="text/javascript">
       var TEMPLATE_PARSER = /\{([^{}]*)\}/g;
-      
-      function getTemplate(verb) {
-        switch (verb) {
-          case "invite_sent":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">email</i>{% trans "You have been inivited to " %}"{target}"{% trans " by " %}{actor}.</a>';
-          case "invite_accepted":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">check</i>{actor}{% trans "has accepted the invitation to Initiative: " %}"{target}".</a>';
-          case "invite_rejected":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">block</i>{actor}{% trans "has rejected the invitation to Initiative: " %}"{target}".</a>';
-          case "init_edited":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">mode_edit</i>"{target}" {% trans "has been changed by" %} {actor}.</a>';
-          case "init_submitted":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">publish</i>"{target}" {% trans "has been submitted by" %} {actor}.</a>';
-          case "init_published":
-            if (target) {
-              return '<a href="/initiative/{target_object_id}"><i class="material-icons">public</i>"{target}" {% trans "has been published by" %} {actor}.</a>';
-            }
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">public</i>{actor} {% trans "has been published" %}.</a>';
-          case "init_discussion":
-            return '<a href="/initiative/{target_object_idtarget_object_id}"><i class="material-icons">forum</i>{actor} {% trans "can now be discussed" %}.</a>';
-          case "init_discussion_closed":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">create</i>{actor} {% trans "can now go into final edit" %}.</a>';
-          case "init_vote":
-            if (target) {
-              return '<a href="/initiative/{target_object_id}"><i class="material-icons">thumbs_up_down</i>{actor} {% trans "has opened the following Initiative for voting:" %} "{target}".</a>';
-            }
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">thumbs_up_down</i>{actor} {% trans "can now be voted on" %}.</a>';
-          case "init_new_arg":
-            return '<a href="/initiative/{target_object_id}"><i class="material-icons">comment</i>{actor} {% trans "has published a new argument on:" %} "{target}".</a>'
-          default:
-            return '{actor} {verb} {target} {timestamp}';
-        }
-      }
 
       // show remaining characters on input fields (moved from utils.js)
       function setup_char_counter (prefix) {
@@ -203,15 +170,62 @@
         };
       }
 
+      function getEntry(key) {
+        switch (key) {
+          case "localisation_request":
+            return '{localisation_request} {% trans "Localisation Requests" %}';
+
+          case "invite_sent":
+            return '{invite_sent} {% trans "Unanswered Invites" %}';
+          case "invite_accepted":
+            return '{invite_accepted} {% trans "Accepted Invites" %}';
+          case "invite_rejected":
+            return '{invite_rejected} {% trans "Rejected Invites" %}';
+          case "init_edited":
+            return '{init_edited} {% trans "Unread Initiative Updates" %}';
+          case "init_submitted":
+            return '{init_submitted} {% trans "Submitted Initiatives" %}';
+          case "init_published":
+            return '{init_published} {% trans "Published Initiatives" %}';
+          case "init_discussion":
+            return '{init_discussion} {% trans "Initiatives opened for Discussion" %}';
+          case "init_discussion_closed":
+            return '{init_discussion_closed} {% trans "Initivites ready for finalization" %}';
+          case "init_vote":
+            return '{init_vote} {% trans "Initiatives to vote" %}';
+          case "init_new_arg":
+            return '{init_new_arg} {% trans "New Arguments posted" %}';
+        }
+      }
+
       // https://github.com/django-notifications/django-notifications#how-to-use
       // notify_menu_id is set by the notification plugin
       function update_notifications(data) {
         var menu = document.getElementById(notify_menu_id);
+        var message_dict;
+        var fragment;
+        var key;
+        var item;
+
         if (menu) {
-          menu.innerHTML = data.unread_list.map(function (item) {
-            return "<li>" + getTemplate(item.verb).supplant(item) + "</li>";
-          }).join("");
-        } 
+          message_dict = data.unread_list.reduce(function (pass, item) {
+            pass[item.verb] = pass[item.verb] += 1 || 1;
+            return pass;
+          }, {});
+          fragment = document.createDocumentFragment();
+
+          for (key in message_dict) {
+            if (message_dict.hasOwnProperty(key)) {
+              item = document.createElement("li");
+              item.textContent = getEntry(key).supplant(message_dict[key]);
+              fragment.appendChild(item);
+            }
+          }
+          while (menu.firstChild) {
+            menu.removeChild(menu.firstChild);
+          }
+          menu.appendChild(fragment);
+        }
       }
   </script>
   {% register_notify_callbacks callbacks='update_notifications,fill_notification_badge' %}
