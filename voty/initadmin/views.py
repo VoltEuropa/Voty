@@ -26,6 +26,7 @@ from django.utils.html import escape, strip_tags
 from django.views.decorators.http import require_POST
 
 import account.views
+from pinax.notifications.models import send as notify
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
@@ -399,25 +400,41 @@ def initiative_list(request):
 def profile_localise(request):
 
   user = get_object_or_404(get_user_model(), id=request.user.id)
+  is_confirmed = user.config.is_scope_confirmed
+  form = None
 
   if request.method == "POST":
-    form = UserLocaliseForm(request.POST)
-    if form.is_valid():
+    if is_confirmed != True:
+      messages.warning(request, _("Localisation is not possible while previous change has not been validated."))
+    else:
+      form = UserLocaliseForm(request.POST)
+      if form.is_valid():
+  
+        # XXX explicitly unset?
+        form = UserLocaliseForm(request.POST, instance=user.config)
+        form.save()
+  
+        messsages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
 
-      # XXX explicitly unset?
-      form = UserLocaliseForm(request.POST, instance=user.config)
-      form.save()
+        # Notify moderation team, we notify all members of groups with moderation permission,
+        # which doesn't include superusers, though they individually have moderation permission.
+        # moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
+        # initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(), settings.NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
+        
+        # trigger a notification which only custom groups can see
 
-      # trigger a notification which only custom groups can see
-      # notification should be like worklist = localisations to validate (13)
-      # flag this user in the user list
-      # make a filter for flagged users
-  else:
-    user_values = {
+        # flag this user in the user list
+        # make a filter for flagged users
+  
+  if form is None:
+    form = UserLocaliseForm(initial={
       "scope": user.config.scope,
-      "is_scope_confirmed": user.config.is_scope_confirmed
-    }
-    form = UserLocaliseForm(initial=user_values)
+      "is_scope_confirmed": is_confirmed
+    })
+
+  # don't allow multiple changes without validation
+  if is_confirmed != True:
+    form.fields['scope'].disabled = True
 
   return render(request, "account/localise.html", {"form":form, "user": user})
 
