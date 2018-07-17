@@ -23,6 +23,11 @@ from .models import UserConfig
 # into pinax. Maybe from here.
 def create_notice_types(**kwargs):
 
+  # Moderations
+  NoticeType.create(settings.NOTIFICATIONS.MODERATE.LOCALISED,
+                    _("Localisation Request"),
+                    _("A user requests a localisation change to be validated."))
+
   # Invitations
   NoticeType.create(settings.NOTIFICATIONS.INVITE.SEND,
                     _("Invitation to Initiative"),
@@ -66,11 +71,9 @@ def create_notice_types(**kwargs):
 # configurable, so we replicate what was done here, then switch to configurable
 # custom groups and permissions
 def create_group(name):
-  group, created = Group.objects.get_or_create(name=name)
-  if created:
-    return group
-  else:
-    return False
+
+  # returns group, created (True/False)
+  return Group.objects.get_or_create(name=name)
 
 def delete_group(name):
   try:
@@ -87,9 +90,9 @@ def get_permission(app, name):
 
 def backcompat_init_teams_and_permissions():
   for group_title in settings.BACKCOMPAT_ROLE_LIST:
-    new_group = create_group(group_title)
+    new_group, created = create_group(group_title)
 
-    if new_group:
+    if created:
       for user in User.objects.filter(is_staff=True, is_active=True):
         user.groups.add(new_group)
 
@@ -109,21 +112,29 @@ def backcompat_reverse_teams_and_permissions():
 
 def create_custom_groups_and_permissions():
   for (group_key, group_title) in settings.PLATFORM_GROUP_LIST:
-    new_group = create_group(settings.PLATFORM_GROUP_VALUE_LIST[group_key])
-    if new_group:
+    new_group, created = create_group(settings.PLATFORM_GROUP_VALUE_LIST[group_key])
+    if created:
       new_group.save()
-      perm_list = []
-      for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
-        perm_code, perm_model = perm_code_model.split(",")
-        perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
-        if not Permission.objects.get(name=perm_name).exists():
-          perm = Permission(
-            name=perm_name,
-            codename=perm_code,
-            content_type=ContentType.objects.get(app_label="initproc", model=perm_model)
-          )
-          perm_list.append(perm)
-          perm.save()
+
+    perm_list = []
+    for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
+      perm_code, perm_app_model = perm_code_model.split(",")
+      perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
+
+      if Permission.objects.filter(name=perm_name).exists() == False:
+
+        # permission is added to a group, permission pertains to a content-type
+        # can be a user or an initiative
+        perm_app, perm_model = perm_app_model.split(".")
+        perm = Permission(
+          name=perm_name,
+          codename=perm_code,
+          content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
+        )
+        perm_list.append(perm)
+        perm.save()
+
+    if len(perm_list) > 0:
       new_group.permissions.add(perm_list)
 
 # backcompat - move existing staff to custom group and custom group to staff

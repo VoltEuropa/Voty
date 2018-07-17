@@ -251,6 +251,7 @@ PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_p
 VOTED = raw_parser._sections["initiative_vote_state_list"]
 
 NOTIFICATIONS = SimpleNamespace(**{
+  "MODERATE": SimpleNamespace(**raw_parser._sections["notification_moderation_state_list"]),
   "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
   "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_status_list"])
 })
@@ -270,4 +271,3 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
-
