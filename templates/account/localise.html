@@ -30,7 +30,7 @@
                 <span>{% trans "Current status:" %}</span>
                 <div class="">
                   <button type="button" disabled class="btn btn-default {% if user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
-                    <i class="material-icons {% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}">{% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}</i>{% if user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
+                    <i class="material-icons {% if user.config.is_scope_confirmed %}done{% else %}warning{% endif %}">{% if user.config.is_scope_confirmed %}done{% else %}warning{% endif %}</i>{% if user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
                   </button>
                 </div>
               </div>
@@ -38,7 +38,7 @@
             <button type="submit" class="btn btn-primary">{% trans "Change Localisation and request validation" %}</button>
           </form>
           <br/>
-          <p>{% trans "This setting should only be set once. Changes need to be <b>confirmed my moderators</b>." %}</p> 
+	  <p>{% trans "This setting should be set once. Therefore changes need to be <b>confirmed my moderators</b> and <b>changes are not possible while waiting for moderation</b>." %}</p>
         </div>
       </div>
       <div class="row">
@@ -50,4 +50,3 @@
   </div>
   {% endblock %}
 {% endblock %}
-
