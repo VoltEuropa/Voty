@@ -275,6 +275,7 @@ def user_view(request, user_id):
     user_values["is_scope_confirmed"] = user.config.is_scope_confirmed
 
   form = UserModerateForm(initial=user_values)
+  form.fields["groups"].choices=[(x.id, x.name) for x in Group.objects.all()]
 
   # confirm allocation
 

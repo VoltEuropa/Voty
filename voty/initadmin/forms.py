@@ -138,6 +138,7 @@ class UserModerateForm(forms.ModelForm):
   )
   groups = forms.MultipleChoiceField(
     #widget=forms.CheckboxSelectMultiple,choices=[(x.id, x.name) for x in Group.objects.all()],
+    widget=forms.CheckboxSelectMultiple,
     required=False,
     label=_("Groups"),
     help_text=_("Please select the group(s) this user should belong to. This will give the user permissions associated with the respective group.")
