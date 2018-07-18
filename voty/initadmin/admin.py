@@ -24,4 +24,9 @@ class UserConfigInline(admin.StackedInline):
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
   inlines = (UserConfigInline, )
-
+  
+# Re-register UserAdmin
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
+admin.site.register(SignupCodeResult)
+admin.site.register(Permission)
