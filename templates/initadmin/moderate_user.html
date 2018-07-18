@@ -78,7 +78,7 @@
                   <span>{% trans "Current status:" %}</span>
                   <div class="">
                     <button type="button" disabled class="btn btn-default {% if user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
-                      <i class="material-icons {% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}">{% if user.config.is_scope_confirmed %}done{% else %}failure{% endif %}</i>{% if user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
+                      <i class="material-icons {% if user.config.is_scope_confirmed %}done{% else %}warning{% endif %}">{% if user.config.is_scope_confirmed %}done{% else %}warning{% endif %}</i>{% if user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
                     </button>
                   </div>
                 </div>
@@ -149,4 +149,3 @@
     </div>
   {% endblock %}
 {% endblock %}
-
