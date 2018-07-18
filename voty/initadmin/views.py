@@ -267,7 +267,9 @@ def user_view(request, user_id):
     user_values["username"] = user.username
     user_values["first_name"] = user.first_name
     user_values["last_name"] = user.last_name
-    user_values["last_login"] = user.last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)")
+    last_login = getattr(user, "last_login", None)
+    if last_login:
+      user_values["last_login"] = user.last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)")
     user_values["email"] = user.email
     user_values["scope"] = user.config.scope
     user_values["is_scope_confirmed"] = user.config.is_scope_confirmed
@@ -467,4 +469,3 @@ def profile_delete(request):
 #def active_users(request):
 #    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
 #    return render(request, "initadmin/active_users.html", dict(users=users_q))
-
