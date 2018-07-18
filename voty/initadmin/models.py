@@ -23,23 +23,28 @@ class InviteBatch(models.Model):
 
 # ----------------------------- UserConfig -------------------------------------
 # XXX should team lead be set here instead of in a separate group?
-class UserConfig(models.Model):
+class UserConfig(models.Model): 
   user = models.OneToOneField(User, related_name="config", on_delete=models.CASCADE)
   is_diverse_mod = models.BooleanField(default=False)
   is_female_mod = models.BooleanField(default=False)
   scope = models.CharField(choices=settings.CATEGORIES.SCOPE_CHOICES,max_length=100,default="eu")
   is_scope_confirmed = models.BooleanField(default=True)
 
-  # without these new proper registrations will have no config accessible 
-  @receiver(post_save, sender=User)
-  def create_user_config(sender, instance, created, **kwargs):
-    if created:
-      UserConfig.objects.create(user=instance)
+  # supposedly without post_save new registrations will have no config. but
+  # both creating users in admin interface and via signup code works and
+  # creates the user plus config. So comment out for now, because this will
+  # call post and "put" a second time and throw unique-id errors.
+
+  # dispatch https://code.djangoproject.com/wiki/Signals#Helppost_saveseemstobeemittedtwiceforeachsave
+  #@receiver(post_save, sender=User, dispatch_uid="some_string_create_user_config")
+  #def create_user_config(sender, instance, created, **kwargs):
+  #  if created:
+  #    UserConfig.objects.create(user=instance)
   
-  @receiver(post_save, sender=User)
-  def save_user_config(sender, instance, **kwargs):
-    if getattr(instance, "config", None):
-      instance.config.save()
-    else:
-      UserConfig.objects.create(user=instance)
+  #@receiver(post_save, sender=User, dispatch_uid="some_string_update_user_config")
+  #def save_user_config(sender, instance, created, **kwargs):
+  #  if getattr(instance, "config", None):
+  #    UserConfig.objects.create(user=instance)
+  #  else:
+  #    instance.config.save()
 
