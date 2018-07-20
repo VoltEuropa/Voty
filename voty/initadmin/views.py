@@ -31,8 +31,9 @@ from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch
 from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
-  UserModerateForm, ListboxSearchForm, UserLocaliseForm, UserInviteForm,
-  DeleteSignupCodeForm)
+  UserModerateForm, UserValidateLocalisationForm, UserActivateForm, UserDeleteForm,
+  UserGiveGroupPrivilegeForm , ListboxSearchForm, UserLocaliseForm, UserInviteForm,
+  DeleteSignupCodeForm,)
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -207,7 +208,7 @@ def user_invite(request):
     form_invite = UserInviteForm()
     form_remove = DeleteSignupCodeForm()
 
-  return render(request, "initadmin/invite_users.html", context={
+  return render(request, "initadmin/invite_user.html", context={
     "form_upload": form_upload,
     "form_invite": form_invite,
     "form_remove": form_remove,
@@ -252,37 +253,69 @@ def download_csv(request, batch_id):
 
 # -------------------------- Moderate User  ------------------------------------
 @login_required
-#@group_required("Policy Team", "Policy Team Lead")
+#@group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST)
 def user_view(request, user_id):
-
-  user_values = {"groups": []}
   user = get_object_or_404(get_user_model(), pk=user_id)
 
-  if request.method == "GET":
+  if request.method == "POST":
 
+    # reset_email
+    if request.POST.get("action", None) == "reset_email":
+      form = UserModerateForm(request.POST)
+      return
+
+    # add/remove group membership
+    elif request.POST.get("action", None) == "give_group_privileges":
+      form = UserGiveGroupPrivilegeForm(request.POST)
+      return
+
+    # validate localisation scope
+    elif request.POST.get("action", None) == "validate_scope":
+      form = UserValidateLocalisationForm(request.POST)
+      return
+
+    # activate/disactivate account
+    elif request.POST.get("action", None) == "activate_account":
+      form = UserActivateForm(request.POST)
+      return
+
+    # delete user permanently
+    elif request.POST.get("action", None) == "delete_account":
+      form = UserDeleteForm(request.POST)
+      return
+
+  else:
+    groups = []
     for group in Group.objects.all():
       if user.groups.filter(name=group.name).exists():
-        user_values["groups"].append(group.id)
+        groups.append(group.id)
 
-    user_values["username"] = user.username
-    user_values["first_name"] = user.first_name
-    user_values["last_name"] = user.last_name
+    form_user_moderate = UserModerateForm(initial={
+      "first_name": user.first_name,
+      "last_name": user.last_name,
+      "username": user.username,
+      "email": user.email
+    })
+    form_user_addgroup = UserGiveGroupPrivilegeForm(initial={"groups": groups})
+    form_user_addgroup.fields["groups"].choices=[(x.id, x.name) for x in Group.objects.all()]
+    form_user_validate = UserValidateLocalisationForm(initial={
+      "scope": user.config.scope,
+      "is_scope_confirmed": user.config.is_scope_confirmed
+    })
     last_login = getattr(user, "last_login", None)
-    if last_login:
-      user_values["last_login"] = user.last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)")
-    user_values["email"] = user.email
-    user_values["scope"] = user.config.scope
-    user_values["is_scope_confirmed"] = user.config.is_scope_confirmed
+    form_user_activate = UserActivateForm(initial={
+      "last_login": last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)") if last_login else None
+    })
+    form_user_delete = UserDeleteForm()
 
-  form = UserModerateForm(initial=user_values)
-  form.fields["groups"].choices=[(x.id, x.name) for x in Group.objects.all()]
-
-  # confirm allocation
-
-  return render(request, "initadmin/moderate_user.html", context=dict(
-    form=form,
-    user=user
-  ))
+  return render(request, "initadmin/moderate_user.html", context={
+    "avatar_user": user,
+    "form_user_moderate": form_user_moderate,
+    "form_user_validate": form_user_validate,
+    "form_user_addgroup": form_user_addgroup,
+    "form_user_activate": form_user_activate,
+    "form_user_delete": form_user_delete
+  })
 
 # ---------------------------- User List  --------------------------------------
 # XXX make generic so it can be used for initiatives, too
@@ -423,9 +456,8 @@ def profile_localise(request):
         # which doesn't include superusers, though they individually have moderation permission.
         # moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
         # initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(), settings.NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
-        
-        # trigger a notification which only custom groups can see
 
+        # trigger a notification which only custom groups can see
         # flag this user in the user list
         # make a filter for flagged users
   
@@ -464,9 +496,3 @@ def profile_edit(request):
 def profile_delete(request):
   return render(request, "initadmin/delete.html", context={})
 
-
-# active users (recently logged in first)
-#@login_required
-#def active_users(request):
-#    users_q = get_user_model().objects.filter(is_active=True, avatar__primary=True).order_by("-last_login")
-#    return render(request, "initadmin/active_users.html", dict(users=users_q))

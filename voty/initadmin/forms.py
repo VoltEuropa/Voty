@@ -94,8 +94,7 @@ class UserModerateForm(forms.ModelForm):
 
   class Meta:
     model = get_user_model()
-    fields = ["groups", "username", "first_name", "last_name", "email", "is_active", "last_login"]
-    # doesn't work - readonly_fields = ("username",),
+    fields = ["username", "first_name", "last_name", "email"]
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -114,9 +113,53 @@ class UserModerateForm(forms.ModelForm):
   username = forms.CharField(
     widget=forms.TextInput(attrs={"readonly": True})
   )
-  last_login = forms.CharField(
-    widget=forms.TextInput(attrs={"readonly": True})
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="reset_email"
   )
+
+# ----------------------- UserGiveGroupPrivilegeForm ---------------------------
+class UserGiveGroupPrivilegeForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["groups"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  groups = forms.MultipleChoiceField(
+    #widget=forms.CheckboxSelectMultiple,choices=[(x.id, x.name) for x in Group.objects.all()],
+    widget=forms.CheckboxSelectMultiple,
+    required=False,
+    label=_("Groups"),
+    help_text=_("Please select the group(s) this user should belong to. This will give the user permissions associated with the respective group.")
+  )
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="give_group_privileges"
+  )
+
+# ------------------------ UserValidateLocalisationForm ------------------------
+class UserValidateLocalisationForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["groups"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
 
   scope = forms.ChoiceField(
     required=True,
@@ -130,18 +173,65 @@ class UserModerateForm(forms.ModelForm):
     choices=[("1", _("Validated")), ("0", _("Not Validated"))],
     help_text=_("Validate or invalidate the requested/current scope")
   )
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="validate_scope"
+  )
+
+# ----------------------------- UserActivateForm -------------------------------
+class UserActivateForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["last_login", "is_active"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  last_login = forms.CharField(
+    widget=forms.TextInput(attrs={"readonly": True})
+  )
   status = forms.ChoiceField(
     required=True,
     label=_("Set Account to:"),
     choices=[("1", _("Active")), ("0", _("Inactive"))],
     help_text=_("Inactive Users can no longer login into their account")
   )
-  groups = forms.MultipleChoiceField(
-    #widget=forms.CheckboxSelectMultiple,choices=[(x.id, x.name) for x in Group.objects.all()],
-    widget=forms.CheckboxSelectMultiple,
-    required=False,
-    label=_("Groups"),
-    help_text=_("Please select the group(s) this user should belong to. This will give the user permissions associated with the respective group.")
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="activate_account"
+  )
+
+# ----------------------------- UserDeleteForm ---------------------------------
+class UserDeleteForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["username"]
+    labels = {
+      "username": _("Username"),
+    }
+    help_texts = {
+      "username": _("Please rewrite the username to confirm this is the user you want to delete."),
+    }
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="delete_account"
   )
                        
 # -------------------------- ListboxSearchForm ---------------------------------

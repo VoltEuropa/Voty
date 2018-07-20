@@ -15,60 +15,72 @@
           <div class="col">
             <h2>{% trans "Moderate User Settings" %}</h2>
             <p>{% trans "This page is for helping users reset their password and modifying user access permissions" %}</p>
-
             <hr/>
 
-            <h3>{{ user.username }}</h3>
             <form method="POST" action="">
+              <h3>{{ avatar_user.username }}</h3>
               {% csrf_token %}
-              {{ form.non_field_errors }}
-              {{ form.source.errors }}
-              {{ form.source }}
+              {{ form_user_moderate.non_field_errors }}
+              {{ form_user_moderate.source.errors }}
+              {{ form_user_moderate.source }}
 
               <div class="form-inline-group">
                 <div class="form-group">
-                  <img src="{% avatar_full_url user size %}" alt="{{user.firstname|default:user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
+                  <img src="{% avatar_full_url avatar_user size %}" alt="{{avatar_user.firstname|default:avatar_user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
                 </div>
                 <div class="form-group">
-                  {{ form.first_name.label_tag }}
+                  {{ form_user_moderate.first_name.label_tag }}
                   <div class="">
-                    {{ form.first_name }}
+                    {{ form_user_moderate.first_name }}
                   </div>
                 </div>
                 <div class="form-group">
-                  {{ form.last_name.label_tag }}
+                  {{ form_user_moderate.last_name.label_tag }}
                   <div class="">
-                    {{ form.last_name }}
+                    {{ form_user_moderate.last_name }}
                   </div>
                 </div>
               </div>
-
-              <hr/>
-
-              <h3>{% trans "Add Email/Send Reset Link" %}</h3>
               <div class="form-group">
-                {{ form.email.label_tag }}
+                {{ form_user_moderate.email.label_tag }}
                 <div class="">
-                  {{ form.email.errors }}
-                  {{ form.email }}
-                  {{ form.email.help_text }}
+                  {{ form_user_moderate.email.errors }}
+                  {{ form_user_moderate.email }}
+                  {{ form_user_moderate.email.help_text }}
                 </div>
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Send user a link to reset his password" %}</a>
+                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Confirm this email and send password reset link" %}</button>
               </div>
+            </form>
 
-              <hr />
+            <hr />
+
+            <form method="POST" action="">
+              {% csrf_token %}
+              {{ form_user_addgroup.non_field_errors }}
+              {{ form_user_addgroup.source.errors }}
+              {{ form_user_addgroup.source }}
 
               <h3>{% trans "Group Membership" %}</h3>
               <div class="form-group form-input-group">
-                {{ form.groups.label_tag }}
-                {{ form.groups.errors }}
-                {{ form.groups }}
-                {{ form.groups.help_text }}
+                {{ form_user_addgroup.groups.label_tag }}
+                {{ form_user_addgroup.groups.errors }}
+                {{ form_user_addgroup.groups }}
+                {{ form_user_addgroup.groups.help_text }}
               </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Update group membership" %}</button>
+              </div>
+            </form>
 
-              <hr />
+            <hr />
+
+            <form method="POST" action="">
+              {% csrf_token %}
+              {{ form_user_validate.non_field_errors }}
+              {{ form_user_validate.source.errors }}
+              {{ form_user_validate.source }}
 
               <h3>{% trans "Participation Permission" %}</h3>
               <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of <i>EU/France/Paris</i> will permit the user to vote on European, French and Paris-based initiatives." %}
@@ -83,23 +95,30 @@
                   </div>
                 </div>
                 <div class="form-group">
-                  {{ form.scope.label_tag }}
+                  {{ form_user_validate.scope.label_tag }}
                   <div class="">
-                    {{ form.scope.errors }}
-                    {{ form.scope }}
-                    {{ form.scope.help_text }}
+                    {{ form_user_validate.scope }}
                   </div>
                 </div>
                 <div class="form-group">
-                  {{ form.is_scope_confirmed.label_tag }}
+                  {{ form_user_validate.is_scope_confirmed.label_tag }}
                   <div class="">
-                    {{ form.is_scope_confirmed.errors }}
-                    {{ form.is_scope_confirmed }}
+                    {{ form_user_validate.is_scope_confirmed }}
                   </div>
                 </div>
               </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Validate Localisation" %}</button>
+              </div>
+            </form>
 
-              <hr />
+            <hr />
+
+            <form method="POST" action="">
+              {% csrf_token %}
+              {{ form_user_activate.non_field_errors }}
+              {{ form_user_activate.source.errors }}
+              {{ form_user_activate.source }}
 
               <h3>{% trans "Activate/Disable Account" %}</h3>
               <div class="form-inline-group">
@@ -112,32 +131,52 @@
                   </div>
                 </div>
                 <div class="form-group">
-                  {{ form.last_login.label_tag }}
+                  {{ form_user_activate.last_login.label_tag }}
                   <div class="">
-                    {{ form.last_login }}
+                    {{ form_user_activate.last_login }}
                   </div>
                 </div>
                 <div class="form-group">
-                  {{ form.status.label_tag }}
+                  {{ form_user_activate.status.label_tag }}
                   <div class="">
-                    {{ form.status.errors }}
-                    {{ form.status }}
+                    {{ form_user_activate.status.errors }}
+                    {{ form_user_activate.status }}
                   </div>
                 </div>
               </div>
-
-              <hr />
-
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Save all changes" %}</button>
+                <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Change account status" %}</button>
               </div>
-
-              <hr />
-
-              <h3>{% trans "Delete Account and anonymize contributions" %}</h3>
-              <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
-              <button type="submit" class="btn btn-danger" name="user_delete">Permanently delete account</button>
             </form>
+
+            <hr />
+
+             <form method="POST" action="">
+                {% csrf_token %}
+                {{ form_user_delete.non_field_errors }}
+                {{ form_user_delete.source.errors }}
+                {{ form_user_delete.source }}
+  
+                <h3>{% trans "Delete Account and anonymize contributions" %}</h3>
+                <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
+                <div class="form-inline-group">
+                  <div class="form-group">
+                    {{ form_user_delete.username.label_tag }}
+                    <div class="">
+                      {{ form_user_delete.username.errors }}
+                      {{ form_user_delete.username }}
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Are you sure?</label>
+                    <div class="">
+                      <button type="submit" class="btn btn-danger" name="user_delete">Permanently delete account</button>
+                    </div>
+                  </div>
+                </div>
+                {{ form_user_delete.username.help_text }}
+            </form>
+          
           </div>
         </div>
         <div class="row">
