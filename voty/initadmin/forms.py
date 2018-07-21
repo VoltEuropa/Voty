@@ -105,15 +105,17 @@ class UserModerateForm(forms.ModelForm):
 
   # override fields
   first_name = forms.CharField(
-    widget=forms.TextInput(attrs={"readonly": True})
+    widget=forms.TextInput(attrs={"readonly": True}),
+    disabled=True
   )
   last_name = forms.CharField(
-    widget=forms.TextInput(attrs={"readonly": True})
+    widget=forms.TextInput(attrs={"readonly": True}),
+    disabled=True
   )
   username = forms.CharField(
-    widget=forms.TextInput(attrs={"readonly": True})
+    widget=forms.TextInput(attrs={"readonly": True}),
+    disabled=True
   )
-
   action = forms.CharField(
     max_length=24,
     widget=forms.HiddenInput(),

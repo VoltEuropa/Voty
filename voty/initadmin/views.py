@@ -8,7 +8,8 @@
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.models import Group, User
 from django.contrib import messages
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied
@@ -262,7 +263,26 @@ def user_view(request, user_id):
     # reset_email
     if request.POST.get("action", None) == "reset_email":
       form = UserModerateForm(request.POST)
-      return
+
+      # cannot check for form.is_valid() because of disabled fields
+      new_email = request.POST.get("email")
+      if user.email == "":
+        existing_user_list = User.objects.filter(email=new_email)
+        if len(existing_user_list) > 0:
+          messages.warning(request, "".join([
+            _("Cannot associate email with this user, because it is already used by (username):"),
+            existing_user_list[0].username
+          ]))
+          return redirect("/backoffice/users/%s" % (user.id))
+        user.email = new_email
+        user.save()
+
+      # play password reset
+      email_form = PasswordResetForm({"email": new_email})
+      if email_form.is_valid():
+        email_form.save()
+        messages.success(request, _("Email updated and password reset link sent."))
+        return redirect("/backoffice/users/%s" % (user.id))
 
     # add/remove group membership
     elif request.POST.get("action", None) == "give_group_privileges":

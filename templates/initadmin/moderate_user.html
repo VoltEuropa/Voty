@@ -20,6 +20,7 @@
             <form method="POST" action="">
               <h3>{{ avatar_user.username }}</h3>
               {% csrf_token %}
+              {{ form_user_moderate.action }}
               {{ form_user_moderate.non_field_errors }}
               {{ form_user_moderate.source.errors }}
               {{ form_user_moderate.source }}
@@ -50,7 +51,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Confirm this email and send password reset link" %}</button>
+                <button class="btn btn-primary" type="submit">{% trans "Confirm this email and send password reset link" %}</button>
               </div>
             </form>
 
@@ -58,6 +59,7 @@
 
             <form method="POST" action="">
               {% csrf_token %}
+              {{ form_user_addgroup.action }}
               {{ form_user_addgroup.non_field_errors }}
               {{ form_user_addgroup.source.errors }}
               {{ form_user_addgroup.source }}
@@ -70,7 +72,7 @@
                 {{ form_user_addgroup.groups.help_text }}
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Update group membership" %}</button>
+                <button class="btn btn-primary" type="submit">{% trans "Update group membership" %}</button>
               </div>
             </form>
 
@@ -78,6 +80,7 @@
 
             <form method="POST" action="">
               {% csrf_token %}
+              {{ form_user_validate.action }}
               {{ form_user_validate.non_field_errors }}
               {{ form_user_validate.source.errors }}
               {{ form_user_validate.source }}
@@ -108,7 +111,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <button class="btn btn-primary" type="submit" name="user_reset_email">{% trans "Validate Localisation" %}</button>
+                <button class="btn btn-primary" type="submit">{% trans "Validate Localisation" %}</button>
               </div>
             </form>
 
@@ -116,6 +119,7 @@
 
             <form method="POST" action="">
               {% csrf_token %}
+              {{ form_user_activate.action }}
               {{ form_user_activate.non_field_errors }}
               {{ form_user_activate.source.errors }}
               {{ form_user_activate.source }}
@@ -153,6 +157,7 @@
 
              <form method="POST" action="">
                 {% csrf_token %}
+                {{ form_user_delete.action }}
                 {{ form_user_delete.non_field_errors }}
                 {{ form_user_delete.source.errors }}
                 {{ form_user_delete.source }}
