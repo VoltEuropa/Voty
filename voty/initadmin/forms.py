@@ -202,7 +202,7 @@ class UserActivateForm(forms.ModelForm):
     required=True,
     label=_("Set Account to:"),
     choices=[("1", _("Active")), ("0", _("Inactive"))],
-    help_text=_("Inactive Users can no longer login into their account")
+    help_text=_("While inactive users can no longer login into their account. They remain in the database until deleted or reactivated.")
   )
   action = forms.CharField(
     max_length=24,

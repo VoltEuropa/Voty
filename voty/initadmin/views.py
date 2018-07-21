@@ -303,14 +303,14 @@ def user_view(request, user_id):
       user_config.scope = request.POST.get("scope", "eu")
       user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
       user_config.save()
-
       messages.success(request, _("Successfully updated user localisation."))
       # XXX notify user
 
     # activate/disactivate account
     elif request.POST.get("action", None) == "activate_account":
-      form = UserActivateForm(request.POST)
-      return
+      user.is_active = request.POST.get("status")
+      user.save()
+      messages.success(request, _("User account status was changed."))
 
     # delete user permanently
     elif request.POST.get("action", None) == "delete_account":
@@ -339,12 +339,13 @@ def user_view(request, user_id):
     })
     last_login = getattr(user, "last_login", None)
     form_user_activate = UserActivateForm(initial={
+      "is_active": user.is_active,
       "last_login": last_login.strftime("%Y-%m-%d %H:%M:%S (%Z)") if last_login else None
     })
     form_user_delete = UserDeleteForm()
 
   return render(request, "initadmin/moderate_user.html", context={
-    "avatar_user": user,
+    "viewed_user": user,
     "form_user_moderate": form_user_moderate,
     "form_user_validate": form_user_validate,
     "form_user_addgroup": form_user_addgroup,
