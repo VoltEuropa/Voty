@@ -483,7 +483,11 @@ def user_list(request):
 
 # -------------------------- Notification List  --------------------------------
 def notification_list(request):
-  return render(request)
+  user = get_object_or_404(get_user_model(), id=request.user.id)
+
+  return render(request, "pinax/notifications/list.html", {
+    "notifications": request.user.notifications
+  })
 
 # -------------------------- Initiative List  ----------------------------------
 def initiative_list(request):

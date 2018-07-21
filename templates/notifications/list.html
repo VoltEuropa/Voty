@@ -1,0 +1,29 @@
+{% extends "_base.html" %}
+
+{% load i18n %}
+{% load get_trans %}
+{% block head_title %}{% trans "Plenum: Notification List" %}{% endblock %}
+
+{% block content %}
+  {% block body %}
+  <div class="container-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+          <h2>{% trans "Notification List" %}</h2>
+
+          <ul class="notifications">
+            {% for notice in notifications %}
+              {% include 'notifications/notice.html' %}
+            {% endfor %}
+          </ul>
+
+      </div>
+  </div>
+  <div class="row mt-4 mb-4">
+      <div class="col">
+          <a href="{% url "profile_edit" %}"><i class="material-icons chevron-left">chevron_left</i>{% trans "Back to Settings" %}</a>
+      </div>
+  </div>
+  {% endblock %}
+{% endblock %}

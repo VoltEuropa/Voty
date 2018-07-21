@@ -26,9 +26,9 @@ urlpatterns = [
   url(r"^account/localise", views.profile_localise, name="account_localise"),
 
   url(r"^avatar/", include("avatar.urls")),
-  url(r"^worklist/", include(notifications.urls, namespace="notifications")),
-  url(r"^worklist/", include("pinax.notifications.urls")),
-  url(r"^worklist/", views.notification_list, name="notifications"),
+  url(r"^worklist/notifications/", include(notifications.urls, namespace="notifications")),
+  url(r"^worklist/notifications/", include("pinax.notifications.urls")),
+  url(r"^worklist/notifications/$", views.notification_list, name="notifications"),
 
   # moderators
   url(r"^backoffice/users/$", views.user_list, name="users"),
