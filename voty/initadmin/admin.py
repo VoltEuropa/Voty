@@ -8,7 +8,8 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth.models import Permission, User, models
+#from django.conf import settings
 
 from account.models import SignupCodeResult
 from .models import UserConfig
@@ -24,7 +25,11 @@ class UserConfigInline(admin.StackedInline):
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
   inlines = (UserConfigInline, )
-  
+
+# enforce unique emails (https://stackoverflow.com/a/7564331)
+#if settings.USE_UNIQUE_EMAILS:
+#  User._meta.get_field('email').__dict__['_unique'] = True or User._meta.get_field('email')._unique = True
+
 # Re-register UserAdmin
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

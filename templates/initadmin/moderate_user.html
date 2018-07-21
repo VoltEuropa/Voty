@@ -67,10 +67,20 @@
               <h3>{% trans "Group Membership" %}</h3>
               <div class="form-group form-input-group">
                 {{ form_user_addgroup.groups.label_tag }}
-                {{ form_user_addgroup.groups.errors }}
-                {{ form_user_addgroup.groups }}
+                
+                <ul id="id_groups">
+                  {% for id, value, check in form_user_addgroup.groups.field.choices %}
+                  <li>
+                    <label for="id_groups_{{ id }}">
+                      <input class="form-control" id="id_group_{{ id }}" {{ check }} name="groups_{{ id }}" type="checkbox" value="{{ id }}" />
+                      {{ value }}
+                    </label>
+                  </li>
+                  {% endfor %}
+                </ul>
                 {{ form_user_addgroup.groups.help_text }}
               </div>
+
               <div class="form-group">
                 <button class="btn btn-primary" type="submit">{% trans "Update group membership" %}</button>
               </div>

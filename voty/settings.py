@@ -227,6 +227,7 @@ CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST"
 CORS_ALLOW_CREDENTIALS = True
 
 # ----------------------------- Customizations ---------------------------------
+
 #  CUSTOM (GLOBALS)
 MIN_SEARCH_LENGTH = raw_parser.getint("settings", "MIN_SEARCH_LENGTH")
 

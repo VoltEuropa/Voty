@@ -1696,7 +1696,7 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   display: inline-block;
   width: 3em;
   vertical-align: middle;
-  margin-left: -2.55em;
+  margin-left: -2.8em;
   margin-right: 1em;
 }
 /* ----------------------- autocomplete corrections ------------------------- */
@@ -1713,5 +1713,4 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   margin-bottom: .5em;
   
 }
-
 

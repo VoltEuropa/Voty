@@ -254,7 +254,7 @@ def download_csv(request, batch_id):
 
 # -------------------------- Moderate User  ------------------------------------
 @login_required
-#@group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST)
+@group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST, raise_exception=True)
 def user_view(request, user_id):
   user = get_object_or_404(get_user_model(), pk=user_id)
 
@@ -263,31 +263,37 @@ def user_view(request, user_id):
     # reset_email
     if request.POST.get("action", None) == "reset_email":
       form = UserModerateForm(request.POST)
-
-      # cannot check for form.is_valid() because of disabled fields
       new_email = request.POST.get("email")
       if user.email == "":
         existing_user_list = User.objects.filter(email=new_email)
         if len(existing_user_list) > 0:
           messages.warning(request, "".join([
-            _("Cannot associate email with this user, because it is already used by (username):"),
+            _("Cannot associate email with this user, because it is already used by (username): "),
             existing_user_list[0].username
           ]))
           return redirect("/backoffice/users/%s" % (user.id))
         user.email = new_email
         user.save()
 
-      # play password reset
+      # hijack auth password reset
       email_form = PasswordResetForm({"email": new_email})
       if email_form.is_valid():
         email_form.save()
         messages.success(request, _("Email updated and password reset link sent."))
-        return redirect("/backoffice/users/%s" % (user.id))
 
     # add/remove group membership
     elif request.POST.get("action", None) == "give_group_privileges":
       form = UserGiveGroupPrivilegeForm(request.POST)
-      return
+      user.groups.clear()
+      new_group_list = []
+      for key, value in request.POST.items():
+        if key.startswith("groups"):
+          group = Group.objects.get(id=int(key.split("_")[1]))
+          if group:
+            new_group_list.append(group.name)
+            user.groups.add(group)
+      user.save()
+      messages.success(request, "".join([_("Added the user to the following groups:"), ", ".join(new_group_list)]))
 
     # validate localisation scope
     elif request.POST.get("action", None) == "validate_scope":
@@ -302,22 +308,24 @@ def user_view(request, user_id):
     # delete user permanently
     elif request.POST.get("action", None) == "delete_account":
       form = UserDeleteForm(request.POST)
-      return
+    
+    return redirect("/backoffice/users/%s" % (user.id))
 
   else:
-    groups = []
-    for group in Group.objects.all():
-      if user.groups.filter(name=group.name).exists():
-        groups.append(group.id)
-
     form_user_moderate = UserModerateForm(initial={
       "first_name": user.first_name,
       "last_name": user.last_name,
       "username": user.username,
       "email": user.email
     })
-    form_user_addgroup = UserGiveGroupPrivilegeForm(initial={"groups": groups})
-    form_user_addgroup.fields["groups"].choices=[(x.id, x.name) for x in Group.objects.all()]
+    form_user_addgroup = UserGiveGroupPrivilegeForm()
+    groups = {}
+    for group in Group.objects.all():
+      if user.groups.filter(name=group.name).exists():
+        groups[group.id] = "checked=checked"
+      else:
+        groups[group.id] = ""
+    form_user_addgroup.fields["groups"].choices=[(x.id, x.name, groups[x.id]) for x in Group.objects.all()]
     form_user_validate = UserValidateLocalisationForm(initial={
       "scope": user.config.scope,
       "is_scope_confirmed": user.config.is_scope_confirmed
@@ -344,7 +352,7 @@ def user_view(request, user_id):
 def user_list(request):
 
   user_values = {}
-  user_list = get_user_model().objects.filter()
+  user_list = get_user_model().objects.filter(is_superuser=False)
   user_filters = {
     "glossary_active_all": True,
     "glossary_char_list": settings.LISTBOX_OPTION_DICT.GLOSSARY_CHAR_LIST
