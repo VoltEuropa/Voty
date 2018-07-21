@@ -24,7 +24,6 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.translation import ugettext as _
 from django.utils import six
 from django.utils.html import escape, strip_tags
-from django.views.decorators.http import require_POST
 
 import account.views
 from pinax.notifications.models import send as notify
@@ -36,13 +35,17 @@ from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
   UserGiveGroupPrivilegeForm , ListboxSearchForm, UserLocaliseForm, UserInviteForm,
   DeleteSignupCodeForm,)
 
+# XXX bad?
+from voty.initproc.models import (Comment, Contra, Like, Moderation,
+  Pro, Proposal, Supporter, Vote)
+
 from datetime import datetime, timedelta
 from uuid import uuid4
 from dal import autocomplete
 from io import StringIO, TextIOWrapper
 import csv
 
-
+# --------------------- Group Permission decorator -----------------------------
 # Poor man's decorator, use: @group_required("[group-name]")
 # https://djangosnippets.org/snippets/10508/
 def group_required(group, login_url=None, raise_exception=False):
@@ -60,8 +63,8 @@ def group_required(group, login_url=None, raise_exception=False):
     return False
   return user_passes_test(check_perms, login_url=login_url)
 
+# -------------------------- Invite single user -------------------------------- 
 def _invite_single_user(first_name, email_address, site):
-   
   try:
     code = SignupCode.objects.get(email=email_address)
     new_addition = False
@@ -96,6 +99,7 @@ def _invite_single_user(first_name, email_address, site):
 
   return code, new_addition
 
+# ------------------------- Invite multiple users ------------------------------
 def _invite_batch_users(csv_file):
   site = Site.objects.get_current()
   total = newly_added = 0
@@ -314,8 +318,26 @@ def user_view(request, user_id):
 
     # delete user permanently
     elif request.POST.get("action", None) == "delete_account":
-      form = UserDeleteForm(request.POST)
-    
+      if user.is_active == True:
+        messages.warning(request, _("You cannot delete a user whose account is still in active state. Please disactivate the account first."))
+      elif request.POST.get("username") != user.username:
+        messages.warning(request, _("Username does not match. Please provide the correct username."))
+      else:
+        deleted_user_id = User.objects.get(username="deleted").id
+
+        # purge the user, rien ne vas plus
+        Comment.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Contra.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Like.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Moderation.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Pro.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Proposal.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Supporter.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        Vote.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
+        user.delete()
+        messages.success(request, _("User was deleted from database and his contributions relabelled to 'Deleted User'."))
+        return redirect("/backoffice/users")
+
     return redirect("/backoffice/users/%s" % (user.id))
 
   else:
@@ -360,7 +382,7 @@ def user_view(request, user_id):
 def user_list(request):
 
   user_values = {}
-  user_list = get_user_model().objects.filter(is_superuser=False)
+  user_list = get_user_model().objects.filter(is_superuser=False, is_staff=False)
   user_filters = {
     "glossary_active_all": True,
     "glossary_char_list": settings.LISTBOX_OPTION_DICT.GLOSSARY_CHAR_LIST

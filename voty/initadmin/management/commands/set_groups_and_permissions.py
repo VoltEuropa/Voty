@@ -16,6 +16,18 @@ from django.utils.translation import ugettext as _
 
 from pinax.notifications.models import NoticeType
 
+def create_deleted_user():
+  try:
+    user = User.objects.get(username="deleted")
+  except ObjectDoesNotExist:
+    User.objects.create_user(
+      username="deleted",
+      first_name="Deleted",
+      last_name="User",
+      is_active=False,
+      is_staff=True,
+    )
+
 # translations in apps.py are recorded but the translated texts do not make it 
 # into pinax. Maybe from here.
 def create_notice_types(**kwargs):
@@ -151,5 +163,8 @@ class Command(BaseCommand):
     
     # create notice types for PINAX
     create_notice_types()
+
+    # create a deleted-user for keeping contributions from deleted users
+    create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
