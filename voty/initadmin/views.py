@@ -30,7 +30,7 @@ import account.views
 from pinax.notifications.models import send as notify
 from account.models import SignupCodeResult, SignupCode
 
-from .models import InviteBatch
+from .models import InviteBatch, UserConfig
 from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
   UserModerateForm, UserValidateLocalisationForm, UserActivateForm, UserDeleteForm,
   UserGiveGroupPrivilegeForm , ListboxSearchForm, UserLocaliseForm, UserInviteForm,
@@ -262,7 +262,6 @@ def user_view(request, user_id):
 
     # reset_email
     if request.POST.get("action", None) == "reset_email":
-      form = UserModerateForm(request.POST)
       new_email = request.POST.get("email")
       if user.email == "":
         existing_user_list = User.objects.filter(email=new_email)
@@ -283,7 +282,6 @@ def user_view(request, user_id):
 
     # add/remove group membership
     elif request.POST.get("action", None) == "give_group_privileges":
-      form = UserGiveGroupPrivilegeForm(request.POST)
       user.groups.clear()
       new_group_list = []
       for key, value in request.POST.items():
@@ -297,8 +295,17 @@ def user_view(request, user_id):
 
     # validate localisation scope
     elif request.POST.get("action", None) == "validate_scope":
-      form = UserValidateLocalisationForm(request.POST)
-      return
+
+      # XXX should only user be allowed to set this? not moderators?
+      #if request.POST.get("scope", None) !== user.config.scope:
+      #  messages.warning(request, _("You are not allowed to modify the localisation chosen by a user. Please only validate/invalidate the chose localisation"))
+      user_config = UserConfig.objects.get(user_id=user_id)
+      user_config.scope = request.POST.get("scope", "eu")
+      user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
+      user_config.save()
+
+      messages.success(request, _("Successfully updated user localisation."))
+      # XXX notify user
 
     # activate/disactivate account
     elif request.POST.get("action", None) == "activate_account":
