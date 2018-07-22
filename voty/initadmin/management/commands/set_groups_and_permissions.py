@@ -103,32 +103,36 @@ def backcompat_reverse_teams_and_permissions():
   delete_group(group_title)
 
 def create_custom_groups_and_permissions():
+  group_list = []
+  perm_list = []
+
   for (group_key, group_title) in settings.PLATFORM_GROUP_LIST:
     new_group, created = create_group(settings.PLATFORM_GROUP_VALUE_LIST[group_key])
+    group_list.append(new_group)
     if created:
       new_group.save()
 
-    perm_list = []
-    for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
-      perm_code, perm_app_model = perm_code_model.split(",")
-      perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
+  for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
+    perm_code, perm_app_model = perm_code_model.split(",")
+    perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
 
-      if Permission.objects.filter(name=perm_name).exists() == False:
+    if Permission.objects.filter(name=perm_name).exists() == False:
 
-        # permission is added to a group, permission pertains to a content-type
-        # can be a user or an initiative
-        perm_app, perm_model = perm_app_model.split(".")
-        perm = Permission(
-          name=perm_name,
-          codename=perm_code,
-          content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
-        )
-        perm_list.append(perm)
-        perm.save()
+      # permission is added to a group, permission pertains to a content-type
+      # in this case a user (2) or an initiative (37)
+      perm_app, perm_model = perm_app_model.split(".")
+      perm = Permission(
+        name=perm_name,
+        codename=perm_code,
+        content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
+      )
+      perm.save()
+      perm_list.append(perm)
 
-    if len(perm_list) > 0:
-      new_group.permissions.add(perm_list)
-
+  if len(perm_list) > 0:
+    for group in group_list:
+      group.permissions = perm_list
+      group.save()
 
 # ---------------------------------- Command -----------------------------------
 class Command(BaseCommand):
@@ -151,5 +155,4 @@ class Command(BaseCommand):
     create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
-
 
