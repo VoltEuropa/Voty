@@ -6,9 +6,9 @@
   </a>
   <h4 class="todo-list-header">
     {% if notice.unread %}<i class="icon-mail material-icons fiber_new">fiber_new</i>{% endif %}
-    <a href="{% url notice.target_content_type|templify init_id=notice.target_object_id %}">{{ notice.actor }}:{{ notice.verb }}{% if notice.target %} - {{ notice.target }}{% endif %}</a>
+    <a href="{% url notice.target_content_type|templify init_id=notice.target_object_id %}">{{ notice.actor }}: {{ notice.verb }} {% if notice.target %} - {{ notice.target }}{% endif %}</a>
   </h4>
-  <p class="todo-list-timestamp">{% trans "Posted" %}{{ notice.timesince }}</p>
+  <p class="todo-list-timestamp">{% trans "Pending since: " %}{{ notice.timesince }}</p>
   {% if notice.description %}
   <p class="todo-list-description">{{ notice.description|linebreaksbr }}</p>
   {% endif %}
@@ -18,3 +18,4 @@
     {% endfor %}
   </div>
 </div>
+

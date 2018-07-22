@@ -26,6 +26,7 @@ from django.utils import six
 from django.utils.html import escape, strip_tags
 
 import account.views
+import uuid
 from pinax.notifications.models import send as notify
 from account.models import SignupCodeResult, SignupCode
 
@@ -300,9 +301,9 @@ def user_view(request, user_id):
     # validate localisation scope
     elif request.POST.get("action", None) == "validate_scope":
 
-      # XXX should only user be allowed to set this? not moderators?
       #if request.POST.get("scope", None) !== user.config.scope:
       #  messages.warning(request, _("You are not allowed to modify the localisation chosen by a user. Please only validate/invalidate the chose localisation"))
+
       user_config = UserConfig.objects.get(user_id=user_id)
       user_config.scope = request.POST.get("scope", "eu")
       user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
@@ -497,7 +498,8 @@ def initiative_list(request):
 @login_required
 def profile_localise(request):
 
-  user = get_object_or_404(get_user_model(), id=request.user.id)
+  user_id = request.user.id
+  user = get_object_or_404(get_user_model(), id=user_id)
   is_confirmed = user.config.is_scope_confirmed
   form = None
 
@@ -507,14 +509,18 @@ def profile_localise(request):
     else:
       form = UserLocaliseForm(request.POST)
       if form.is_valid():
-        localisation_permission = Permission.objects.filter(codename="can_localise_user")
+        permission = "can_localise_user"
+        localisation_permission = Permission.objects.filter(codename=permission)
         recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
+        flag_id = "".join([permission, ":", str(uuid.uuid4())])
 
         # see initadmin notify_backend of how notifications are mapped to pinax
         # extra_content: 'action_object', 'target', 'verb', 'description'
         notify(recipient_list, settings.NOTIFICATIONS.MODERATE.LOCALISED, {
-          "target": user
+          "target": user,
+          "description": flag_id
         }, sender=request.user)
+        user.config.is_flagged = user.config.is_flagged + flag_id + ";"
         form = UserLocaliseForm(request.POST, instance=user.config)
         form.save()
         messages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))

@@ -22,13 +22,15 @@ class InviteBatch(models.Model):
   payload = models.TextField()
 
 # ----------------------------- UserConfig -------------------------------------
-# XXX should team lead be set here instead of in a separate group?
 class UserConfig(models.Model): 
   user = models.OneToOneField(User, related_name="config", on_delete=models.CASCADE)
+  scope = models.CharField(choices=settings.CATEGORIES.SCOPE_CHOICES,max_length=100,default="eu")
   is_diverse_mod = models.BooleanField(default=False)
   is_female_mod = models.BooleanField(default=False)
-  scope = models.CharField(choices=settings.CATEGORIES.SCOPE_CHOICES,max_length=100,default="eu")
   is_scope_confirmed = models.BooleanField(default=True)
+
+  # catch-all field to show all flags set on a user
+  is_flagged = models.CharField(blank=True,max_length=200,default="")
 
   # supposedly without post_save new registrations will have no config. but
   # both creating users in admin interface and via signup code works and
@@ -47,4 +49,3 @@ class UserConfig(models.Model):
   #    UserConfig.objects.create(user=instance)
   #  else:
   #    instance.config.save()
-

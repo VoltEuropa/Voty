@@ -1556,7 +1556,8 @@ textarea#id_title:-moz-placeholder, textarea#id_text:-moz-placeholder { /* Firef
 }
 
 /* ------------------------------ form-listbox ------------------------------ */
-.form-listbox table thead tr th {
+.form-listbox table thead tr th,
+.form-listbox table tbody tr td:last-child {
   text-align: center;
 }
 .form-listbox .form-listbox-top .form-group label {
