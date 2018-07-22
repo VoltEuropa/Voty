@@ -227,6 +227,7 @@ CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST"
 CORS_ALLOW_CREDENTIALS = True
 
 # ----------------------------- Customizations ---------------------------------
+USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
 
 #  CUSTOM (GLOBALS)
 MIN_SEARCH_LENGTH = raw_parser.getint("settings", "MIN_SEARCH_LENGTH")
@@ -272,3 +273,4 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
+
