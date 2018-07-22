@@ -14,6 +14,23 @@ from types import SimpleNamespace
 from six.moves import configparser
 from django.utils.translation import ugettext_lazy as _
 
+# ------------------------------ helpers ---------------------------------------
+def _getCharDict():
+  char_dict = {}
+  for x in ("#","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"):
+    char_dict[x] = {"value": x}
+  return char_dict
+
+def _getItemsAsDict(section):
+  return dict(raw_parser.items(section))
+  
+def _strip(snippet):
+  return snippet.partition('{% trans "')[2].partition('" %}')[0]
+
+def _getTranslateableSimpleNameSpace(section):
+  return SimpleNamespace(**dict([(key, _strip(snippet)) for key, snippet in raw_parser._sections[section].items()]))
+
+# ----------------------------- SETTINGS ---------------------------------------
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -227,6 +244,8 @@ CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST"
 CORS_ALLOW_CREDENTIALS = True
 
 # ----------------------------- Customizations ---------------------------------
+# XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
+
 USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
 
 #  CUSTOM (GLOBALS)
@@ -234,12 +253,14 @@ MIN_SEARCH_LENGTH = raw_parser.getint("settings", "MIN_SEARCH_LENGTH")
 
 PLATFORM_TITLE = raw_parser.get("settings", "PLATFORM_TITLE")
 
-# Roles and Permission imports
+# XXX why do those have to be classes? Nothing will ever change.
+VOTED = raw_parser._sections["initiative_vote_state_list"]
+
+
+# groups and permissions
 BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
 BACKCOMPAT_PERMISSION_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
 
-
-# XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
 PLATFORM_GROUP_LIST = raw_parser.items("platform_group_list")
 PLATFORM_GROUP_VALUE_LIST = raw_parser._sections["platform_group_value_list"]
 PLATFORM_GROUP_VALUE_TITLE_LIST = ["{0}".format(v) for k,v in PLATFORM_GROUP_VALUE_LIST.items() if not k.startswith("__")]
@@ -247,30 +268,33 @@ PLATFORM_USER_PERMISSION_LIST = raw_parser.items("platform_user_permission_list"
 PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permission_value_list"]
 PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")
 
-# XXX why do those have to be classes? Nothing will ever change.
-# XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
-# Possibilities for casting a vote
-VOTED = raw_parser._sections["initiative_vote_state_list"]
-
+# notifications
+# cannot be translated here because python translation objects cannot be stored 
+# in the database and pinax stores titles and descriptions in noticetypes. 
+# => requires lazy translation whenever displayed
 NOTIFICATIONS = SimpleNamespace(**{
   "MODERATE": SimpleNamespace(**raw_parser._sections["notification_moderation_state_list"]),
+  "MODERATE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_moderation_state_value_list"),
+  "MODERATE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_moderation_state_description_list"),
+
   "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
-  "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_status_list"])
+  "INVITE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_invitation_state_value_list"),
+  "INVITE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_invitation_state_description_list"),
+  
+  "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_state_list"]),
+  "INITIATIVE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_initiative_state_value_list"),
+  "INITIATIVE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_initiative_state_description_list"),
 })
 
-scope_value_list = dict(raw_parser.items('scope_value_list'))
+# categories
+# should all be translated right away because they are only displayed not stored
 CATEGORIES = SimpleNamespace(**{
-  "SCOPE_CHOICES": [(code_tuple[1], _(scope_value_list[code_tuple[0]].partition('{% trans "')[2].partition('" %}')[0])) for code_tuple in raw_parser.items('scope_list')]
+  "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('scope_list')]
 })
 
-# listbox options
-# XXX improve
-char_dict = {}
-for x in ("#","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"):
-  char_dict[x] = {"value": x}
+# listbox default options
 LISTBOX_OPTION_DICT = SimpleNamespace(**{
-  "GLOSSARY_CHAR_LIST": char_dict,
+  "GLOSSARY_CHAR_LIST": _getCharDict(),
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
-

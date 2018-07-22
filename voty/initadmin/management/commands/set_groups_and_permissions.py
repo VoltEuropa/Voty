@@ -30,48 +30,31 @@ def create_deleted_user():
 
 # translations in apps.py are recorded but the translated texts do not make it 
 # into pinax. Maybe from here.
+# Pinax requires noticetypes to be stored in the database with title and 
+# description. 
 def create_notice_types(**kwargs):
 
   # Moderations
-  NoticeType.create(settings.NOTIFICATIONS.MODERATE.LOCALISED,
-                    _("Localisation Request"),
-                    _("A user requests a localisation change to be validated."))
+  for key, command in vars(settings.NOTIFICATIONS.MODERATE).items():
+    NoticeType.create(
+      command,
+      getattr(settings.NOTIFICATIONS.MODERATE_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.MODERATE_DESCRIPTION_LIST, key),
+    )
+  
+  for key, command in vars(settings.NOTIFICATIONS.INVITE).items():
+    NoticeType.create(
+      command,
+      getattr(settings.NOTIFICATIONS.INVITE_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.INVITE_DESCRIPTION_LIST, key),
+    )
 
-  # Invitations
-  NoticeType.create(settings.NOTIFICATIONS.INVITE.SEND,
-                    _("Invitation to Initiative"),
-                    _("You have been invitied to a new Initiative"))
-  NoticeType.create(settings.NOTIFICATIONS.INVITE.ACCEPTED,
-                    _("Invitation accepted"),
-                    _("The Invitation was accepted"))
-  NoticeType.create(settings.NOTIFICATIONS.INVITE.REJECTED,
-                    _("Invitation declined"),
-                    _("The Invitation was declined"))
-
-  # Initiative
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.EDITED,
-                    _("Initiative modified"),
-                    _("The Initiative was modified"))
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.SUBMITTED,
-                    _("Initiative submitted"),
-                    _("The Initiative was submitted"))
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.PUBLISHED,
-                    _("Initiative published"),
-                    _("The Initiative was published"))
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.WENT_TO_DISCUSSION,
-                    _("Initiative in discussion"),
-                    _("The Initiative has been moved to the discussion phase"))
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.DISCUSSION_CLOSED,
-                    _("Discussion for Initiative ended"),
-                    _("The Initiative can now be finally modified"))
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.WENT_TO_VOTE,
-                    _("Initiative in Vote"),
-                    _("The Initiative has been put to Vote"))
-
-  # Discussion
-  NoticeType.create(settings.NOTIFICATIONS.INITIATIVE.NEW_ARGUMENT,
-                    _("New Argument in Discussion for Initiative"),
-                    _("A new Argument was postet in the Discussion for the Initiative"))
+  for key, command in vars(settings.NOTIFICATIONS.INITIATIVE).items():
+    NoticeType.create(
+      command,
+      getattr(settings.NOTIFICATIONS.INITIATIVE_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.INITIATIVE_DESCRIPTION_LIST, key),
+    )
 
 # BACKCOMPAT (migrations 0025)
 # add all staff to the defined backcompat role and vice versa, then remove the 
@@ -168,3 +151,5 @@ class Command(BaseCommand):
     create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
+
+
