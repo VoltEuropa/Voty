@@ -9,7 +9,7 @@
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Permission, Group, User
 from django.contrib import messages
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied
@@ -507,22 +507,18 @@ def profile_localise(request):
     else:
       form = UserLocaliseForm(request.POST)
       if form.is_valid():
-  
-        # XXX explicitly unset?
+        localisation_permission = Permission.objects.filter(codename="can_localise_user")
+        recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
+
+        # see initadmin notify_backend of how notifications are mapped to pinax
+        # extra_content: 'action_object', 'target', 'verb', 'description'
+        notify(recipient_list, settings.NOTIFICATIONS.MODERATE.LOCALISED, {
+          "target": user
+        }, sender=request.user)
         form = UserLocaliseForm(request.POST, instance=user.config)
         form.save()
-  
-        messsages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
+        messages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
 
-        # Notify moderation team, we notify all members of groups with moderation permission,
-        # which doesn't include superusers, though they individually have moderation permission.
-        # moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
-        # initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(), settings.NOTIFICATIONS.INITIATIVE.SUBMITTED, subject=request.user)
-
-        # trigger a notification which only custom groups can see
-        # flag this user in the user list
-        # make a filter for flagged users
-  
   if form is None:
     form = UserLocaliseForm(initial={
       "scope": user.config.scope,

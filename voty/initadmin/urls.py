@@ -37,7 +37,10 @@ urlpatterns = [
   url(r"^backoffice/initiatives/", views.initiative_list, name="initiatives"),
   url(r"^backoffice/download/(?P<batch_id>.*)$", views.download_csv, name="download_user_batch_invite"),
   url(r"^backoffice/delete/(?P<batch_id>.*)$", views.delete_csv, name="delete_user_batch_invite"),
-  
+
+  # notification forward to user
+  url(r"^backoffice/users/(?P<init_id>\d+)/$", views.user_view, name="user"),
+
   # superusers
   url(r"^admin/", admin.site.urls),
 ]
