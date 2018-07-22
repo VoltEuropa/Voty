@@ -1,3 +1,9 @@
+# ==============================================================================
+# Voty initadmin urls
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
 from django.conf.urls import url
 from django.views import generic
 from . import views
@@ -5,7 +11,7 @@ from . import views
 urlpatterns = [
   url(r'^(?P<filename>(robots.txt)|(humans.txt))$', views.crawler, name='crawler'),
 
-	# home/i18n
+        # home/i18n
   url(r"^$", views.index, name="home"),
 
   # about (ueber) is not static
@@ -16,6 +22,9 @@ urlpatterns = [
   url(r"^user_autocomplete$", views.UserAutocomplete.as_view(), name="user_autocomplete"),
 
   # initiative
+  # linking from notification/todo list to initiative (must match content-type)
+  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?$", views.item, name="initiative"),
+
   url(r"^initiative/new$", views.new, name="new_initiative"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/support$", views.support),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/ack_support$", views.ack_support),
@@ -36,3 +45,4 @@ urlpatterns = [
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.like),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.unlike)
 ]
+

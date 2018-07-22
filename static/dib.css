@@ -1711,6 +1711,21 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
 .form-input-group-fileupload .form-control {
   height: 2.4em;
   margin-bottom: .5em;
-  
 }
+/* ------------------------ notification menu ------------------------------- */
+.dropdown .dropdown-menu {
+  width: 14rem;
+  text-align: center;
+}
+.dropdown-menu #live_notify_list {
+  border-bottom: 1px solid rgba(37, 60, 135, 1);
+  margin-bottom: .25em;
+  padding-bottom: .25em;
+  text-align: left;
+}
+.todo-list-header .material-icons {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 

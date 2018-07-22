@@ -80,7 +80,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right notifications" aria-labelledby="navbarDropdownMenuLink">
             {% live_notify_list %}
-            <a href="{% url 'notifications' %}">{% trans "Todo List" %}</a>
+            <a class="notification-menu-link" href="{% url 'notifications' %}">{% trans "Go to Todo List" %}</a>
             </div>
           </li>
           <li class="nav-item dropdown">
@@ -176,25 +176,25 @@
             return '{localisation_request} {% trans "Localisation Requests" %}';
 
           case "invite_sent":
-            return '{invite_sent} {% trans "Unanswered Invites" %}';
+            return '{invite_sent} {% trans "Support Requests" %}';
           case "invite_accepted":
-            return '{invite_accepted} {% trans "Accepted Invites" %}';
+            return '{invite_accepted} {% trans "Support Pledges" %}';
           case "invite_rejected":
-            return '{invite_rejected} {% trans "Rejected Invites" %}';
+            return '{invite_rejected} {% trans "Support Declines" %}';
           case "init_edited":
-            return '{init_edited} {% trans "Unread Initiative Updates" %}';
+            return '{init_edited} {% trans "Initiative Updates" %}';
           case "init_submitted":
-            return '{init_submitted} {% trans "Submitted Initiatives" %}';
+            return '{init_submitted} {% trans "Initiatives Submitted" %}';
           case "init_published":
-            return '{init_published} {% trans "Published Initiatives" %}';
+            return '{init_published} {% trans "Initiatives Published" %}';
           case "init_discussion":
-            return '{init_discussion} {% trans "Initiatives opened for Discussion" %}';
+            return '{init_discussion} {% trans "Initiatives for Discussion" %}';
           case "init_discussion_closed":
-            return '{init_discussion_closed} {% trans "Initivites ready for finalization" %}';
+            return '{init_discussion_closed} {% trans "Initiatives to finalize" %}';
           case "init_vote":
-            return '{init_vote} {% trans "Initiatives to vote" %}';
+            return '{init_vote} {% trans "Initiatives to vote on" %}';
           case "init_new_arg":
-            return '{init_new_arg} {% trans "New Arguments posted" %}';
+            return '{init_new_arg} {% trans "New Arguments" %}';
         }
       }
 
@@ -209,15 +209,22 @@
 
         if (menu) {
           message_dict = data.unread_list.reduce(function (pass, item) {
-            pass[item.verb] = pass[item.verb] += 1 || 1;
+            if (pass[item.verb] === undefined) {
+              pass[item.verb] = 1;
+              return pass;
+            }
+            pass[item.verb] += 1;
             return pass;
           }, {});
+
           fragment = document.createDocumentFragment();
 
           for (key in message_dict) {
             if (message_dict.hasOwnProperty(key)) {
               item = document.createElement("li");
-              item.textContent = getEntry(key).supplant(message_dict[key]);
+              counter = {}
+              counter[key] = message_dict[key]
+              item.textContent = getEntry(key).supplant(counter);
               fragment.appendChild(item);
             }
           }

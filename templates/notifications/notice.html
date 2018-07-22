@@ -1,24 +1,20 @@
-          <div class="alert alert-block alert-{{ notice.level }}">
-            <a class="close pull-right" href="{% url 'notifications:mark_as_read' notice.slug %}">
-              <i class="icon-close"></i>
-            </a>
-  
-            <h4>
-              <i class="icon-mail{% if notice.unread %}-alt{% endif %}"></i>
-              {{ notice.actor }} 
-              {{ notice.verb }}
-              {% if notice.target %}
-                of {{ notice.target }}
-              {% endif %}
-            </h4>
-  
-            <p>{{ notice.timesince }} ago</p>
-            
-            <p>{{ notice.description|linebreaksbr }}</p>
-            
-            <div class="notice-actions">
-              {% for action in notice.data.actions %}
-                <a class="btn" href="{{ action.href }}">{{ action.title }}</a>
-              {% endfor %}
-            </div>
-          </div>
+{% load i18n %}
+{% load templify %}
+<div class="todo-list-item alert alert-block alert-{{ notice.level }}">
+  <a class="todo-list-close close pull-right" href="{% url 'notifications:mark_as_read' notice.slug %}">
+    <i class="material-icons close icon-close">close</i>
+  </a>
+  <h4 class="todo-list-header">
+    {% if notice.unread %}<i class="icon-mail material-icons fiber_new">fiber_new</i>{% endif %}
+    <a href="{% url notice.target_content_type|templify init_id=notice.target_object_id %}">{{ notice.actor }}:{{ notice.verb }}{% if notice.target %} - {{ notice.target }}{% endif %}</a>
+  </h4>
+  <p class="todo-list-timestamp">{% trans "Posted" %}{{ notice.timesince }}</p>
+  {% if notice.description %}
+  <p class="todo-list-description">{{ notice.description|linebreaksbr }}</p>
+  {% endif %}
+  <div class="todo-list-actions notice-actions">
+    {% for action in notice.data.actions %}
+      <a class="btn" href="{{ action.href }}">{{ action.title }}</a>
+    {% endfor %}
+  </div>
+</div>

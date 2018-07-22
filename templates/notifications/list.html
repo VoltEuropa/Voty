@@ -2,7 +2,8 @@
 
 {% load i18n %}
 {% load get_trans %}
-{% block head_title %}{% trans "Plenum: Notification List" %}{% endblock %}
+{% load verify_group_membership %}
+{% block head_title %}{% trans "Plenum: Todo List" %}{% endblock %}
 
 {% block content %}
   {% block body %}
@@ -10,9 +11,12 @@
       <div class="container">
         <div class="row">
           <div class="col">
-          <h2>{% trans "Notification List" %}</h2>
-
-          <ul class="notifications">
+          <h2>{% trans "Todo List" %}</h2>
+          <p>{% trans "This is a list of all items and todos you are subscribed to (see your settings). Items remain on the list until you mark them as read/answer the respective request." %}
+          {% if request.user|is_team_member %}
+          <p>{% trans "Administrative or moderation items can be handled by all users with appropriate permissions and will disappear once handled." %}</p>
+          {% endif %}
+          <ul class="todo-list notifications">
             {% for notice in notifications %}
               {% include 'notifications/notice.html' %}
             {% endfor %}
@@ -22,7 +26,7 @@
   </div>
   <div class="row mt-4 mb-4">
       <div class="col">
-          <a href="{% url "profile_edit" %}"><i class="material-icons chevron-left">chevron_left</i>{% trans "Back to Settings" %}</a>
+          <a href="/"><i class="material-icons chevron-left">chevron_left</i>{% trans "Back to main page" %}</a>
       </div>
   </div>
   {% endblock %}
