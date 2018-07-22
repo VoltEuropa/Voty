@@ -1718,9 +1718,6 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   text-align: center;
 }
 .dropdown-menu #live_notify_list {
-  border-bottom: 1px solid rgba(37, 60, 135, 1);
-  margin-bottom: .25em;
-  padding-bottom: .25em;
   text-align: left;
 }
 .todo-list-header .material-icons {
