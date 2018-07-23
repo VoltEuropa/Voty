@@ -175,15 +175,14 @@ LOCALE_PATHS = (
   os.path.join( BASE_DIR, "locale"),
 )
 
-# translate-able text from the .ini file will not be handled by external libs,
-# so it needs to be translated manually here
-# XXX get an array and call tuple versus redoing a tuple
-ACCOUNT_LANGUAGES = tuple([(x[0], _(x[1].partition('{% trans "')[2].partition('" %}')[0])) for x in raw_parser.items("alternative_language_list")])
+ACCOUNT_LANGUAGES = tuple([(x[0], _(_strip(x[1]))) for x in raw_parser.items("alternative_language_list")])
 LANGUAGE_CODE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
 TIME_ZONE = raw_parser.get("settings", "DEFAULT_TIMEZONE")
 LANGUAGES = ACCOUNT_LANGUAGES
 
+# not sure which one?
 NOTIFICATIONS_USE_JSONFIELD=True
+DJANGO_NOTIFICATIONS_CONFIG = { 'USE_JSONFIELD': True}
 
 ACCOUNT_EMAIL_UNIQUE = True
 ACCOUNT_OPEN_SIGNUP = False
@@ -298,3 +297,4 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
+

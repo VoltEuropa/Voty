@@ -27,7 +27,9 @@ from django.utils.html import escape, strip_tags
 
 import account.views
 import uuid
+import json
 from pinax.notifications.models import send as notify
+from notifications.models import Notification
 from account.models import SignupCodeResult, SignupCode
 
 from .models import InviteBatch, UserConfig
@@ -140,6 +142,8 @@ def _invite_batch_users(csv_file):
   ).save()
 
   return total, newly_added
+
+# ----------------------- retrieve flag from UserConfig ------------------------
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -298,18 +302,39 @@ def user_view(request, user_id):
       user.save()
       messages.success(request, "".join([_("Added the user to the following groups:"), ", ".join(new_group_list)]))
 
-    # validate localisation scope
+    # ----------------------- Validate Localisation ----------------------------
     elif request.POST.get("action", None) == "validate_scope":
 
+      # prevent tempering
       #if request.POST.get("scope", None) !== user.config.scope:
       #  messages.warning(request, _("You are not allowed to modify the localisation chosen by a user. Please only validate/invalidate the chose localisation"))
+      #  return redirect("/backoffice/users/%s" % (user.id))
+      if user_id == request.user.id:
+        message.warning(_("You cannot validate your own localisation change. Please have another team member review your request."))
+        return redirect("/backoffice/users/%s" % (user.id))
 
       user_config = UserConfig.objects.get(user_id=user_id)
+      user_config_flag_list = [x for x in user_config.is_flagged.split(";") if x.startswith("can_localise_user")]
+
+      if len(user_config_flag_list) > 0:
+        for flag in user_config_flag_list:
+          
+          # XXX data stored as JSON but couldn't figure out how to search
+          # XXX only way to access data is x.data["flag"], so filter() won't work
+          # XXX this can be costly
+          # https://docs.djangoproject.com/en/1.10/ref/contrib/postgres/fields/#std:fieldlookup-hstorefield.contains
+          for note in Notification.objects.all():
+            if note.data["flag"] == flag:
+              note.delete()
+
       user_config.scope = request.POST.get("scope", "eu")
       user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
       user_config.save()
       messages.success(request, _("Successfully updated user localisation."))
-      # XXX notify user
+      notify([user], settings.NOTIFICATIONS.MODERATE.LOCALISED, {
+        "target": user,
+        "description": "".join([_("Localisation validated. New location: "), user.config.scope, "."]),
+      }, sender=request.user)
 
     # activate/disactivate account
     elif request.POST.get("action", None) == "activate_account":
@@ -377,15 +402,15 @@ def user_view(request, user_id):
   })
 
 # ---------------------------- User List  --------------------------------------
-# XXX make generic so it can be used for initiatives, too
 @login_required
-#@user_passes_test(lambda u: is_team_member(u))
+@group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST, raise_exception=True)
 def user_list(request):
 
   user_values = {}
   user_list = get_user_model().objects.filter(is_superuser=False, is_staff=False)
   user_filters = {
     "glossary_active_all": True,
+    "glossary_active_flag": True,
     "glossary_char_list": settings.LISTBOX_OPTION_DICT.GLOSSARY_CHAR_LIST
   }
   number_of_records = settings.LISTBOX_OPTION_DICT.NUMBER_OF_RECORDS_DEFAULT
@@ -407,9 +432,10 @@ def user_list(request):
     ).distinct()
     user_values["search"] = request_search
 
+  # by now we have the relevant user set, flag available characters
+
   # XXX glossary assumes we are searching for username, should be settable
   # XXX missing summarizing all $%&/( into #
-  # by now we have the relevant user set, flag available characters
   glossary_candidate_list = [getattr(x[1], "username", None) for x in enumerate(user_list)]
   glossary_candidate_list = list(set([x[0].upper() for x in glossary_candidate_list if x is not None]))
 
@@ -418,6 +444,14 @@ def user_list(request):
       user_filters["glossary_char_list"][glossy_character]["avail"] = True
     except:
       user_filters["glossary_char_list"]["#"]["avail"] = True
+
+  # check if users have flags set and enable the character
+  for user in user_list:
+    if len(user.config.is_flagged) > 0:
+      glossary_candidate_list.append("flagged")
+      user_filters["glossary_active_flag"] = False
+      user_filters["glossary_char_list"]["flagged"] = {"avail":True}
+      break
 
   # filter user_list if a glossary is passed in the request
   if "glossary" in request.GET:
@@ -433,6 +467,11 @@ def user_list(request):
             user_list = user_list.exclude(username__regex=regex_azAZ)
             del user_filters["glossary_char_list"]["#"]["avail"]
             del user_filters["glossary_active_all"]
+          elif request_glossy_character == "flagged":
+            user_list = user_list.exclude(config__is_flagged__isnull=True).exclude(config__is_flagged__exact="")
+            del user_filters["glossary_active_all"]
+            user_filters["glossary_active_flag"] = True
+            del user_filters["glossary_char_list"]["flagged"]["avail"]
           else:
             user_list = user_list.filter(username__istartswith=glossy_character)
             del user_filters["glossary_char_list"][glossy_character]["avail"]
@@ -504,34 +543,34 @@ def profile_localise(request):
   form = None
 
   if request.method == "POST":
+
     if is_confirmed != True:
       messages.warning(request, _("Localisation is not possible while previous change has not been validated."))
     else:
       form = UserLocaliseForm(request.POST)
       if form.is_valid():
+
+        # create recipient list based on group and permission
         permission = "can_localise_user"
         localisation_permission = Permission.objects.filter(codename=permission)
         recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
-        flag_id = "".join([permission, ":", str(uuid.uuid4())])
 
-        # see initadmin notify_backend of how notifications are mapped to pinax
-        # extra_content: 'action_object', 'target', 'verb', 'description'
+        # create a searchable id to remove all notifications when on moderator answers
+        flag = "".join([permission, ":", str(uuid.uuid4())])
         notify(recipient_list, settings.NOTIFICATIONS.MODERATE.LOCALISED, {
           "target": user,
-          "description": flag_id
+          "description": "".join([_("Request to change location. Current location: "), user.config.scope, ". ", _("New location: "), request.POST.get("scope") ]),
+          "flag": flag,
         }, sender=request.user)
-        user.config.is_flagged = user.config.is_flagged + flag_id + ";"
+
+        # save the config
+        user.config.is_flagged = user.config.is_flagged + flag + ";"
         form = UserLocaliseForm(request.POST, instance=user.config)
         form.save()
         messages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
 
   if form is None:
-    form = UserLocaliseForm(initial={
-      "scope": user.config.scope,
-      "is_scope_confirmed": is_confirmed
-    })
-
-  # don't allow multiple changes without validation
+    form = UserLocaliseForm(initial={"scope": user.config.scope, "is_scope_confirmed": is_confirmed})
   if is_confirmed != True:
     form.fields['scope'].disabled = True
 

@@ -1,3 +1,4 @@
+
 # ==============================================================================
 # Voty initadmin urls
 # ==============================================================================
@@ -7,6 +8,7 @@
 from django.conf.urls import url, include
 from django.views.generic.base import TemplateView
 from django.contrib import admin
+from django.utils.translation import ugettext_lazy as _
 
 import notifications.urls
 
@@ -39,7 +41,7 @@ urlpatterns = [
   url(r"^backoffice/delete/(?P<batch_id>.*)$", views.delete_csv, name="delete_user_batch_invite"),
 
   # notification forward to user
-  url(r"^backoffice/users/(?P<init_id>\d+)/$", views.user_view, name="user"),
+  url(r"^backoffice/users/(?P<object_id>\d+)/$", views.user_view, name=_("user")),
 
   # superusers
   url(r"^admin/", admin.site.urls),

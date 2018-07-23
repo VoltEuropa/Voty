@@ -95,7 +95,7 @@
               {{ form_user_validate.source.errors }}
               {{ form_user_validate.source }}
 
-              <h3>{% trans "Participation Permission" %}</h3>
+              <h3 id="localisation_request">{% trans "Participation Permission" %}</h3>
               <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of <i>EU/France/Paris</i> will permit the user to vote on European, French and Paris-based initiatives." %}
               <p>{% trans "When a user requests to change this setting, it has to be validated by a moderator to come into effect" %}</p>
               <div class="form-inline-group">
@@ -173,7 +173,7 @@
                 {{ form_user_delete.source.errors }}
                 {{ form_user_delete.source }}
   
-                <h3>{% trans "Delete Account and anonymize contributions" %}</h3>
+                <h3 id="deletion_request">{% trans "Delete Account and anonymize contributions" %}</h3>
                 <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
                 <div class="form-inline-group">
                   <div class="form-group">

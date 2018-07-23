@@ -16,7 +16,6 @@ from notifications.signals import notify
 def mark_as_read(get_response):
   def middleware(request):
 
-      # XXX ? # from voty.initproc.models import Initiative
       response = get_response(request)
       if request.user and request.user.is_authenticated and getattr(request, "initiative", None):
         initiative_type = ContentType.objects.get_for_model(request.initiative)
@@ -37,9 +36,9 @@ class SiteBackend(BaseBackend):
 
   def deliver(self, recipient, sender, notice_type, extra_context):
     notify_kw = {"verb": notice_type.label}
-    for x in ['action_object', 'target', 'verb', 'description']:
+    for x in ['action_object', 'target', 'verb', 'description', 'flag_id']:
       if x in extra_context:
         notify_kw[x] = extra_context[x]
 
-    # XXX collustion with Initivative notify?
     notify.send(sender, recipient=recipient, **notify_kw)
+

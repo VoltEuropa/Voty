@@ -1613,12 +1613,14 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
 .form-listbox .form-listbox-glossary {
   list-style: none;
   padding: 0;
-  margin: 0 .5em;
 }
 .form-listbox .form-listbox-glossary li {
   display: inline-block;
   padding: .25em;
   opacity: .15;
+}
+.form-listbox .form-listbox-glossary li:last-child {
+  padding: .25em 0;
 }
 .form-listbox .form-listbox-glossary li:not(.form-listbox-glossary-avail) {
   pointer-events: none;

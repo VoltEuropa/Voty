@@ -1,4 +1,3 @@
-
 {% extends "_base.html" %}
 
 {% load i18n %}
@@ -48,6 +47,9 @@
                     <li class="{% if opt.avail %}form-listbox-glossary-avail btn-secondary{% endif %}{% if opt.active %} form-listbox-glossary-active{% endif %}">
                       <a href="?page=&amp;glossary={{ opt.value }}&amp;search={{ user_filters.search }}&amp;scope={{ user_filters.scope }}">{{ opt.value }}</a></li>
                     {% endfor %}
+                    <li class="{% if user_filters.glossary_active_flag %}form-listbox-glossary-active {% else %} form-listbox-glossary-avail btn-secondary{% endif %}">
+                      <a href="?page=&amp;glossary=flagged&amp;search={{ user_filters.search }}&amp;scope={{ user_filters.scope }}">{% trans "Todo" %}</a>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -58,7 +60,7 @@
                     <th>{% trans "First Name" %}</th>
                     <th>{% trans "Last Name" %}</th>
                     <th>{% trans "Email" %}</th>
-                    <th>{% trans "Flagged" %}</th>
+                    <th>{% trans "Todo" %}</th>
                   </tr>
                 </thead>
                 <tbody>

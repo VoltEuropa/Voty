@@ -6,6 +6,7 @@
 # ------------------------------------------------------------------------------
 from django.conf.urls import url
 from django.views import generic
+from django.utils.translation import ugettext_lazy as _
 from . import views
 
 urlpatterns = [
@@ -21,9 +22,8 @@ urlpatterns = [
   # autocomplete for mass invitations  
   url(r"^user_autocomplete$", views.UserAutocomplete.as_view(), name="user_autocomplete"),
 
-  # initiative
-  # linking from notification/todo list to initiative (must match content-type)
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?$", views.item, name="initiative"),
+  # notification forward to initiative, careful, this autotranslates unfortunately
+  url(r"^initiative/(?P<object_id>\d+)/$", views.item, name=_("initiative")),
 
   url(r"^initiative/new$", views.new, name="new_initiative"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/support$", views.support),
@@ -45,4 +45,3 @@ urlpatterns = [
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.like),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.unlike)
 ]
-

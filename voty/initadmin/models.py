@@ -38,10 +38,10 @@ class UserConfig(models.Model):
   # call post and "put" a second time and throw unique-id errors.
 
   # dispatch https://code.djangoproject.com/wiki/Signals#Helppost_saveseemstobeemittedtwiceforeachsave
-  #@receiver(post_save, sender=User, dispatch_uid="some_string_create_user_config")
-  #def create_user_config(sender, instance, created, **kwargs):
-  #  if created:
-  #    UserConfig.objects.create(user=instance)
+  @receiver(post_save, sender=User, dispatch_uid="some_string_create_user_config")
+  def create_user_config(sender, instance, created, **kwargs):
+    if created:
+      UserConfig.objects.create(user=instance)
   
   #@receiver(post_save, sender=User, dispatch_uid="some_string_update_user_config")
   #def save_user_config(sender, instance, created, **kwargs):
