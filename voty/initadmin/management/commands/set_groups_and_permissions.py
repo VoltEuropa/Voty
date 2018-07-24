@@ -38,22 +38,22 @@ def create_notice_types(**kwargs):
   for key, command in vars(settings.NOTIFICATIONS.MODERATE).items():
     NoticeType.create(
       command,
-      getattr(settings.NOTIFICATIONS.MODERATE_VALUE_LIST, key),
-      getattr(settings.NOTIFICATIONS.MODERATE_DESCRIPTION_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_DESCRIPTION_LIST, key),
     )
   
   for key, command in vars(settings.NOTIFICATIONS.INVITE).items():
     NoticeType.create(
       command,
-      getattr(settings.NOTIFICATIONS.INVITE_VALUE_LIST, key),
-      getattr(settings.NOTIFICATIONS.INVITE_DESCRIPTION_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_DESCRIPTION_LIST, key),
     )
 
   for key, command in vars(settings.NOTIFICATIONS.INITIATIVE).items():
     NoticeType.create(
       command,
-      getattr(settings.NOTIFICATIONS.INITIATIVE_VALUE_LIST, key),
-      getattr(settings.NOTIFICATIONS.INITIATIVE_DESCRIPTION_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),
+      getattr(settings.NOTIFICATIONS.I18N_DESCRIPTION_LIST, key),
     )
 
 # BACKCOMPAT (migrations 0025)

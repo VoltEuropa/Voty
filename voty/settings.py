@@ -27,10 +27,16 @@ def _getItemsAsDict(section):
 def _strip(snippet):
   return snippet.partition('{% trans "')[2].partition('" %}')[0]
 
-def _getTranslateableSimpleNameSpace(section):
-  return SimpleNamespace(**dict([(key, _strip(snippet)) for key, snippet in raw_parser._sections[section].items()]))
+def _getTranslatedSimpleNameSpace(section):
+  return SimpleNamespace(**dict([(key, _(_strip(snippet))) for key, snippet in raw_parser._sections[section].items()]))
 
 # ----------------------------- SETTINGS ---------------------------------------
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("SECRET", "&v--b40hjwtfre(o^(4=-s!g7!x&za1u_=v#140ex+_%iek(c#");
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,12 +44,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 raw_parser = configparser.RawConfigParser()
 raw_parser.optionxform=str
 raw_parser.read(os.path.join(BASE_DIR, "init.ini"))
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET", "&v--b40hjwtfre(o^(4=-s!g7!x&za1u_=v#140ex+_%iek(c#");
 
 DEBUG = not os.environ.get("VIRTUAL_HOST", False)
 
@@ -243,18 +243,44 @@ CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST"
 CORS_ALLOW_CREDENTIALS = True
 
 # ----------------------------- Customizations ---------------------------------
-# XXX switch _sections to {s:dict(config.items(s)) for s in config.sections()}
+# XXX don't use _sections => {s:dict(config.items(s)) for s in config.sections()}
+DEFAULT_LANGUAGE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
+DEFAULT_CONTACT_EMAIL = raw_parser.get("settings", "DEFAULT_CONTACT_EMAIL")
+THEME_CONTACT_EMAIL = raw_parser.get("settings", "THEME_CONTACT_EMAIL")
+INITIATIVE_SUPPORT_EMAIL = raw_parser.get("settings", "INITIATIVE_SUPPORT_EMAIL")
+MIN_SEARCH_LENGTH = raw_parser.get("settings", "MIN_SEARCH_LENGTH")
+URL_HOWTO_INITIATIVE = raw_parser.get("settings", "URL_HOWTO_INITIATIVE")
+
+ACCOUNT_DELETION_EXPUNGE_HOURS = raw_parser.get("settings", "ACCOUNT_DELETION_EXPUNGE_HOURS")
+PLATFORM_TITLE = raw_parser.get("settings", "PLATFORM_TITLE")
+PLATFORM_SUB_TITLE = raw_parser.get("settings", "PLATFORM_SUB_TITLE")
+PLATFORM_TITLE_ACRONYM = raw_parser.get("settings", "PLATFORM_TITLE_ACRONYM")
+
+PLATFORM_DEFAULT_URL = raw_parser.get("settings", "PLATFORM_DEFAULT_URL")
+PLATFORM_MARKETPLACE_URL = raw_parser.get("settings", "PLATFORM_MARKETPLACE_URL")
+PLATFORM_REGISTRATION_URL = raw_parser.get("settings", "PLATFORM_REGISTRATION_URL")
+PLATFORM_LEGAL_URL = raw_parser.get("settings", "PLATFORM_LEGAL_URL")
+PLATFORM_DATA_PROTECTION_URL = raw_parser.get("settings", "PLATFORM_DATA_PROTECTION_URL")
+INITIATIVE_TEMPLATE_URL = raw_parser.get("settings", "INITIATIVE_TEMPLATE_URL")
+INITIATIVE_EXPLANATION_URL = raw_parser.get("settings", "INITIATIVE_EXPLANATION_URL")
+PLATFORM_VOTING_REGULATION_URL = raw_parser.get("settings", "PLATFORM_VOTING_REGULATION_URL")
+PLATFORM_TECH_DEVELOPMENT_URL = raw_parser.get("settings", "PLATFORM_TECH_DEVELOPMENT_URL")
+PLATFORM_TECH_SUPPORT_URL = raw_parser.get("settings", "PLATFORM_TECH_SUPPORT_URL")
+PLATFORM_TECH_SOURCE_CODE_URL = raw_parser.get("settings", "PLATFORM_TECH_SOURCE_CODE_URL")
+PLATFORM_TECH_DEVELOPMENT_TICKET_URL = raw_parser.get("settings", "PLATFORM_TECH_DEVELOPMENT_TICKET_URL")
+PLATFORM_SOCIAL_MEDIA_LOGO_URL = raw_parser.get("settings", "PLATFORM_SOCIAL_MEDIA_LOGO_URL")
+PLATFORM_LOGO_URL = raw_parser.get("settings", "PLATFORM_LOGO_URL")
+
+SITE_FONT_CSS_URL = raw_parser.get("settings", "SITE_FONT_CSS_URL")
+SITE_THEME_CSS_URL = raw_parser.get("settings", "SITE_THEME_CSS_URL")
+SITE_JS_URL = raw_parser.get("settings", "SITE_JS_URL")
+
+
 
 USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
 
-#  CUSTOM (GLOBALS)
-MIN_SEARCH_LENGTH = raw_parser.getint("settings", "MIN_SEARCH_LENGTH")
-
-PLATFORM_TITLE = raw_parser.get("settings", "PLATFORM_TITLE")
-
 # XXX why do those have to be classes? Nothing will ever change.
 VOTED = raw_parser._sections["initiative_vote_state_list"]
-
 
 # groups and permissions
 BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
@@ -273,16 +299,14 @@ PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_p
 # => requires lazy translation whenever displayed
 NOTIFICATIONS = SimpleNamespace(**{
   "MODERATE": SimpleNamespace(**raw_parser._sections["notification_moderation_state_list"]),
-  "MODERATE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_moderation_state_value_list"),
-  "MODERATE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_moderation_state_description_list"),
-
   "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
-  "INVITE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_invitation_state_value_list"),
-  "INVITE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_invitation_state_description_list"),
-  
   "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_state_list"]),
-  "INITIATIVE_VALUE_LIST": _getTranslateableSimpleNameSpace("notification_initiative_state_value_list"),
-  "INITIATIVE_DESCRIPTION_LIST": _getTranslateableSimpleNameSpace("notification_initiative_state_description_list"),
+
+  # translation lookup values across all notifications
+  "I18N_VALUE_LIST": _getTranslatedSimpleNameSpace("notification_i18n_value_list"),
+  "I18N_DESCRIPTION_LIST": _getTranslatedSimpleNameSpace("notification_i18n_description_list"),
+  "I18N_TODO_TITLE_LIST": _getTranslatedSimpleNameSpace("notification_i18n_todo_list"),
+  "I18N_TODO_LIST": [k for k, _ in raw_parser._sections["notification_i18n_todo_list"].items()],
 })
 
 # categories

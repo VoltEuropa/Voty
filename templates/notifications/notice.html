@@ -1,12 +1,28 @@
 {% load i18n %}
-{% load templify %}
+{% load get_as_string %}
+{% load get_trans %}
+{% load get_setting %}
 <div class="todo-list-item alert alert-block alert-{{ notice.level }}">
-  <a class="todo-list-close close pull-right" href="{% url 'notifications:mark_as_read' notice.slug %}">
+  <a class="todo-list-close close pull-right" href="{% url 'notifications:delete' notice.slug %}">
     <i class="material-icons close icon-close">close</i>
   </a>
   <h4 class="todo-list-header">
     {% if notice.unread %}<i class="icon-mail material-icons fiber_new">fiber_new</i>{% endif %}
-    <a href="{% url notice.target_content_type|templify object_id=notice.target_object_id %}#{{ notice.verb }}">{{ notice.actor }}: {{ notice.verb }} {% if notice.target %} - {{ notice.target }}{% endif %}</a>
+
+    {% with "NOTIFICATIONS.I18N_VALUE_LIST."|add:notice.verb as lookup %}
+      {% with lookup|get_setting as pointer %}
+        {% with pointer|get_trans as action %}
+          {% if notice.target_object_id %}
+            <a href="{% url notice.target_content_type|get_as_string object_id=notice.target_object_id %}#{{ notice.verb }}">
+          {% endif %}
+          {{ notice.actor }}: {{ action }} {% if notice.target %}{% if notice.target %}- {{ notice.target }}{% endif %}{% endif %}
+          {% if notice.target_object_id %} 
+            </a>
+          {% endif %}
+        {% endwith %}
+      {% endwith %}
+    {% endwith %}
+
   </h4>
   <p class="todo-list-timestamp">{% trans "Pending since: " %}{{ notice.timesince }}</p>
   {% if notice.description %}

@@ -15,17 +15,19 @@ from notifications.signals import notify
 # mark all notifications related to initiative passed in request as read
 def mark_as_read(get_response):
   def middleware(request):
-
-      response = get_response(request)
-      if request.user and request.user.is_authenticated and getattr(request, "initiative", None):
+    response = get_response(request)
+    if request.user and request.user.is_authenticated:
+      if getattr(request, "initiative", None):
         initiative_type = ContentType.objects.get_for_model(request.initiative)
         q = request.user.notifications.filter(
           Q(actor_content_type=initiative_type, actor_object_id=request.initiative.id) | \
           Q(target_content_type=initiative_type, target_object_id=request.initiative.id)
         ).mark_all_as_read()
+      #
+      #  user_type = ContentType.objects.get_for_model(request.user)
+      #  raise Exception(request.user.notifications)
 
-      return response
-
+    return response
   return middleware
 
 # ---------------------------- SiteBackend -------------------------------------
@@ -36,9 +38,8 @@ class SiteBackend(BaseBackend):
 
   def deliver(self, recipient, sender, notice_type, extra_context):
     notify_kw = {"verb": notice_type.label}
-    for x in ['action_object', 'target', 'verb', 'description', 'flag_id']:
+    for x in ['action_object', 'target', 'verb', 'description', 'flag']:
       if x in extra_context:
         notify_kw[x] = extra_context[x]
 
     notify.send(sender, recipient=recipient, **notify_kw)
-

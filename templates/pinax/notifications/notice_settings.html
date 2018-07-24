@@ -31,19 +31,37 @@
                 {% endfor %}
               </tr>
               {% for row in notice_settings.rows %}
-              <tr class="notice-row">
-                <td>
-                  <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
-                  <span class="notice_type_description">
-                    {{ row.notice_type.description|get_trans }}
-                  </span>
-                </td>
-                {% for cell in row.cells %}
-                  <td>
-                    <input type="checkbox" name="{{ cell.0 }}" {% if cell.1 %}checked="yes"{% endif %} />
-                  </td>
-                {% endfor %}
-              </tr>
+                {% if row.notice_type.label|first in "user" %}
+                  {% if perms.auth.user_can_localise %}
+                    <tr class="notice-row">
+                      <td>
+                        <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
+                        <span class="notice_type_description">
+                          {{ row.notice_type.description|get_trans }}
+                        </span>
+                      </td>
+                      {% for cell in row.cells %}
+                        <td>
+                          <input type="checkbox" name="{{ cell.0 }}" {% if cell.1 %}checked="yes"{% endif %} />
+                        </td>
+                      {% endfor %}
+                    </tr>
+                  {% endif %}
+                {% else %}
+                  <tr class="notice-row">
+                    <td>
+                      <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
+                      <span class="notice_type_description">
+                        {{ row.notice_type.description|get_trans }}
+                      </span>
+                    </td>
+                    {% for cell in row.cells %}
+                      <td>
+                        <input type="checkbox" name="{{ cell.0 }}" {% if cell.1 %}checked="yes"{% endif %} />
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endif %}
               {% endfor %}
             </table>
 

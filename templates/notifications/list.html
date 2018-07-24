@@ -2,7 +2,6 @@
 
 {% load i18n %}
 {% load get_trans %}
-{% load verify_group_membership %}
 {% block head_title %}{% trans "Plenum: Todo List" %}{% endblock %}
 
 {% block content %}
@@ -13,7 +12,7 @@
           <div class="col">
           <h2>{% trans "Todo List" %}</h2>
           <p>{% trans "This is a list of all items and todos you are subscribed to (see your settings). Items remain on the list until you mark them as read/answer the respective request." %}
-          {% if request.user|is_team_member %}
+          {% if perms.auth.user_can_localise %}
           <p>{% trans "Administrative or moderation items can be handled by all users with appropriate permissions and will disappear once handled." %}</p>
           {% endif %}
           <ul class="todo-list notifications">

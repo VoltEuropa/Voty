@@ -27,7 +27,6 @@ from django.utils.html import escape, strip_tags
 
 import account.views
 import uuid
-import json
 from pinax.notifications.models import send as notify
 from notifications.models import Notification
 from account.models import SignupCodeResult, SignupCode
@@ -142,8 +141,6 @@ def _invite_batch_users(csv_file):
   ).save()
 
   return total, newly_added
-
-# ----------------------- retrieve flag from UserConfig ------------------------
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -314,11 +311,14 @@ def user_view(request, user_id):
         return redirect("/backoffice/users/%s" % (user.id))
 
       user_config = UserConfig.objects.get(user_id=user_id)
-      user_config_flag_list = [x for x in user_config.is_flagged.split(";") if x.startswith("can_localise_user")]
+      user_config_flag_list = [x for x in user_config.is_flagged.split(";") if x.startswith("user_can_localise")]
 
       if len(user_config_flag_list) > 0:
         for flag in user_config_flag_list:
-          
+
+          # remove all related flag from this users config
+          user_config.is_flagged = user_config.is_flagged.replace("".join([flag, ";"]), "")
+
           # XXX data stored as JSON but couldn't figure out how to search
           # XXX only way to access data is x.data["flag"], so filter() won't work
           # XXX this can be costly
@@ -331,8 +331,7 @@ def user_view(request, user_id):
       user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
       user_config.save()
       messages.success(request, _("Successfully updated user localisation."))
-      notify([user], settings.NOTIFICATIONS.MODERATE.LOCALISED, {
-        "target": user,
+      notify([user], settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_ACCEPTED, {
         "description": "".join([_("Localisation validated. New location: "), user.config.scope, "."]),
       }, sender=request.user)
 
@@ -551,13 +550,13 @@ def profile_localise(request):
       if form.is_valid():
 
         # create recipient list based on group and permission
-        permission = "can_localise_user"
+        permission = "user_can_localise"
         localisation_permission = Permission.objects.filter(codename=permission)
         recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
 
         # create a searchable id to remove all notifications when on moderator answers
         flag = "".join([permission, ":", str(uuid.uuid4())])
-        notify(recipient_list, settings.NOTIFICATIONS.MODERATE.LOCALISED, {
+        notify(recipient_list, settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_REQUESTED, {
           "target": user,
           "description": "".join([_("Request to change location. Current location: "), user.config.scope, ". ", _("New location: "), request.POST.get("scope") ]),
           "flag": flag,

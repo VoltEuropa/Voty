@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
-# Templify a parameter so it can be wrapped in a {% %} tag
+# Get a parameter as string so it can be wrapped in a {% %} tag
 # ==============================================================================
 #
 # parameters (*default)
@@ -14,10 +14,11 @@ from django.template.defaultfilters import stringfilter
 
 register = template.Library()
 
-# call: {% load templify %} then call {% [parameter]|templify %}
+# call: {% load get_as_string %} then call {% [parameter]|get_as_string %}
 # this returns the template value, if you're stuck with:
-# {% url 'some.parameter' %} => {% url some_parameter|templify ... %}
+# {% url 'some.parameter' %} gives {% url some_parameter|get_as_string ... %}
 @register.filter
 @stringfilter
-def templify(my_param):
+def get_as_string(my_param):
   return str(my_param)
+

@@ -2,8 +2,7 @@
 {% load static %}
 {% load fullurl %}
 {% load i18n %}
-{% load site_defaults %}
-{% load verify_group_membership %} 
+{% load get_setting %}
 <!DOCTYPE html>
 <html lang="{{ 'DEFAULT_LANGUAGE'|get_setting }}">
 
@@ -90,7 +89,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right profile" aria-labelledby="navbarDropdownMenuLink">
                 <a class="dropdown-item" href="{% url 'profile_edit' %}">{% trans "Settings" %}</a>
-                {% if request.user|is_team_member %}
+                {% if perms.auth.user_can_localise %}
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item" href="{% url 'initiatives' %}">{% trans "Initiatives" %}</a>
                   <a class="dropdown-item" href="{% url 'users' %}">{% trans "Users" %}</a>
@@ -171,33 +170,15 @@
         };
       }
 
-      function getEntry(key) {
-        switch (key) {
-          case "localisation_request":
-            return '{localisation_request} {% trans "Localisation Requests" %}';
-          case "localisation_accepted":
-            return '{localisation_accepted} {% trans "Localisation Accepted" %}';
-
-          case "invite_sent":
-            return '{invite_sent} {% trans "Support Requests" %}';
-          case "invite_accepted":
-            return '{invite_accepted} {% trans "Support Pledges" %}';
-          case "invite_rejected":
-            return '{invite_rejected} {% trans "Support Declines" %}';
-          case "init_edited":
-            return '{init_edited} {% trans "Initiative Updates" %}';
-          case "init_submitted":
-            return '{init_submitted} {% trans "Initiatives Submitted" %}';
-          case "init_published":
-            return '{init_published} {% trans "Initiatives Published" %}';
-          case "init_discussion":
-            return '{init_discussion} {% trans "Initiatives for Discussion" %}';
-          case "init_discussion_closed":
-            return '{init_discussion_closed} {% trans "Initiatives to finalize" %}';
-          case "init_vote":
-            return '{init_vote} {% trans "Initiatives to vote on" %}';
-          case "init_new_arg":
-            return '{init_new_arg} {% trans "New Arguments" %}';
+      function getTitle(verb) {
+        console.log(verb)
+        switch(verb) {
+          {% for k in "NOTIFICATIONS.I18N_TODO_LIST"|get_setting %}
+            case "{{ k }}":
+              {% with "NOTIFICATIONS.I18N_TODO_TITLE_LIST."|add:k as t %}
+                return "{{ t|get_setting }}";
+              {% endwith %}
+          {% endfor %}
         }
       }
 
@@ -219,15 +200,13 @@
             pass[item.verb] += 1;
             return pass;
           }, {});
-
+          console.log(message_dict)
           fragment = document.createDocumentFragment();
 
           for (key in message_dict) {
             if (message_dict.hasOwnProperty(key)) {
               item = document.createElement("li");
-              counter = {}
-              counter[key] = message_dict[key]
-              item.textContent = getEntry(key).supplant(counter);
+              item.textContent = message_dict[key] + " " + getTitle(key.toUpperCase());
               fragment.appendChild(item);
             }
           }
