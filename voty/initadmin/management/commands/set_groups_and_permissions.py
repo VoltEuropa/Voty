@@ -104,11 +104,11 @@ def backcompat_reverse_teams_and_permissions():
 
 def create_custom_groups_and_permissions():
   group_list = []
-  perm_list = []
+  group_permission_dict = dict([(x, y.split(",")) for x, y in settings.PLATFORM_GROUP_USER_PERMISSION_MAPPING])
 
   for (group_key, group_title) in settings.PLATFORM_GROUP_LIST:
     new_group, created = create_group(settings.PLATFORM_GROUP_VALUE_LIST[group_key])
-    group_list.append(new_group)
+    group_list.append((group_key, new_group))
     if created:
       new_group.save()
 
@@ -127,12 +127,17 @@ def create_custom_groups_and_permissions():
         content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
       )
       perm.save()
-      perm_list.append(perm)
 
-  if len(perm_list) > 0:
-    for group in group_list:
-      group.permissions = perm_list
-      group.save()
+      # XXX a lot of saving groups, find better way
+      for group in group_list:
+        for group_key, group_permission_list in group_permission_dict.items():
+          if group[0] == group_key:
+            for group_permission_key in group_permission_list:
+              if perm_key == group_permission_key.upper():
+                group[1].permissions.add(perm)
+
+  for group in group_list:
+    group[1].save()
 
 # ---------------------------------- Command -----------------------------------
 class Command(BaseCommand):
@@ -155,4 +160,3 @@ class Command(BaseCommand):
     create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
-
