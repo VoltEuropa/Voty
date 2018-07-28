@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Abstimmungstool\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-07-09 23:32+0200\n"
-"PO-Revision-Date: 2018-07-09 21:38+0000\n"
+"POT-Creation-Date: 2018-07-28 18:42+0200\n"
+"PO-Revision-Date: 2018-07-28 17:50+0000\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -15,147 +15,327 @@ msgstr ""
 "X-Generator: Loco https://localise.biz/\n"
 "X-Loco-Parser: loco_parse_po"
 
-#: init.ini:53
+#: init.ini:58
 msgid "German"
 msgstr "Deutsch"
 
-#: init.ini:54
+#: init.ini:59
 msgid "English"
 msgstr "Englisch"
 
+#: init.ini:125
+msgid "Localisation Requests"
+msgstr "Lokalisierungsanfragen"
+
+#: init.ini:126 init.ini:143
+msgid "Localisation Validated"
+msgstr "Lokalisierung bestätigt"
+
+#: init.ini:127
+msgid "Deletion Requests"
+msgstr "Anfragen zur Löschung"
+
+#: init.ini:128
+msgid "Support Requests"
+msgstr "Support Anfragen."
+
+#: init.ini:129
+msgid "Support Pledges"
+msgstr "Support Zusagen"
+
+#: init.ini:130
+msgid "Support Declines"
+msgstr "Support Absagen"
+
+#: init.ini:131
+msgid "Initiatives modified"
+msgstr "Initiativen bearbeitet"
+
+#: init.ini:132
+msgid "Initiatives submitted"
+msgstr "Initiativen eingreicht"
+
+#: init.ini:133
+msgid "Initiatives published"
+msgstr "Initiativen veröffentlicht"
+
+#: init.ini:134
+msgid "Initiatives in discussion"
+msgstr "Initiativen in Diskussion"
+
+#: init.ini:135
+msgid "Initiatives to finalize"
+msgstr "Initiativen final bearbeitet"
+
+#: init.ini:136
+msgid "Initiative to Vote on"
+msgstr "Initiative in Abstimmung"
+
+#: init.ini:137
+msgid "Initiatives accepted"
+msgstr "Initiativen akzeptiert"
+
+#: init.ini:138
+msgid "Initiatives rejected"
+msgstr "Initiativen abgelehnt"
+
+#: init.ini:139
+msgid "New Arguments submitted"
+msgstr "Neue Argumente"
+
+#: init.ini:142
+msgid "Localisation Request"
+msgstr "Lokalisierungsanfrage"
+
+#: init.ini:144
+msgid "Deletion Request"
+msgstr "Anfrage zur Löschung"
+
+#: init.ini:145
+msgid "Support Request"
+msgstr "Support Anfrage"
+
+#: init.ini:146
+msgid "Support Pledged"
+msgstr "Support zugesagt"
+
+#: init.ini:147
+msgid "Support Declined"
+msgstr "Support abgelehnt"
+
+#: init.ini:148
+msgid "Initiative modified"
+msgstr "Initiative bearbeitet"
+
+#: init.ini:149
+msgid "Initiative submitted"
+msgstr "Initiative eingreicht"
+
+#: init.ini:150 voty/initproc/views.py:506
+msgid "Initiative published"
+msgstr "Initiative veröffentlicht"
+
+#: init.ini:151
+msgid "Initiative in discussion"
+msgstr "Initiative in Diskussion"
+
+#: init.ini:152
+msgid "Discussion for Initiative ended"
+msgstr "Diskussion zur Initiative ist beendet"
+
 #: init.ini:153
+msgid "Initiative in Vote"
+msgstr "Initiative in Abstimmung"
+
+#: init.ini:154
+msgid "Initiative accepted"
+msgstr "Initiative akzeptiert"
+
+#: init.ini:155
+msgid "Initiative rejected"
+msgstr "Initiative abgelehnt"
+
+#: init.ini:156
+msgid "New Argument in Discussion for Initiative"
+msgstr "Neues Argument in Diskussion zur Initiative"
+
+#: init.ini:159
+msgid "A user requests a localisation change to be validated."
+msgstr "Ein Benutzer hat eine Lokalisierung beantragt."
+
+#: init.ini:160
+msgid "The localisation request was accepted."
+msgstr "Die Lokalisierung wurde bestätigt."
+
+#: init.ini:161
+msgid "A user requested to delete his account."
+msgstr "Ein Benutzer verlangt die Löschung seines Kontos."
+
+#: init.ini:162
+msgid "You have been invited to support a new Initiative."
+msgstr "Du wurdest zu einer neuen Initiative eingeladen"
+
+#: init.ini:163
+msgid "The user gave his support for this Initiative. "
+msgstr "Der Benutzer unterstützt diese Initiative."
+
+#: init.ini:164
+msgid "The user declined support for this Initiative."
+msgstr "Der Benutzer will diese Initiative nicht unterstützen."
+
+#: init.ini:165
+msgid "The Initiative was modified."
+msgstr "Die Initiative wurde überarbeitet."
+
+#: init.ini:166
+msgid "The Initiative was submitted."
+msgstr "Die Initiative wurde eingereicht."
+
+#: init.ini:167
+msgid "The Initiative was published."
+msgstr "Die Initiative wurde veröffentlicht."
+
+#: init.ini:168
+msgid "The Initiative has been moved to the discussion phase."
+msgstr "Die Initiative wurde in die Diskussionsphase gegeben."
+
+#: init.ini:169
+msgid "The Initiative can now be finally modified."
+msgstr "Die Initiative kann jetzt final bearbeitet werden."
+
+#: init.ini:170
+msgid "The Initiative has been put to Vote."
+msgstr "Die Initiative wurde zur Abstimmung freigeben."
+
+#: init.ini:171
+msgid "The Initiative has been accepted."
+msgstr "Die Initiative wurde akzeptiert."
+
+#: init.ini:172
+msgid "The Initiative has been rejected."
+msgstr "Die Initiative wurde abgelehnt."
+
+#: init.ini:173
+msgid "A new Argument was postet in the Discussion for the Initiative."
+msgstr "Ein neues Argument wurde in der Diskussion zur Initiative gepostet."
+
+#: init.ini:220
 msgid "Europe"
 msgstr "Europa"
 
-#: init.ini:154
+#: init.ini:221
 msgid "Europe/Austria"
 msgstr "Europa/Österreich"
 
-#: init.ini:155
+#: init.ini:222
 msgid "Europe/Belgium"
 msgstr "Europa/Belgien"
 
-#: init.ini:156
+#: init.ini:223
 msgid "Europe/Bulgaria"
 msgstr "Europa/Bulgarien"
 
-#: init.ini:157
+#: init.ini:224
 msgid "Europe/Croatia"
 msgstr "Europa/Kroatien"
 
-#: init.ini:158
+#: init.ini:225
 msgid "Europe/Cyprus"
 msgstr "Europa/Zypern"
 
-#: init.ini:159
+#: init.ini:226
 msgid "Europe/Czech Republic"
 msgstr "Europa/Tschechische Republik"
 
-#: init.ini:160
+#: init.ini:227
 msgid "Europe/Denmark"
 msgstr "Europa/Dänemark"
 
-#: init.ini:161
+#: init.ini:228
 msgid "Europe/Estonia"
 msgstr "Europa/Estland"
 
-#: init.ini:162
+#: init.ini:229
 msgid "Europe/Finland"
 msgstr "Europa/Finland"
 
-#: init.ini:163
+#: init.ini:230
 msgid "Europe/France"
 msgstr "Europa/Frankreich"
 
-#: init.ini:164
+#: init.ini:231
 msgid "Europe/France/Paris"
 msgstr "Europa/Frankreich/Paris"
 
-#: init.ini:165
+#: init.ini:232
 msgid "Europe/France/Lille"
 msgstr "Europa/Frankreich/Lille"
 
-#: init.ini:166
+#: init.ini:233
 msgid "Europe/France/Toulouse"
 msgstr "Europa/Frankreich/Toulouse"
 
-#: init.ini:167
+#: init.ini:234
 msgid "Europe/Germany"
 msgstr "Europa/Deutschland"
 
-#: init.ini:168
+#: init.ini:235
 msgid "Europe/Greece"
 msgstr "Europa/Griechenland"
 
-#: init.ini:169
+#: init.ini:236
 msgid "Europe/Hungary"
 msgstr "Europa/Ungarn"
 
-#: init.ini:170
+#: init.ini:237
 msgid "Europe/Ireland"
 msgstr "Europa/Irland"
 
-#: init.ini:171
+#: init.ini:238
 msgid "Europe/Italy"
 msgstr "Europa/Italien"
 
-#: init.ini:172
+#: init.ini:239
 msgid "Europe/Latvia"
 msgstr "Europa/Lettland"
 
-#: init.ini:173
+#: init.ini:240
 msgid "Europe/Lithuania"
 msgstr "Europa/Litauen"
 
-#: init.ini:174
+#: init.ini:241
 msgid "Europe/Luxembourg"
 msgstr "Europa/Luxemburg"
 
-#: init.ini:175
+#: init.ini:242
 msgid "Europe/Malta"
 msgstr "Europa/Malta"
 
-#: init.ini:176
+#: init.ini:243
 msgid "Europe/Netherlands"
 msgstr "Europa/Niederlande"
 
-#: init.ini:177
+#: init.ini:244
 msgid "Europe/Poland"
 msgstr "Europa/Polen"
 
-#: init.ini:178
+#: init.ini:245
 msgid "Europe/Portugal"
 msgstr "Europe/Portugal"
 
-#: init.ini:179
+#: init.ini:246
 msgid "Europe/Romania"
 msgstr "Europa/Rumänien"
 
-#: init.ini:180
+#: init.ini:247
 msgid "Europe/Slovakia"
 msgstr "Europa/Slowakei"
 
-#: init.ini:181
+#: init.ini:248
 msgid "Europe/Slovenia"
 msgstr "Europa/Slowenien"
 
-#: init.ini:182
+#: init.ini:249
 msgid "Europe/Spain"
 msgstr "Europa/Spanien"
 
-#: init.ini:183
+#: init.ini:250
 msgid "Europe/Sweden"
 msgstr "Europa/Sweden"
 
-#: init.ini:184
+#: init.ini:251
 msgid "Europe/United Kingdom"
 msgstr "Europa/Grossbritannien"
 
 #: templates/403.html:10
+msgid "Permission Required"
+msgstr "Zugriffsberechtigung notwendig"
+
+#: templates/403.html:11
 msgid "You are not authorized to view this page."
 msgstr "Du hast keine Berechtigung, diese Seite zu sehen."
 
-#: templates/403.html:10
+#: templates/403.html:11
 msgid "Please login first."
 msgstr "Bitte zuerst anmelden."
 
@@ -163,156 +343,83 @@ msgstr "Bitte zuerst anmelden."
 msgid "Sorry, nothing to see here."
 msgstr "Hoppla! Hier gibt es nichts zu sehen. Schade."
 
-#: templates/_base.html:12
+#: templates/_base.html:11
 msgid "Plenum of participants of "
 msgstr "Plenum der Beweger*innen von"
 
-#: templates/_base.html:22
+#: templates/_base.html:21
 msgid "Voting platform for Participants"
 msgstr "Abstimmungstool für Beweger*innen"
 
-#: templates/_base.html:23
+#: templates/_base.html:22
 msgid ""
 "Here participants and supporters vote on Initiatives to form the program of"
 msgstr ""
 "Hier stimmen die Beweger*innen über Initiativen ab und bilden das politische "
 "Programm von"
 
-#: templates/_base.html:64
+#: templates/_base.html:63
 msgid "Help"
 msgstr "Hilfe"
 
-#: templates/_base.html:67
+#: templates/_base.html:66
 msgid "Data Protection"
 msgstr "Datenschutz"
 
-#: templates/_base.html:70 templates/static/about.html:21
+#: templates/_base.html:69 templates/static/about.html:21
 msgid "Legal Notice"
 msgstr "Impressum"
 
-#: templates/_base.html:74
+#: templates/_base.html:73
 msgid "New Initiative"
 msgstr "Neue Initiative"
 
-#: templates/_base.html:90 templates/account/profile_edit.html:11 
-#: templates/account/settings.html:7 templates/account/settings.html:16
+#: templates/_base.html:83
+msgid "Go to Todo List"
+msgstr "Zur Todoliste wechseln"
+
+#: templates/_base.html:91 templates/account/profile_edit.html:13
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: templates/_base.html:92
+#: templates/_base.html:94
 msgid "Initiatives"
 msgstr "Initiativen"
 
-#: templates/_base.html:93
+#: templates/_base.html:95
 msgid "Users"
 msgstr "Benutzer"
 
-#: templates/_base.html:97
+#: templates/_base.html:99
 msgid "Admin"
 msgstr "Aministration"
 
-#: templates/_base.html:100 templates/account/logout.html:12 
+#: templates/_base.html:102 templates/account/logout.html:12 
 #: templates/account/logout.html:15
 msgid "Logout"
 msgstr "Abmelden"
 
-#: templates/_base.html:105
+#: templates/_base.html:107
 msgid "Register"
 msgstr "Registrieren"
 
-#: templates/_base.html:109
+#: templates/_base.html:111
 msgid "Menu"
 msgstr "Menu"
 
-#: templates/_base.html:112 templates/account/login.html:15 
-#: templates/account/login.html:21
+#: templates/_base.html:114 templates/account/login.html:15 
+#: templates/account/login.html:21 
+#: templates/registration/password_reset_complete.html:13
 msgid "Login"
 msgstr "Anmelden"
 
-#: templates/_base.html:114
+#: templates/_base.html:116
 msgid "Language"
 msgstr "Sprache"
 
-#: templates/_base.html:155
+#: templates/_base.html:159
 msgid " characters left "
 msgstr "Zeichen verfügbar"
-
-#: templates/_base.html:172
-msgid "You have been inivited to "
-msgstr "Du wurdest eingeladen zu"
-
-#: templates/_base.html:172
-msgid " by "
-msgstr "von"
-
-#: templates/_base.html:177
-msgid "has accepted the invitation to Initiative: "
-msgstr "akzeptierte die Einladung zur Initiative:"
-
-#: templates/_base.html:183
-msgid "has rejected the invitation to Initiative: "
-msgstr "hat die Einladung zu folgender Initiative abgelehnt:"
-
-#: templates/_base.html:191
-msgid "has been changed by"
-msgstr "wurde verändert von"
-
-#: templates/_base.html:197
-msgid "has been submitted by"
-msgstr "wurde eingereicht von"
-
-#: templates/_base.html:204
-msgid "has been published by"
-msgstr "wurde veröffentlicht von"
-
-#: templates/_base.html:208
-msgid "has been published"
-msgstr "wurde veröffentlicht"
-
-#: templates/_base.html:215
-msgid "can now be discussed"
-msgstr "kann jetzt diskutiert werden"
-
-#: templates/_base.html:221
-msgid "can now go into final edit"
-msgstr "kann jetzt in die finale Überarbeitung gehen"
-
-#: templates/_base.html:229
-msgid "has opened the following Initiative for voting:"
-msgstr "hat die folgende Initiative zur Abstimmung freigegeben:"
-
-#: templates/_base.html:233
-msgid "can now be voted on"
-msgstr "ist zur Abstimmung freigegeben"
-
-#: templates/_base.html:240
-msgid "has published a new Argument on:"
-msgstr "hat ein neues Argument zur folgenden Diskussion veröffentlicht:"
-
-#: templates/account/delete.html:6 templates/account/delete.html:15 
-#: templates/account/profile_edit.html:24
-msgid "Delete Account"
-msgstr "Benutzerkonto löschen"
-
-#: templates/account/delete.html:16
-#, python-format
-msgid ""
-"Please note, once you delete your account, all account related data will be "
-"permanently and irrevocably deleted after a "
-"%('ACCOUNT_DELETION_EXPUNGE_HOURS'|get_setting)s hours."
-msgstr ""
-"Wenn Du Dein Konto löscht, werden alle verknüpften Daten permanent und "
-"unwiderruflich gelöscht. Die Löschung erfolgt mit nach einer Pufferperiode "
-"von %('ACCOUNT_DELETION_EXPUNGE_HOURS'|get_setting)s Stunden."
-
-#: templates/account/delete.html:18
-msgid "Delete my account"
-msgstr "Mein Benutzerkonto löschen"
-
-#: templates/account/delete.html:24 templates/account/language.html:39 
-#: templates/account/password_change.html:23
-msgid "Return to settings"
-msgstr "Zurück zu Einstellungen"
 
 #: templates/account/email_confirm.html:3
 msgid "Confirm Email address"
@@ -368,7 +475,7 @@ msgid "Set Account Language"
 msgstr "Sprache wählen"
 
 #: templates/account/language.html:33 
-#: templates/pinax/notifications/notice_settings.html:51
+#: templates/pinax/notifications/notice_settings.html:69
 msgid "Change"
 msgstr "Ändern"
 
@@ -396,26 +503,14 @@ msgstr "Plenum: Abmelden"
 msgid "Please confirm you want to logout?"
 msgstr "Wirklich abmelden?"
 
-#: templates/account/password_change.html:5
-msgid "Plenum: Password Change"
-msgstr "Plenum: Passwort ändern"
-
-#: templates/account/password_change.html:14
-msgid "Password Change"
-msgstr "Passwort ändern"
-
-#: templates/account/password_change.html:17 
-#: templates/account/profile_edit.html:15 templates/account/settings.html:19 
-#: templates/initproc/new.html:29
-msgid "Save"
-msgstr "Speichern"
-
 #: templates/account/password_reset.html:7 
-#: templates/account/password_reset_token.html:4
+#: templates/account/password_reset_token.html:4 
+#: templates/registration/password_reset_confirm.html:4
 msgid "Plenum: Password Reset"
 msgstr "Plenum: Passwort zurücksetzen"
 
-#: templates/account/password_reset.html:18
+#: templates/account/password_reset.html:18 
+#: templates/registration/password_reset_confirm.html:12
 msgid "Password Reset"
 msgstr "Passwort zurücksetzen"
 
@@ -510,29 +605,117 @@ msgstr ""
 "ändern möchtest, lasse Dir einen <a href=\"%(url)s\">neuen Link "
 "zuschicken</a>."
 
-#: templates/account/profile_edit.html:17
+#: templates/account/profile_edit.html:14
+msgid "This page is for managing your account settings."
+msgstr "Auf dieser Seite können alle Profileinstellungen vorgenommen werden."
+
+#: templates/account/profile_edit.html:16
+msgid "Profile"
+msgstr "Profil"
+
+#: templates/account/profile_edit.html:61
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+#: templates/account/profile_edit.html:62
+msgid "Change Avatar"
+msgstr "Avatar ändern"
+
+#: templates/account/profile_edit.html:68
+msgid "Modify Password"
+msgstr "Passwort ändern"
+
+#: templates/account/profile_edit.html:72
+msgid "Update Password"
+msgstr "Passwort aktualisieren"
+
+#: templates/account/profile_edit.html:77
+msgid "Set Localisation"
+msgstr "Lokalisierung vornehmen"
+
+#: templates/account/profile_edit.html:78
+msgid ""
+"This setting determines on which initiatives you are able to particiapte and "
+"vote on."
+msgstr ""
+"Diese Einstellung bestimmt, an welchen Initiativen Du Dich beteiligen und "
+"abstimmen kannst."
+
+#: templates/account/profile_edit.html:79
+msgid ""
+"By default, a <i>Europe</i> permission will only allow you to contribute to "
+"European initiatives. If you localise to a country and city, you can also "
+"vote on initiatives on these levels, so a setting of <i>"
+"Europe/France/Paris</i> allows to participate on European, French and Paris-"
+"based initiatives."
+msgstr ""
+"Der Defaultwert <i>Europa</i> ermöglicht ausschließlich die Partizipation "
+"auf europäischer Ebene. Die Beantragung einer Lokalisierung (bspw. Land und "
+"Stadt) erweitert die Freigabe auf die entsprechenden Ebenen. Eine "
+"Lokalisierung <i>Europe/France/Paris</i> ermöglicht folglich die Teilnahme "
+"an Prozessen auf europäischer, französischer und ortgebundenen Inititativen."
+
+#: templates/account/profile_edit.html:95 
+#: templates/initadmin/moderate_user.html:105 
+#: templates/initadmin/moderate_user.html:143
+msgid "Current status:"
+msgstr "Aktueller Status:"
+
+#: templates/account/profile_edit.html:103
+msgid "Change Localisation and request validation"
+msgstr "Lokalisierung ändern und Freigabe anfordern"
+
+#: templates/account/profile_edit.html:106
+msgid ""
+"This setting should be set once. Therefore changes need to be <b>confirmed "
+"my moderators</b> and <b>changes are not possible while waiting for "
+"moderation</b>."
+msgstr ""
+"Dieser Wert sollte nur einmalig vorgenommen werden. Änderungen müssen daher "
+"<b>vom Moderatoren-Team</b> bestätigt werden. Während einer offenen "
+"Bestätigung sind zudem <b>keine weiteren Änderungen</b> möglich."
+
+#: templates/account/profile_edit.html:110
+msgid "Set Preferred Language"
+msgstr "Bevorzugte Sprache einstellen"
+
+#: templates/account/profile_edit.html:114
+msgid "Save Language Preference"
+msgstr "Sprachpräferenz speichern"
+
+#: templates/account/profile_edit.html:119
+msgid "Delete Account"
+msgstr "Benutzerkonto löschen"
+
+#: templates/account/profile_edit.html:121
+msgid ""
+"Please note that once you delete your account, all account-related data will "
+"be permanently and irrevocably deleted."
+msgstr ""
+"Wenn Du Dein Konto löscht, werden alle verknüpften Daten permanent und "
+"unwiderruflich gelöscht. "
+
+#: templates/account/profile_edit.html:123
+msgid ""
+"Please note that once you delete your account, all account-related data will "
+"be permanently and irrevocably deleted. All contributions you have made on "
+"the platform will be set to author 'deleted_user'."
+msgstr ""
+"Wenn Du Dein Konto löscht, werden alle verknüpften Daten permanent und "
+"unwiderruflich gelöscht. Alle Beiträge werden anonymisiert und unter "
+"\"Gelöschter Benutzer\" weitergeführt."
+
+#: templates/account/profile_edit.html:151
 msgid "Additional Settings"
 msgstr "Weitere Einstellungen"
 
-#: templates/account/profile_edit.html:19
+#: templates/account/profile_edit.html:153
 msgid "Change Email Notifications"
 msgstr "E-Mail-Benachrichtigungen ändern"
 
-#: templates/account/profile_edit.html:20
+#: templates/account/profile_edit.html:154
 msgid "Change Profile Picture"
 msgstr "Profilbild ändern"
-
-#: templates/account/profile_edit.html:21
-msgid "Change Password"
-msgstr "Passwort ändern"
-
-#: templates/account/profile_edit.html:22
-msgid "Set Account Location"
-msgstr "Benutzerkonto lokalisieren"
-
-#: templates/account/profile_edit.html:23
-msgid "Set Language"
-msgstr "Sprache wählen"
 
 #: templates/account/signup.html:6 templates/account/signup_closed.html:3
 msgid "Plenum: Create Account"
@@ -563,36 +746,40 @@ msgstr "Bitte Anmelde-Code eingeben:"
 msgid "Registration Code"
 msgstr "Anmelde-Code"
 
-#: templates/avatar/change.html:9
+#: templates/avatar/change.html:11
 msgid "Avatar Settings"
 msgstr "Avatar Einstellungen"
 
-#: templates/avatar/change.html:15
-msgid "Your current avatar:"
-msgstr "Dein aktueller Avatar:"
+#: templates/avatar/change.html:12
+msgid "Current Avatar"
+msgstr "Aktueller Avatar"
 
-#: templates/avatar/change.html:22
-msgid "Select Avatar"
-msgstr "Avatar auswählen"
+#: templates/avatar/change.html:16
+msgid "Select New Avatar"
+msgstr "Neuen Avatar auswählen"
 
-#: templates/avatar/change.html:24
+#: templates/avatar/change.html:17
+msgid "Uploaded Avatars"
+msgstr "Avatar hochladen"
+
+#: templates/avatar/change.html:19
 msgid "You haven't uploaded an avatar yet. Please upload one now."
 msgstr "Du hast noch keinen Avatar hochgeladen."
 
-#: templates/avatar/change.html:29
+#: templates/avatar/change.html:24
 msgid "Select"
 msgstr "Auswählen"
 
-#: templates/avatar/change.html:36
+#: templates/avatar/change.html:31
 msgid "Upload Avatar"
 msgstr "Avatar hochladen"
 
-#: templates/avatar/change.html:39
+#: templates/avatar/change.html:35
 msgid "Upload Image"
 msgstr "Bilddatei hochladen"
 
-#: templates/avatar/change.html:45 
-#: templates/pinax/notifications/notice_settings.html:58
+#: templates/avatar/change.html:41 
+#: templates/pinax/notifications/notice_settings.html:76
 msgid "Back to Settings"
 msgstr "Zurück zu Einstellungen"
 
@@ -1014,21 +1201,225 @@ msgstr "Nein"
 msgid "Cast your Vote"
 msgstr "Jetzt abstimmen"
 
-#: templates/initadmin/invite_users.html:11
-msgid "Upload Invitations"
-msgstr "Einladungen hochladen"
+#: templates/initadmin/invite_user.html:13 
+#: templates/initadmin/list_users.html:15
+msgid "Add Users"
+msgstr "Benutzer hinzufügen"
 
-#: templates/initadmin/invite_users.html:19 voty/initproc/forms.py:102
+#: templates/initadmin/invite_user.html:14
+msgid ""
+"You can send invitation links to individual users or upload a batch file to "
+"send invitations to."
+msgstr ""
+"Du kannst Einladungen an individuelle Nutzer oder mit Hilfe der "
+"Stapelverarbeitung an mehrere Benutzer gleichzeitig verschicken."
+
+#: templates/initadmin/invite_user.html:18
+msgid "Invite User"
+msgstr "Benutzer einladen"
+
+#: templates/initadmin/invite_user.html:19
+msgid ""
+"Send an invitation link and sign-up code (valid for 24 hours) to a user."
+msgstr ""
+"Diesem Benutzer eine Einladung mit Registrierungscode schicken (gültig für "
+"24 Stunden)."
+
+#: templates/initadmin/invite_user.html:25
+msgid "Send invitation to this user"
+msgstr "Einladung an diesen Benutzer schicken"
+
+#: templates/initadmin/invite_user.html:32
+msgid "Delete User Signup Code"
+msgstr "Einladungscode löschen"
+
+#: templates/initadmin/invite_user.html:33
+msgid ""
+"If you need to invite a user again, please remove his sign-up code first"
+msgstr ""
+"Wenn ein Nutzer erneut eingeladen werden soll, bitte zuerst dessen "
+"vorherigen Einladungs-Link entfernen."
+
+#: templates/initadmin/invite_user.html:37
+msgid "Remove Signup Code"
+msgstr "Einladungscode entfernen"
+
+#: templates/initadmin/invite_user.html:44
+msgid "Invite Multiple Users"
+msgstr "Mehrere Benutzer gleichzeitig einladen"
+
+#: templates/initadmin/invite_user.html:45
+msgid ""
+"Please upload a .csv file, one user per line with <i>first name</i>, <i>last "
+"name</i> and <i>email</i> separated by semicolon (eg John;Doe;john."
+"doe@example.com)."
+msgstr ""
+"Bitte eine .csv Datei hochladen, eine Zeile pro Einladung mit <i>Vorname</i>,"
+" <i>Nachname</i> und <i>Email-Adresse</i> durch Strichpunkt getrennt (z.B. "
+"Martin;Mustermann;martin.mustermann@beispiel.de)."
+
+#: templates/initadmin/invite_user.html:64 voty/initproc/forms.py:102
 msgid "Invite"
 msgstr "Einladen"
 
-#: templates/initadmin/invite_users.html:25
-msgid "Previous Invitations"
-msgstr "Bisherige Einladungen"
+#: templates/initadmin/invite_user.html:71
+msgid "Invitation Batch File Archive"
+msgstr "Archiv Stapelverarbeitungsdateien"
 
-#: templates/initadmin/invite_users.html:33
+#: templates/initadmin/invite_user.html:72
+msgid ""
+"Deleting a batch file will enable re-inviting all users invited with this "
+"file (Download the file to see which users were included)."
+msgstr ""
+"Das Löschen eines Einladungs-Stapelverarbeitungsdatei ermöglicht das erneute "
+"Einladen aller Benutzer, die in der Datei enthalten sind (bitte die Datei "
+"herunterladen um zu sehen, welche Benutzer genau mit dieser Datei eingeladen "
+"wurden)."
+
+#: templates/initadmin/invite_user.html:76
+msgid "Batch Timestamp"
+msgstr "Zeitstempel Stapelverarbeitung"
+
+#: templates/initadmin/invite_user.html:77
+msgid "New Invitations"
+msgstr "Neue Support Anfragen"
+
+#: templates/initadmin/invite_user.html:78
+msgid "Total Found"
+msgstr "Gesamt"
+
+#: templates/initadmin/invite_user.html:79
+msgid "Delete"
+msgstr "Löschen"
+
+#: templates/initadmin/invite_user.html:92
 msgid "No invitiations uploaded"
 msgstr "Keine Einladungen hochgeladen"
+
+#: templates/initadmin/invite_user.html:105 
+#: templates/initadmin/moderate_user.html:204
+msgid "Return to user list"
+msgstr "Zurück zu Benutzerliste"
+
+#: templates/initadmin/list_users.html:6 templates/initadmin/list_users.html:14
+msgid "User List"
+msgstr "Benutzerliste"
+
+#: templates/initadmin/list_users.html:15
+msgid "List of users accessible for moderation."
+msgstr "Liste der Benutzer, die zur Moderation freigegeben sind."
+
+#: templates/initadmin/list_users.html:37
+msgid "Load"
+msgstr "Laden"
+
+#: templates/initadmin/list_users.html:44
+msgid "All"
+msgstr "Alle"
+
+#: templates/initadmin/list_users.html:51 
+#: templates/initadmin/list_users.html:63
+msgid "Todo"
+msgstr "Todo"
+
+#: templates/initadmin/list_users.html:59 voty/initadmin/forms.py:136 
+#: voty/initadmin/forms.py:336
+msgid "Username"
+msgstr "Email oder Benutzername"
+
+#: templates/initadmin/list_users.html:60
+msgid "First Name"
+msgstr "Vorname"
+
+#: templates/initadmin/list_users.html:61
+msgid "Last Name"
+msgstr "Nachname"
+
+#: templates/initadmin/list_users.html:62
+msgid "Email"
+msgstr "Email"
+
+#: templates/initadmin/moderate_user.html:8
+msgid "Moderate User"
+msgstr "Benutzer moderieren"
+
+#: templates/initadmin/moderate_user.html:16
+msgid "Moderate User Settings"
+msgstr "Benutzereinstellungen moderieren"
+
+#: templates/initadmin/moderate_user.html:17
+msgid ""
+"This page is for helping users reset their password and modifying user "
+"access permissions."
+msgstr ""
+"Auf dieser Seite könnenBenutzerpasswörter zurückgesetzt und "
+"Benutzerzugriffsrechte verwaltet werden."
+
+#: templates/initadmin/moderate_user.html:54
+msgid "Confirm this email and send password reset link"
+msgstr ""
+"Email Adresse bestätigen und Link zum Zurücksetzen des Passworts schicken"
+
+#: templates/initadmin/moderate_user.html:68
+msgid "Group Membership"
+msgstr "Gruppenmitgliedschaft"
+
+#: templates/initadmin/moderate_user.html:86
+msgid "Update group membership"
+msgstr "Gruppenmitgliedschaft aktualisieren"
+
+#: templates/initadmin/moderate_user.html:100
+msgid "Participation Permission"
+msgstr "Freigabe zur Teilnahme"
+
+#: templates/initadmin/moderate_user.html:101
+msgid ""
+"Users are allowed to participate depending on this setting. For example, a "
+"scope of <i>EU/France/Paris</i> will permit the user to vote on European, "
+"French and Paris-based initiatives."
+msgstr ""
+"Benutzer können an Initiativen entsprechend dieser Einstellung teilnehmen. "
+"Die Einstellung <i>EU/Frankreich/Paris</i> ermöglicht bespielweise die "
+"Teilnahme an Abstimmung auf europäscher, französischer und lokaler Paris "
+"Ebene."
+
+#: templates/initadmin/moderate_user.html:102
+msgid ""
+"When a user requests to change this setting, it has to be validated by a "
+"moderator to come into effect"
+msgstr ""
+"Wenn eine Benutzer diese Einstellung ändert, muss die Änderung von einem "
+"Moderator bestätigt werden."
+
+#: templates/initadmin/moderate_user.html:126
+msgid "Update and validate Localisation"
+msgstr "Lokalisierung bestätigen und aktualisieren"
+
+#: templates/initadmin/moderate_user.html:140
+msgid "Activate/Disable Account"
+msgstr "Konto aktivieren/deaktivieren"
+
+#: templates/initadmin/moderate_user.html:166
+msgid "Change account status"
+msgstr "Status Benutzerkonto ändern"
+
+#: templates/initadmin/moderate_user.html:180
+msgid "Delete Account and anonymize contributions"
+msgstr "Benutzerkonto löschen und Beiträge anonym stellen"
+
+#: templates/initadmin/moderate_user.html:181
+msgid "Warning"
+msgstr "Warnung"
+
+#: templates/initadmin/moderate_user.html:181
+msgid ""
+"Deleting an account will remove this user from the database. Authorship of "
+"all initiatives, comments, votes etc of this user will be set to 'Deleted "
+"User'."
+msgstr ""
+"Die Löschung eines Benutzerkontos entfernt diesen Benutzer aus der Datenbank."
+" Initiativen, Kommentare, Beiträge usw dieser Benutzers werden danach mit "
+"\"Gelöschter Benutzer\" geführt."
 
 #: templates/initproc/blocks/content.html:16 voty/initproc/forms.py:128
 msgid "Initiators' Argument"
@@ -1062,7 +1453,8 @@ msgstr "In Abstimmung"
 msgid "Context"
 msgstr "Bereich"
 
-#: templates/initproc/blocks/meta.html:24 voty/initproc/forms.py:130
+#: templates/initproc/blocks/meta.html:24 voty/initadmin/forms.py:284 
+#: voty/initproc/forms.py:130
 msgid "Scope"
 msgstr "Ebene"
 
@@ -1448,6 +1840,45 @@ msgstr "Neue Initiative zur Abstimmung erstellen."
 msgid "More information on how to create an Initiative"
 msgstr "Weitere Erklärung zur Erstellung einer Initiative"
 
+#: templates/initproc/new.html:29
+msgid "Save"
+msgstr "Speichern"
+
+#: templates/notifications/list.html:5
+msgid "Plenum: Todo List"
+msgstr "Plenum: Todo Liste"
+
+#: templates/notifications/list.html:13
+msgid "Todo List"
+msgstr "Todo Liste"
+
+#: templates/notifications/list.html:14
+msgid ""
+"This is a list of all items and todos you are subscribed to (see your "
+"settings). Items remain on the list until you mark them as read/answer the "
+"respective request."
+msgstr ""
+"Dies ist die Liste aller Meldungen, die Du abonniert hast (Änderungen via "
+"Einstellungen). Meldungen verbleiben in der Liste bis Du sie als gelesen "
+"markiert hast oder die zugrundeliegende Anfrage bearbeitet wurde. "
+
+#: templates/notifications/list.html:16
+msgid ""
+"Administrative or moderation items can be handled by all users with "
+"appropriate permissions and will disappear once handled."
+msgstr ""
+"Administrative Aufgaben und Moderierungen können von allen Benutzern mit den "
+"notwendingen Freigaben vorgenommen werden und werden automatisch aus der "
+"Liste entfernt, sobald die Aufgabe von einem Benutzer bearbeitet wurde."
+
+#: templates/notifications/list.html:28
+msgid "Back to main page"
+msgstr "Zurück zu Startseite"
+
+#: templates/notifications/notice.html:27
+msgid "Pending since: "
+msgstr "Offen seit:"
+
 #: templates/pinax/notifications/notice_settings.html:6
 msgid "Plenum: Notification Settings"
 msgstr "Plenum: Benachrichtungseinstellungen"
@@ -1473,6 +1904,32 @@ msgstr "E-Mail hinzufügen"
 #: templates/pinax/notifications/notice_settings.html:28
 msgid "Notification Purpose"
 msgstr "Benachrichtigungsgrund"
+
+#: templates/registration/password_reset_complete.html:4
+msgid "Plenum: Password Reset Complete"
+msgstr "Plenum: Passwort zurückgesetzt"
+
+#: templates/registration/password_reset_complete.html:12
+msgid "Password Reset Complete"
+msgstr "Passwort zurückgesetzt"
+
+#: templates/registration/password_reset_complete.html:13
+msgid "Your password has been set. You can now login by following this link:"
+msgstr ""
+"Dein Passwort wurde zurückgesetzt. Du kannst Dich jetzt unter folgendem Link "
+"einloggen:"
+
+#: templates/registration/password_reset_confirm.html:17
+msgid "Save new Password"
+msgstr "Neues Passwort speichern"
+
+#: templates/registration/password_reset_confirm.html:20
+msgid ""
+"The password reset link was invalid (expired or already used). Please "
+"request a new link"
+msgstr ""
+"Der Link zum Zurücksetzen des Passworts ist ungültig (falsch, erloschen oder "
+"bereits verwendet worden). Bitte frage einen neuen Link an."
 
 #: templates/static/about.html:11
 msgid "About this Voting Platform"
@@ -1918,22 +2375,22 @@ msgstr ""
 "href=\"%('PLATFORM_TECH_DEVELOPMENT_TICKET_URL'|get_setting)s\">Kanban-"
 "Board</a> verfolgen."
 
-#: templates/static/register.html:7
+#: templates/static/register.html:12
 msgid "Time to Participate"
 msgstr "Zeit etwas zu #bewegen"
 
-#: templates/static/register.html:8
-msgid "Submit Initiatives for discussion and voting"
-msgstr "Initiative zur Diskussion und Abstimmung einreichen"
+#: templates/static/register.html:13
+msgid "Submit Initiatives, contribute to discussions and vote!"
+msgstr "Initiativen erstellen, gemeinsam diskutieren und abstimmen!"
 
-#: templates/static/register.html:9
+#: templates/static/register.html:14
 msgid ""
 "is a political movement like no other. It is a place where everyone can "
-"Initiatives, discuss them collaboratively and cast votes. As a participant "
-"you can influence and contribute to our political programm and its direction "
-"within the boundaries of our values - even if you are not a member of our "
-"movement. Submitting and voting on Initiatives is done online through our "
-"Voting platform."
+"launch Initiatives, discuss them collaboratively and cast votes. As a "
+"participant you can influence and contribute our political programm and its "
+"direction within the boundaries of our values - even if you are not a member "
+"of our movement. Submitting and voting on Initiatives is done online through "
+"our Voting platform."
 msgstr ""
 "ist eine Partei wie keine andere. Bei uns kann jede*r Initiativen einbringen,"
 " diskutieren und abstimmen. Wir nennen Menschen, die sich an diesem Prozess "
@@ -1942,105 +2399,251 @@ msgstr ""
 "wenn Du nicht Parteimitglied bist. Die Einbringung und Abstimmung über "
 "Initiativen erfolgt online über unsere Abstimmungsplattform."
 
-#: templates/static/register.html:10
+#: templates/static/register.html:16
 msgid "Register Now!"
 msgstr "Jetzt Registrieren!"
 
-#: voty/initadmin/admin.py:28
-msgid "Invitation to Initiative"
-msgstr "Einladung zur Initiative"
-
-#: voty/initadmin/admin.py:29
-msgid "You have been invitied to a new Initiative"
-msgstr "Du wurdest zu einer neuen Initiative eingeladen"
-
-#: voty/initadmin/admin.py:31
-msgid "Invitation accepted"
-msgstr "Einladung akzeptiert"
-
-#: voty/initadmin/admin.py:32
-msgid "The Invitation was accepted"
-msgstr "Die Initiative wurde angenommen"
-
-#: voty/initadmin/admin.py:34
-msgid "Invitation declined"
-msgstr "Einladung abgelehnt"
-
-#: voty/initadmin/admin.py:35
-msgid "The Invitation was declined"
-msgstr "Die Initiative wurde abgelehnt"
-
-#: voty/initadmin/admin.py:39
-msgid "Initiative modified"
-msgstr "Initiative bearbeitet"
-
-#: voty/initadmin/admin.py:40
-msgid "The Initiative was modified"
-msgstr "Die Initiative wurde überarbeitet"
-
-#: voty/initadmin/admin.py:42
-msgid "Initiative submitted"
-msgstr "Initiative eingreicht"
-
-#: voty/initadmin/admin.py:43
-msgid "The Initiative was submitted"
-msgstr "Die Initiative wurde eingereicht"
-
-#: voty/initadmin/admin.py:45 voty/initproc/views.py:506
-msgid "Initiative published"
-msgstr "Initiative veröffentlicht"
-
-#: voty/initadmin/admin.py:46
-msgid "The Initiative was published"
-msgstr "Die Initiative wurde veröffentlicht"
-
-#: voty/initadmin/admin.py:48
-msgid "Initiative in discussion"
-msgstr "Initiative in Diskussion"
-
-#: voty/initadmin/admin.py:49
-msgid "The Initiative has been moved to the discussion phase"
-msgstr "Die Initiative wurde in die Diskussionsphase gegeben"
-
-#: voty/initadmin/admin.py:51
-msgid "Discussion for Initiative ended"
-msgstr "Diskussion zur Initiative ist beendet"
-
-#: voty/initadmin/admin.py:52
-msgid "The Initiative can now be finally modified"
-msgstr "Die Initiative kann jetzt final bearbeitet werden"
-
-#: voty/initadmin/admin.py:54
-msgid "Initiative in Vote"
-msgstr "Initiative in Abstimmung"
-
-#: voty/initadmin/admin.py:55
-msgid "The Initiative has been put to Vote"
-msgstr "Die Initiative wurde zur Abstimmung freigeben"
-
-#: voty/initadmin/admin.py:59
-msgid "New Argument in Discussion for Initiative"
-msgstr "Neues Argument in Diskussion zur Initiative"
-
-#: voty/initadmin/admin.py:60
-msgid "A new Argument was postet in the Discussion for the Initiative"
-msgstr "Ein neues Argument wurde in der Diskussion zur Initiative gepostet"
-
-#: voty/initadmin/forms.py:19
+#: voty/initadmin/forms.py:21
 msgid "Email or Username"
 msgstr "E-Mail oder Benutzername"
 
-#: voty/initadmin/views.py:136
-msgid "Data updated."
-msgstr "Daten aktualisiert."
+#: voty/initadmin/forms.py:118
+msgid "Languages"
+msgstr "Sprachen"
 
-#: voty/initadmin/views.py:163
-msgid "invitations were sent"
-msgstr "Einladungen verschickt"
+#: voty/initadmin/forms.py:120
+msgid "Please select your preferred language."
+msgstr "Bitte bevorzugte Sprache auswählen."
 
-#: voty/initproc/forms.py:107
+#: voty/initadmin/forms.py:139
+msgid ""
+"Please rewrite your username to confirm you really want to delete your "
+"account."
+msgstr ""
+"Bitte gib Deinen Benutzernamen ein um zu bestätigen, dass Dein Benutzerkonto "
+"wirklich gelöscht werden soll."
+
+#: voty/initadmin/forms.py:190
+msgid "Search by Email address"
+msgstr "Nach Email-Adresse suchen"
+
+#: voty/initadmin/forms.py:196 voty/initproc/forms.py:107
 msgid "Type to search"
 msgstr "Text eingeben, um zu Suchen"
+
+#: voty/initadmin/forms.py:259
+msgid "Groups"
+msgstr "Gruppen"
+
+#: voty/initadmin/forms.py:260
+msgid ""
+"Please select the group(s) this user should belong to. This will give the "
+"user permissions associated with the respective group."
+msgstr ""
+"Bitte die Gruppen auswählen, denen dieser Benutzer zugeordnet werden soll. "
+"Mit der Zuordnung erhält der Benutzer alle Zugriffsrechte der jeweiligen "
+"Gruppe."
+
+#: voty/initadmin/forms.py:286
+msgid "User participation scope."
+msgstr "Benutzer Lokalisierung"
+
+#: voty/initadmin/forms.py:290
+msgid "Set Scope to:"
+msgstr "Lokalisierung ändern auf:"
+
+#: voty/initadmin/forms.py:291
+msgid "Validated"
+msgstr "Bestätigt"
+
+#: voty/initadmin/forms.py:291
+msgid "Not Validated"
+msgstr "Nicht bestätigt"
+
+#: voty/initadmin/forms.py:292
+msgid "Validate or invalidate the requested/current scope"
+msgstr "Aktuelle Lokalisierung bestätigen oder aufheben"
+
+#: voty/initadmin/forms.py:319
+msgid "Set Account to:"
+msgstr "Benutzerkonto umstellen auf:"
+
+#: voty/initadmin/forms.py:320
+msgid "Active"
+msgstr "Aktiv"
+
+#: voty/initadmin/forms.py:320
+msgid "Inactive"
+msgstr "Inaktiv"
+
+#: voty/initadmin/forms.py:321
+msgid ""
+"While inactive users can no longer login into their account. They remain in "
+"the database until deleted or reactivated."
+msgstr ""
+"Benutzer mit inaktivem Benutzerkonto können sich nicht länger einloggen. Sie "
+"verbleiben in der Datenbank bis sie gelöscht oder reaktiviert werden."
+
+#: voty/initadmin/forms.py:339
+msgid ""
+"Please rewrite the username to confirm this is the user you want to delete."
+msgstr ""
+"Bitte den Benutzernamen eingeben, um sicherzustellen, dass dieser Benutzer "
+"gelöscht werden soll."
+
+#: voty/initadmin/forms.py:371
+msgid "Search..."
+msgstr "Suchen..."
+
+#: voty/initadmin/forms.py:373
+msgid "Search"
+msgstr "Suche"
+
+#: voty/initadmin/forms.py:379
+msgid "Records"
+msgstr "Datensätze"
+
+#: voty/initadmin/urls.py:41
+msgid "user"
+msgstr "benutzer"
+
+#: voty/initadmin/views.py:352
+msgid "Invitation sent to"
+msgstr "Einladung verschickt an"
+
+#: voty/initadmin/views.py:356
+msgid "Could not send invitation. Please remove existing signup code first."
+msgstr ""
+"Einladung konnte nicht gesendet werden. Bitte zuerst den entsprechenden "
+"Eintrag entfernen."
+
+#: voty/initadmin/views.py:364
+msgid "(sent/total) invitations were sent."
+msgstr "(verschickt/gesamt) Einladungen verschickt"
+
+#: voty/initadmin/views.py:375
+msgid "Removed Signup Code for"
+msgstr "Einladungcode entfernt für Benutzer"
+
+#: voty/initadmin/views.py:409
+msgid ""
+"Cannot associate email with this user, because it is already used by "
+"(username): "
+msgstr ""
+"Diese Email kann nicht gespeichert werden, da sie bereits von einem anderen "
+"User verwendet wird (Benutzername)"
+
+#: voty/initadmin/views.py:420
+msgid "Email updated and password reset link sent."
+msgstr "Email aktualisiert und Link zum Zurücksetzen des Passworts geschickt."
+
+#: voty/initadmin/views.py:435
+msgid "Added the user to the following groups:"
+msgstr "Benutzer wurde den folgenden Gruppen zugeordnet:"
+
+#: voty/initadmin/views.py:446
+msgid ""
+"You cannot validate your own localisation change. Please have another team "
+"member review your request."
+msgstr ""
+"Du kannst Deine eigene Lokalisierung nicht ändern. Bitte ein anderes "
+"Moderatoren-Mitglied, Deine Änderung zu bestätigen."
+
+#: voty/initadmin/views.py:454
+msgid "Successfully updated user localisation."
+msgstr "Lokalisierung des Benutzers erfolgreich aktualisiert."
+
+#: voty/initadmin/views.py:456
+msgid "Localisation validated. New location: "
+msgstr "Lokalisierung bestätigt. Neue Lokalisierung:"
+
+#: voty/initadmin/views.py:465
+msgid "User account status was changed."
+msgstr "Status des Benutzerkontos wurde geändert."
+
+#: voty/initadmin/views.py:471
+msgid ""
+"You cannot delete a user whose account is still in active state. Please "
+"disactivate the account first."
+msgstr ""
+"Ein Benutzer kann nicht gelöscht werden, so lange dessen Benutzerkonto aktiv "
+"ist. Bitte zuerst das Benutzerkonto deaktivieren."
+
+#: voty/initadmin/views.py:473
+msgid "Username does not match. Please provide the correct username."
+msgstr ""
+"Benutzername stimmt nicht überein. Bitte den korrekten Benutzernamen angeben."
+
+#: voty/initadmin/views.py:490
+msgid ""
+"User was deleted from database and his contributions change to author "
+"'Deleted User'."
+msgstr ""
+"Benutzer wurde aus der Datenbank entfernt und dessen Beiträge auf 'Deleted "
+"User' umgeschrieben. "
+
+#: voty/initadmin/views.py:549
+msgid "This username is already taken. Please choose a different username."
+msgstr ""
+"Der Benutzername wird bereits verwendet. Bitte wählen einen anderen "
+"Benutzernamen aus."
+
+#: voty/initadmin/views.py:552
+msgid "Data was updated."
+msgstr "Daten aktualisiert."
+
+#: voty/initadmin/views.py:558
+msgid ""
+"Localisation is not possible while previous change has not been validated."
+msgstr ""
+"Erneute Lokalisierung ist nicht möglich, während die letzte Änderung noch "
+"nicht bestätigt wurde."
+
+#: voty/initadmin/views.py:568
+msgid "Request to change location. Current location: "
+msgstr "Anfrage zur Änderung der Lokalisierung. Aktuelle Lokalisierung:"
+
+#: voty/initadmin/views.py:571
+msgid "New location: "
+msgstr "Neue Lokalisierung:"
+
+#: voty/initadmin/views.py:581
+msgid ""
+"Localisation request sent. Please wait for validation by the moderation team."
+msgstr ""
+"Anfrage zur Lokalisierung verschiclt. Bitte auf Bestätigung durch das "
+"Moderations-Team warten."
+
+#: voty/initadmin/views.py:595
+msgid "Language preference stored."
+msgstr "Sprachpräferenz gespeichert."
+
+#: voty/initadmin/views.py:603
+msgid "Password was successfully changed."
+msgstr "Passwort erfolgreich geändert."
+
+#: voty/initadmin/views.py:605
+msgid "Could not save password. Please correct the errors shown below."
+msgstr ""
+"Passwort konnte nicht gespeichert werden. Bitte Fehlermeldung beachten."
+
+#: voty/initadmin/views.py:615
+msgid "Request to delete account."
+msgstr "Anfrage zur Kontolöschung."
+
+#: voty/initadmin/views.py:625
+msgid "Account deletion request sent. Your account will be removed shortly."
+msgstr ""
+"Anforderung zur Kontolöschung gesendet. Das Benutzerkonto wird in Kürze "
+"gelöscht."
+
+#: voty/initadmin/views.py:687
+msgid "Signup Codes removed. Batch file deleted."
+msgstr "Einladungscodes entfernt. Stapelverarbeitungsdatei gelöscht."
+
+#: voty/initadmin/views.py:689
+msgid "Codes could not be found"
+msgstr "Es konnten keine Codes gefunden werden."
 
 #: voty/initproc/forms.py:120
 msgid "Headline"
@@ -2359,6 +2962,10 @@ msgstr "iässt sich nicht vertreten"
 #: voty/initproc/models.py:338
 msgid "Is no longer relevant."
 msgstr "ist nicht länger relevant."
+
+#: voty/initproc/urls.py:26
+msgid "initiative"
+msgstr "initiative"
 
 #: voty/initproc/views.py:205 voty/initproc/views.py:325
 msgid "Please correct the following problems:"
