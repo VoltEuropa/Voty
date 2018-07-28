@@ -25,9 +25,13 @@ class InviteBatch(models.Model):
 class UserConfig(models.Model): 
   user = models.OneToOneField(User, related_name="config", on_delete=models.CASCADE)
   scope = models.CharField(choices=settings.CATEGORIES.SCOPE_CHOICES,max_length=100,default="eu")
+
   is_diverse_mod = models.BooleanField(default=False)
   is_female_mod = models.BooleanField(default=False)
   is_scope_confirmed = models.BooleanField(default=True)
+
+  # XXX eventually switch to proper language codes = en-en instead of en
+  language_preference = models.CharField(choices=settings.ACCOUNT_LANGUAGES,max_length=100,default=settings.LANGUAGE_CODE.split("-")[0])
 
   # catch-all field to show all flags set on a user
   is_flagged = models.CharField(blank=True,max_length=200,default="")
@@ -42,10 +46,11 @@ class UserConfig(models.Model):
   def create_user_config(sender, instance, created, **kwargs):
     if created:
       UserConfig.objects.create(user=instance)
-  
+
   #@receiver(post_save, sender=User, dispatch_uid="some_string_update_user_config")
   #def save_user_config(sender, instance, created, **kwargs):
   #  if getattr(instance, "config", None):
   #    UserConfig.objects.create(user=instance)
   #  else:
   #    instance.config.save()
+

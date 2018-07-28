@@ -8,6 +8,7 @@
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import Permission, Group, User
 from django.contrib import messages
@@ -23,6 +24,7 @@ from django.db.models.functions import Upper
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.translation import ugettext as _
 from django.utils import six
+from django.utils import translation
 from django.utils.html import escape, strip_tags
 
 import account.views
@@ -34,12 +36,8 @@ from account.models import SignupCodeResult, SignupCode
 from .models import InviteBatch, UserConfig
 from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
   UserModerateForm, UserValidateLocalisationForm, UserActivateForm, UserDeleteForm,
-  UserGiveGroupPrivilegeForm , ListboxSearchForm, UserLocaliseForm, UserInviteForm,
-  DeleteSignupCodeForm,)
-
-# XXX bad?
-from voty.initproc.models import (Comment, Contra, Like, Moderation,
-  Pro, Proposal, Supporter, Vote)
+  UserGiveGroupPrivilegeForm, ListboxSearchForm, UserLocaliseForm, UserInviteForm,
+  UserLanguageForm, DeleteSignupCodeForm, CustomPasswordChangeForm, UserDeleteAccount)
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -64,6 +62,31 @@ def group_required(group, login_url=None, raise_exception=False):
         raise PermissionDenied
     return False
   return user_passes_test(check_perms, login_url=login_url)
+
+# --------------------- Get notification recipient list ------------------------
+def _get_recipient_list(permission):
+  localisation_permission = Permission.objects.filter(codename=permission)
+  recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
+  return recipient_list
+
+# ------------------------- Update UserNotifications ---------------------------
+def _update_notifications_and_flags(current_flag, permission):
+  flag_list = [x for x in current_flag.split(";") if x.startswith(permission)]
+  flag_update = current_flag
+  if len(flag_list) > 0:
+    for flag in flag_list:
+
+      # remove all related flag from this users config
+      flag_update = flag_update.replace("".join([flag, ";"]), "")
+
+      # XXX data stored as JSON but couldn't figure out how to search
+      # XXX only way to access data is x.data["flag"], so filter() won't work
+      # XXX this can be costly
+      # https://docs.djangoproject.com/en/1.10/ref/contrib/postgres/fields/#std:fieldlookup-hstorefield.contains
+      for note in Notification.objects.all():
+        if note.data["flag"] == flag:
+          note.delete()
+  return flag_update
 
 # -------------------------- Invite single user -------------------------------- 
 def _invite_single_user(first_name, email_address, site):
@@ -153,7 +176,6 @@ def _invite_batch_users(csv_file):
 #                                                       
 
 # ---------------------------- LoginView ---------------------------------------
-# XXX why is it a class? can't this be just a form?
 class LoginView(account.views.LoginView):
   form_class = LoginEmailOrUsernameForm
 
@@ -179,6 +201,7 @@ class SignupCodeAutocomplete(autocomplete.Select2QuerySetView):
 def notification_list(request):
   user = get_object_or_404(get_user_model(), id=request.user.id)
 
+  # handled by pinax 
   return render(request, "pinax/notifications/list.html", {
     "notifications": request.user.notifications
   })
@@ -193,7 +216,7 @@ def initiative_list(request):
 def user_list(request):
 
   user_values = {}
-  user_list = get_user_model().objects.filter(is_superuser=False, is_staff=False)
+  user_list = get_user_model().objects.filter(is_superuser=False, is_staff=False).exclude(username__istartswith="deleted")
   user_filters = {
     "glossary_active_all": True,
     "glossary_active_flag": True,
@@ -308,7 +331,6 @@ def user_list(request):
   )
 
 # =============================== Add Users ====================================
-# XXX improve handling of multiple forms
 @login_required
 @group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST, raise_exception=True)
 def user_invite(request):
@@ -326,7 +348,10 @@ def user_invite(request):
             Site.objects.get_current()
           )
           if is_new == True:
-            messages.success(request, "".join([_("Invitation sent to"), ": ", "{}".format(email_address)]))
+            messages.success(request, "".join([
+              _("Invitation sent to"), ": ",
+              "{}".format(email_address)
+            ]))
           else:
             messages.warning(request, _("Could not send invitation. Please remove existing signup code first."))
   
@@ -366,6 +391,8 @@ def user_invite(request):
 @login_required
 @group_required(settings.PLATFORM_GROUP_VALUE_TITLE_LIST, raise_exception=True)
 def user_view(request, user_id):
+
+  # the user being edited  
   user = get_object_or_404(get_user_model(), pk=user_id)
 
   if request.method == "POST":
@@ -420,22 +447,7 @@ def user_view(request, user_id):
           return redirect("/backoffice/users/%s" % (user.id))
   
         user_config = UserConfig.objects.get(user_id=user_id)
-        user_config_flag_list = [x for x in user_config.is_flagged.split(";") if x.startswith("user_can_localise")]
-  
-        if len(user_config_flag_list) > 0:
-          for flag in user_config_flag_list:
-  
-            # remove all related flag from this users config
-            user_config.is_flagged = user_config.is_flagged.replace("".join([flag, ";"]), "")
-  
-            # XXX data stored as JSON but couldn't figure out how to search
-            # XXX only way to access data is x.data["flag"], so filter() won't work
-            # XXX this can be costly
-            # https://docs.djangoproject.com/en/1.10/ref/contrib/postgres/fields/#std:fieldlookup-hstorefield.contains
-            for note in Notification.objects.all():
-              if note.data["flag"] == flag:
-                note.delete()
-  
+        user_config.is_flagged = _update_notifications_and_flags(user_config.is_flagged, "user_can_localise")
         user_config.scope = request.POST.get("scope", "eu")
         user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
         user_config.save()
@@ -454,25 +466,28 @@ def user_view(request, user_id):
 
     # --------------------- Delete account permanently -------------------------
     elif request.POST.get("action", None) == "delete_account":
-      if request.user.has_perm("user_can_delete"):
+      if request.user.has_perm("auth.user_can_delete"):
         if user.is_active == True:
           messages.warning(request, _("You cannot delete a user whose account is still in active state. Please disactivate the account first."))
         elif request.POST.get("username") != user.username:
           messages.warning(request, _("Username does not match. Please provide the correct username."))
         else:
-          deleted_user_id = User.objects.get(username="deleted").id
-  
-          # purge the user, rien ne vas plus
-          Comment.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Contra.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Like.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Moderation.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Pro.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Proposal.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Supporter.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          Vote.objects.filter(user_id=user.id).update(user_id=deleted_user_id)
-          user.delete()
-          messages.success(request, _("User was deleted from database and his contributions relabelled to 'Deleted User'."))
+
+          # clear flags associated with deletion request, reset config 
+          user_config = UserConfig.objects.get(user_id=user_id)
+          user_config.is_flagged = _update_notifications_and_flags(user_config.is_flagged, "user_can_delete")
+          user_config.scope = "eu"
+          user_config.save()
+
+          # it's not possible to set authorship to a single deleted user, because
+          # for example an Initiative cannot have multiple supporters which are 
+          # the same (deleted) user. So the user is kept but anonymized.
+          user.email = ""
+          user.username = "".join(["deleted_user" + str(user.id)])
+          user.first_name = ""
+          user.last_name = ""
+          user.save()
+          messages.success(request, _("User was deleted from database and his contributions change to author 'Deleted User'."))
           return redirect("/backoffice/users")
 
     return redirect("/backoffice/users/%s" % (user.id))
@@ -513,69 +528,129 @@ def user_view(request, user_id):
   })
 
 # ===========================  Profile Edit ====================================
-# --------------------------- Localise User ------------------------------------
-@login_required
-def profile_localise(request):
-
-  user_id = request.user.id
-  user = get_object_or_404(get_user_model(), id=user_id)
-  is_confirmed = user.config.is_scope_confirmed
-  form = None
-
-  if request.method == "POST":
-
-    if is_confirmed != True:
-      messages.warning(request, _("Localisation is not possible while previous change has not been validated."))
-    else:
-      form = UserLocaliseForm(request.POST)
-      if form.is_valid():
-
-        # create recipient list based on group and permission
-        permission = "user_can_localise"
-        localisation_permission = Permission.objects.filter(codename=permission)
-        recipient_list = User.objects.filter(groups__permissions=localisation_permission,is_active=True).distinct()
-
-        # create a searchable id to remove all notifications when on moderator answers
-        flag = "".join([permission, ":", str(uuid.uuid4())])
-        notify(recipient_list, settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_REQUESTED, {
-          "target": user,
-          "description": "".join([_("Request to change location. Current location: "), user.config.scope, ". ", _("New location: "), request.POST.get("scope") ]),
-          "flag": flag,
-        }, sender=request.user)
-
-        # save the config
-        user.config.is_flagged = user.config.is_flagged + flag + ";"
-        form = UserLocaliseForm(request.POST, instance=user.config)
-        form.save()
-        messages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
-
-  if form is None:
-    form = UserLocaliseForm(initial={"scope": user.config.scope, "is_scope_confirmed": is_confirmed})
-  if is_confirmed != True:
-    form.fields['scope'].disabled = True
-
-  return render(request, "account/localise.html", {"form":form, "user": user})
-
-# --------------------------- Profile Edit -------------------------------------
 @login_required
 def profile_edit(request):
-  user = get_object_or_404(get_user_model(), pk=request.user.id)
+  user = request.user
+  is_confirmed = user.config.is_scope_confirmed
+
+  # initialise all forms
+  form_user_profile = form_user_password = form_user_localisation = form_user_language = form_user_delete = None
+
   if request.method == "POST":
-    form = UserEditForm(request.POST, instance=user)
-    if form.save():
-      messages.success(request, _("Data updated."))
-  else:
-    form = UserEditForm(instance=user)
 
-  return render(request, "account/profile_edit.html", context=dict(form=form))
+    # -------------------------- Name Edit -------------------------------------
+    if request.POST.get("action", None) == "edit_profile":
+      form_user_profile = UserEditForm(request.POST, instance=user)
+      new_username = request.POST.get("username")
 
-# --------------------------- Profile Delete -----------------------------------
-def profile_delete(request):
-  return render(request, "initadmin/delete.html", context={})
+      if user.username != new_username:
+        existing_user_list = User.objects.filter(username=new_username)
+        if len(existing_user_list) > 0:
+          messages.warning(request, _("This username is already taken. Please choose a different username."))
+      else:
+        form_user_profile.save()
+        messages.success(request, _("Data was updated."))
 
-# --------------------------- Set Language -------------------------------------
-# --------------------------- Notifications ------------------------------------
+    # ---------------------------- Scope Edit ----------------------------------
+    elif request.POST.get("action", None) == "edit_scope":
+      form_user_localisation = UserLocaliseForm(request.POST)
+      if is_confirmed != True:
+        messages.warning(request, _("Localisation is not possible while previous change has not been validated."))
+      else:
+        if form_user_localisation.is_valid():
 
+          # create a searchable id to remove all notifications when one moderator answers
+          permission = "user_can_localise"
+          flag = "".join([permission, ":", str(uuid.uuid4())])
+          notify(_get_recipient_list(permission), settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_REQUESTED, {
+            "target": user,
+            "description": "".join([
+              _("Request to change location. Current location: "),
+              user.config.scope,
+              ". ",
+              _("New location: "),
+              request.POST.get("scope")
+            ]),
+            "flag": flag,
+          }, sender=user)
+
+          # save the config
+          user.config.is_flagged = user.config.is_flagged + flag + ";"
+          form_user_localisation = UserLocaliseForm(request.POST, instance=user.config)
+          form_user_localisation.save()
+          messages.success(request, _("Localisation request sent. Please wait for validation by the moderation team."))
+
+    # -------------------------- Language Edit ---------------------------------   
+    elif request.POST.get("action", None) == "edit_language":
+      form_user_language = UserLanguageForm(request.POST, instance=user.config)
+      if form_user_language.is_valid():
+        form_user_language.save()
+
+      # set active language if it's different from current language
+      preferred_language = request.POST.get("language_preference")
+      if translation.get_language() != preferred_language:
+        translation.activate(preferred_language)
+        if hasattr(request, 'session'):
+          request.session[translation.LANGUAGE_SESSION_KEY] = preferred_language
+      messages.success(request, _("Language preference stored."))
+
+    # -------------------------- Pasword Edit ----------------------------------
+    elif request.POST.get("action", None) == "edit_password":
+      form_user_password = CustomPasswordChangeForm(request.user, data=request.POST)
+      if form_user_password.is_valid():
+        form_user_password.save()
+        update_session_auth_hash(request, form_user_password.user)
+        messages.success(request, _("Password was successfully changed."))
+      else:
+        messages.warning(request, _("Could not save password. Please correct the errors shown below."))
+
+    # -------------------------- Delete Account --------------------------------
+    elif request.POST.get("action", None) == "delete_account":
+
+      # XXX can't do form.is_valid() because I don't want to save the username
+      permission = "user_can_delete"
+      flag = "".join([permission, ":", str(uuid.uuid4())])
+      notify(_get_recipient_list(permission), settings.NOTIFICATIONS.MODERATE.USER_DELETION_REQUESTED, {
+        "target": user,
+        "description": _("Request to delete account."),
+        "flag": flag,
+      }, sender=user)
+
+      # save the config
+      user.config.is_flagged = user.config.is_flagged + flag + ";"
+      form_user_delete=UserDeleteAccount(request.POST, instance=user.config)
+      form_user_delete.save()
+      user.is_active = False
+      user.save()
+      messages.success(request, _("Account deletion request sent. Your account will be removed shortly."))
+
+  # GET and inval POSTs pass through here preserving validation errors
+  if form_user_profile is None:
+    form_user_profile = UserEditForm(instance=user)
+  if form_user_delete is None:
+    form_user_delete = UserDeleteAccount()
+  if form_user_password is None:
+    form_user_password = CustomPasswordChangeForm(user=user)
+  if form_user_localisation is None:
+    form_user_localisation = UserLocaliseForm(initial={
+      "scope": user.config.scope,
+      "is_scope_confirmed": user.config.is_scope_confirmed
+    })
+    if is_confirmed != True:
+      form_user_localisation.fields['scope'].disabled = True
+  if form_user_language is None:
+    form_user_language = UserLanguageForm(initial={
+      "language_preference": user.config.language_preference or settings.DEFAULT_LANGUAGE
+    })
+
+  return render(request, "account/profile_edit.html", context=dict({
+    "viewed_user": user,
+    "form_user_profile": form_user_profile,
+    "form_user_password": form_user_password,
+    "form_user_localisation": form_user_localisation,
+    "form_user_language": form_user_language,
+    "form_user_delete": form_user_delete
+  }))
 
 #
 #      ___       ______ .___________. __    ______   .__   __.      _______.

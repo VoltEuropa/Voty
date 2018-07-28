@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.utils.translation import ugettext as _
 from django.conf import settings
+from django.contrib.auth.forms import PasswordChangeForm
 
 from account.models import SignupCode
 from dal import autocomplete
@@ -14,7 +15,146 @@ from dal import autocomplete
 from .models import UserConfig
 import account.forms
 
-# ----------------------------- UploadFileForm ---------------------------------
+
+# ------------------------ LoginEmailOrUsernameForm ----------------------------
+class LoginEmailOrUsernameForm(account.forms.LoginEmailForm):
+  email = forms.CharField(label=_("Email or Username"), max_length=50) 
+
+  def get_success_url(self):
+    url = super(LoginEmailOrUsernameForm, self).get_success_url()
+    user = self.request.user
+    if user.is_authenticated():
+      language = user.config.preferred_language
+
+      if language in [x[1] for x in settings.ACCOUNT_LANGUAGES]:
+        activate(language)
+        if hasattr(self.request, 'session'):
+          self.request.session[LANGUAGE_SESSION_KEY] = language
+
+    return url
+        
+
+# ============================ User Settings ===================================
+# ---------------------------- Edit Profile ------------------------------------
+class UserEditForm(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["first_name", "last_name", "username", "email"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  email = forms.CharField(
+    widget=forms.TextInput(attrs={"readonly": True}),
+    disabled=True
+  )
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="edit_profile"
+  )
+
+# ---------------------------- Edit Password -----------------------------------
+class CustomPasswordChangeForm(PasswordChangeForm):
+
+  class Meta:
+    fields = ["old_password", "new_password1", "new_password2"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control',
+      })
+    self.fields['old_password'].widget.attrs.pop("autofocus", None)
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="edit_password"
+  )
+
+# ------------------------------ Edit Scope ------------------------------------
+class UserLocaliseForm(forms.ModelForm):
+
+  class Meta:
+    model = UserConfig
+    fields = ["scope", "is_scope_confirmed"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="edit_scope"
+  )
+
+# ----------------------------- Edit Language ----------------------------------
+class UserLanguageForm(forms.ModelForm):
+
+  class Meta:
+    model = UserConfig
+    fields = ["language_preference"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  language_preference = forms.ChoiceField(
+    required=True,
+    label=_("Languages"),
+    choices=sorted(settings.ACCOUNT_LANGUAGES, key=lambda x: x[1]),
+    help_text=_("Please select your preferred language.")
+  )
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="edit_language"
+  )
+
+# -----------------------------Delete Account ----------------------------------
+# XXX Almost to UserDeleteForm
+class UserDeleteAccount(forms.ModelForm):
+
+  class Meta:
+    model = get_user_model()
+    fields = ["username"]
+    labels = {
+      "username": _("Username"),
+    }
+    help_texts = {
+      "username": _("Please rewrite your username to confirm you really want to delete your account."),
+    }
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="delete_account"
+  )
+
+
+# ============================= Invite Users ===================================
+# ------------------------------ File Uploads ----------------------------------
 class UploadFileForm(forms.Form):
   file = forms.FileField()
   action = forms.CharField(
@@ -23,7 +163,7 @@ class UploadFileForm(forms.Form):
     initial="invite_batch"
   )
 
-# ---------------------------- UserInviteForm ----------------------------------
+# ------------------------------ Invite Users ----------------------------------
 class UserInviteForm(forms.ModelForm):
 
   class Meta:
@@ -38,7 +178,7 @@ class UserInviteForm(forms.ModelForm):
     initial="invite_user"
   )
 
-# -------------------------- DeleteSignupCodeForm ------------------------------
+# --------------------------- Delete Signup Codes ------------------------------
 class DeleteSignupCodeForm(forms.ModelForm):
 
   class Meta:
@@ -64,32 +204,8 @@ class DeleteSignupCodeForm(forms.ModelForm):
     initial="delete_signup"
   )
 
-# ------------------------ LoginEmailOrUsernameForm ----------------------------
-class LoginEmailOrUsernameForm(account.forms.LoginEmailForm):
-  email = forms.CharField(label=_("Email or Username"), max_length=50) 
-
-# ----------------------------- UserEditForm -----------------------------------
-class UserEditForm(forms.ModelForm):
-  
-  class Meta:
-    model = get_user_model()
-    fields = ["first_name", "last_name"]
-
-# --------------------------- UserLocaliseForm ---------------------------------
-class UserLocaliseForm(forms.ModelForm):
-
-  class Meta:
-    model = UserConfig
-    fields = ["scope", "is_scope_confirmed"]
-
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    for field in iter(self.fields):
-      self.fields[field].widget.attrs.update({
-        'class': 'form-control'
-      })
-
-# --------------------------- UserModerateFrom ---------------------------------
+# ============================ Moderate User ===================================
+# -------------------------- Edit Profile/Email --------------------------------
 class UserModerateForm(forms.ModelForm):
 
   class Meta:
@@ -122,7 +238,7 @@ class UserModerateForm(forms.ModelForm):
     initial="reset_email"
   )
 
-# ----------------------- UserGiveGroupPrivilegeForm ---------------------------
+# ------------------------ Add/Remove Group Membership -------------------------
 class UserGiveGroupPrivilegeForm(forms.ModelForm):
 
   class Meta:
@@ -149,7 +265,7 @@ class UserGiveGroupPrivilegeForm(forms.ModelForm):
     initial="give_group_privileges"
   )
 
-# ------------------------ UserValidateLocalisationForm ------------------------
+# ----------------------------- Validate User Scope ----------------------------
 class UserValidateLocalisationForm(forms.ModelForm):
 
   class Meta:
@@ -181,7 +297,7 @@ class UserValidateLocalisationForm(forms.ModelForm):
     initial="validate_scope"
   )
 
-# ----------------------------- UserActivateForm -------------------------------
+# --------------------------- Activate/Deactivate User -------------------------
 class UserActivateForm(forms.ModelForm):
 
   class Meta:
@@ -210,7 +326,7 @@ class UserActivateForm(forms.ModelForm):
     initial="activate_account"
   )
 
-# ----------------------------- UserDeleteForm ---------------------------------
+# ------------------------------- Delete User ----------------------------------
 class UserDeleteForm(forms.ModelForm):
 
   class Meta:
@@ -235,8 +351,9 @@ class UserDeleteForm(forms.ModelForm):
     widget=forms.HiddenInput(),
     initial="delete_account"
   )
-                       
-# -------------------------- ListboxSearchForm ---------------------------------
+
+# =============================== Listboxes ====================================                    
+# --------------------------- ListboxSearchForm --------------------------------
 class ListboxSearchForm(forms.ModelForm):
   
   class Meta:
@@ -262,3 +379,4 @@ class ListboxSearchForm(forms.ModelForm):
     label=_("Records"),
     choices=settings.LISTBOX_OPTION_DICT.NUMBER_OF_RECORDS_OPTION_LIST
   )
+

@@ -1727,5 +1727,16 @@ form.form-listbox .form-listbox-bottom .form-group:last-child label ~ div {
   display: inline-block;
   vertical-align: middle;
 }
+/* ------------------------ help blocks ------------------------------------- */
+.has-error .help-block {
+  color: red;
+}
 
+/* ----------------------- link/submit pointers ----------------------------- */
+a:hover {
+  text-decoration: underline;
+}
+button[type="submit"] {
+  cursor: pointer;
+}
 

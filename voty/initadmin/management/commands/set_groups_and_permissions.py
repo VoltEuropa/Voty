@@ -157,6 +157,6 @@ class Command(BaseCommand):
     create_notice_types()
 
     # create a deleted-user for keeping contributions from deleted users
-    create_deleted_user()
+    #create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")

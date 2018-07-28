@@ -1,6 +1,8 @@
 {% extends "_base.html" %}
 {% load bootstrap %}
 {% load i18n %}
+{% load avatar_full_url %}
+{% load get_setting %}
 
 {% block content %}
   {% block body %}
@@ -9,19 +11,147 @@
         <div class="row">
           <div class="col">
             <h2>{% trans "Settings" %}</h2>
+            <p>{% trans "This page is for managing your account settings." %}
+            <hr/>
+            <h3>{% trans "Profile" %}</h3>
             <form method="POST" action="{% url "profile_edit" %}">
               {% csrf_token %}
-              {{ form|bootstrap }}
-              <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+              {{ form_user_profile.action }}
+              {{ form_user_profile.non_field_errors }}
+              {{ form_user_profile.source.errors }}
+              {{ form_user_profile.source }}
+  
+              <div class="form-inline-group">
+                <div class="form-group">
+                  <img src="{% avatar_full_url viewed_user size %}" alt="{{viewed_user.firstname|default:viewed_user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
+                </div>
+                <div class="form-group">
+                  {{ form_user_profile.email.label_tag }}
+                  <div class="">
+                    {{ form_user_profile.email }}
+                  </div>
+                </div>
+              </div>
+              <div class="form-inline-group">
+                <div class="form-group">
+                  {{ form_user_profile.username.label_tag }}
+                  <div class="">
+                    {{ form_user_profile.username.errors }}
+                    {{ form_user_profile.username }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form_user_profile.first_name.label_tag }}
+                  <div class="">
+                    {{ form_user_profile.first_name.errors }}
+                    {{ form_user_profile.first_name }}
+                    {{ form_user_profile.first_name.help_text }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  {{ form_user_profile.last_name.label_tag }}
+                  <div class="">
+                    {{ form_user_profile.last_name.errors }}
+                    {{ form_user_profile.last_name }}
+                    {{ form_user_profile.last_name.help_text }}
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" type="submit">{% trans "Save changes" %}</button>
+                <a href="{% url 'avatar_change' %}">{% trans "Change Avatar" %}</a>
+              </div>
             </form>
+
+            <hr />
+
+            <h3>{% trans "Modify Password" %}</h3>
+            <form method="POST" action="{% url "profile_edit" %}">
+              {% csrf_token %}
+              {{ form_user_password|bootstrap }}
+              <button class="btn btn-primary" type="submit">{% trans "Update Password" %}</button>
+            </form>
+
+            <hr/>
+
+            <h3>{% trans "Set Localisation" %}</h3>
+            <p>{% trans "This setting determines on which initiatives you are able to particiapte and vote on." %}</p>
+            <p>{% trans "By default, a <i>Europe</i> permission will only allow you to contribute to European initiatives. If you localise to a country and city, you can also vote on initiatives on these levels, so a setting of <i>Europe/France/Paris</i> allows to participate on European, French and Paris-based initiatives." %}</p>
+            <form method="POST">
+              {% csrf_token %}
+              {{ form_user_localisation.non_field_errors }}
+              {{ form_user_localisation.source.errors }}
+              {{ form_user_localisation.source }}
+              <div class="form-inline-group">
+                <div class="form-group">
+                  {{ form_user_localisation.scope.label_tag }}
+                  <div class="">
+                    {{ form_user_localisation.scope.errors }}
+                    {{ form_user_localisation.scope }}
+                    {{ form_user_localisation.scope.help_text }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <span>{% trans "Current status:" %}</span>
+                  <div class="">
+                    <button type="button" disabled class="btn btn-default {% if viewed_user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
+                      <i class="material-icons {% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}">{% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}</i>{% if viewed_user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">{% trans "Change Localisation and request validation" %}</button>
+            </form>
+            <br/>
+            <p>{% trans "This setting should be set once. Therefore changes need to be <b>confirmed my moderators</b> and <b>changes are not possible while waiting for moderation</b>." %}</p>
+
+            <hr />
+
+            <h3>{% trans "Set Preferred Language" %}</h3>
+            <form method="POST" action="{% url "profile_edit" %}">
+              {% csrf_token %}
+              {{ form_user_language|bootstrap }}
+              <button class="btn btn-primary" type="submit">{% trans "Save Language Preference" %}</button>
+            </form>
+
+            <hr />
+
+            <h3>{% trans "Delete Account" %}</h3>
+            {% if 'ACCOUNT_DELETION_EXPUNGE_HOURS'|get_setting == 0 %}
+              <p>{% trans "Please note that once you delete your account, all account-related data will be permanently and irrevocably deleted." %}</p>
+            {% else %}
+              <p>{% trans "Please note that once you delete your account, all account-related data will be permanently and irrevocably deleted. All contributions you have made on the platform will be set to author 'deleted_user'." %}</p>
+            {% endif %}
+            <form method="POST" action="">
+              {% csrf_token %}
+              {{ form_user_delete.action }}
+              {{ form_user_delete.non_field_errors }}
+              {{ form_user_delete.source.errors }}
+              {{ form_user_delete.source }}
+
+              <div class="form-inline-group">
+                <div class="form-group">
+                  {{ form_user_delete.username.label_tag }}
+                  <div class="">
+                    {{ form_user_delete.username }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Are you sure?</label>
+                  <div class="">
+                    <button type="submit" class="btn btn-danger" name="user_delete">Delete account</button>
+                  </div>
+                </div>
+              </div>
+              {{ form_user_delete.username.help_text }}
+            </form>
+
+            <hr/>
+
             <h3>{% trans "Additional Settings" %}</h3>
             <ul>
               <li><a href="{% url 'notification_notice_settings' %}">{% trans "Change Email Notifications" %}</a></li>
               <li><a href="{% url 'avatar_change' %}">{% trans "Change Profile Picture" %}</a></li>
-              <li><a href="{% url 'account_password' %}">{% trans "Change Password" %}</a></li>
-              <li><a href="{% url 'account_localise' %}">{% trans "Set Account Location" %}</a></li> 
-              <li><a href="{% url 'account_language' %}">{% trans "Set Language" %}</a></li>
-              <li><a href="{% url 'account_delete' %}">{% trans "Delete Account" %}</a></li>
             </ul>
           </div>
         </div>
@@ -29,3 +159,4 @@
     </div>
   {% endblock %}
 {% endblock %}
+
