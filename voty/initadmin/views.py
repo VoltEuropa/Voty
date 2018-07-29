@@ -452,10 +452,10 @@ def user_view(request, user_id):
         user_config.is_scope_confirmed = int(request.POST.get("is_scope_confirmed", 0))
         user_config.save()
         messages.success(request, _("Successfully updated user localisation."))
-        notify([user], settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_ACCEPTED, {
-          "description": "".join([_("Localisation validated. New location: "), user.config.scope, "."]),
+        notify([user], settings.NOTIFICATIONS.PUBLIC.USER_LOCALISATION_ACCEPTED, {
+          "description": "".join([_("Localisation validated. New location: "), user_config.scope, "."]),
         }, sender=request.user)
-
+          
     # ---------------------- Activate/Disactivate Account ----------------------
     elif request.POST.get("action", None) == "activate_account":
       if request.user.has_perm("auth.user_can_activate"):
@@ -551,7 +551,7 @@ def profile_edit(request):
         form_user_profile.save()
         messages.success(request, _("Data was updated."))
 
-    # ---------------------------- Scope Edit ----------------------------------
+    # -------------------------- Localisation Edit -----------------------------
     elif request.POST.get("action", None) == "edit_scope":
       form_user_localisation = UserLocaliseForm(request.POST)
       if is_confirmed != True:
@@ -562,7 +562,7 @@ def profile_edit(request):
           # create a searchable id to remove all notifications when one moderator answers
           permission = "user_can_localise"
           flag = "".join([permission, ":", str(uuid.uuid4())])
-          notify(_get_recipient_list(permission), settings.NOTIFICATIONS.MODERATE.USER_LOCALISATION_REQUESTED, {
+          notify(_get_recipient_list(permission), settings.NOTIFICATIONS.RESTRICTED.USER_LOCALISATION_REQUESTED, {
             "target": user,
             "description": "".join([
               _("Request to change location. Current location: "),
@@ -602,27 +602,32 @@ def profile_edit(request):
         update_session_auth_hash(request, form_user_password.user)
         messages.success(request, _("Password was successfully changed."))
       else:
+        # form.errors
         messages.warning(request, _("Could not save password. Please correct the errors shown below."))
 
     # -------------------------- Delete Account --------------------------------
     elif request.POST.get("action", None) == "delete_account":
 
       # XXX can't do form.is_valid() because I don't want to save the username
-      permission = "user_can_delete"
-      flag = "".join([permission, ":", str(uuid.uuid4())])
-      notify(_get_recipient_list(permission), settings.NOTIFICATIONS.MODERATE.USER_DELETION_REQUESTED, {
-        "target": user,
-        "description": _("Request to delete account."),
-        "flag": flag,
-      }, sender=user)
-
-      # save the config
-      user.config.is_flagged = user.config.is_flagged + flag + ";"
-      form_user_delete=UserDeleteAccount(request.POST, instance=user.config)
-      form_user_delete.save()
-      user.is_active = False
-      user.save()
-      messages.success(request, _("Account deletion request sent. Your account will be removed shortly."))
+      if request.POST.get("username") != user.username:
+        messages.warning(request, _("Username does not match. Please provide the correct username."))
+      else:
+        permission = "user_can_delete"
+        flag = "".join([permission, ":", str(uuid.uuid4())])
+        notify(_get_recipient_list(permission), settings.NOTIFICATIONS.RESTRICTED.USER_DELETION_REQUESTED, {
+          "target": user,
+          "description": _("Request to delete account."),
+          "flag": flag,
+        }, sender=user)
+  
+        # save the config, end here and force to the login page
+        user.config.is_flagged = user.config.is_flagged + flag + ";"
+        form_user_delete=UserDeleteAccount(request.POST, instance=user.config)
+        form_user_delete.save()
+        user.is_active = False
+        user.save()
+        messages.success(request, _("Account deletion request sent. Your account will be removed shortly."))
+        return redirect("/account/login/")
 
   # GET and inval POSTs pass through here preserving validation errors
   if form_user_profile is None:
@@ -701,4 +706,3 @@ def download_csv(request, batch_id):
     response = HttpResponse(batch.payload, content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=invited_users.csv"
     return response
-

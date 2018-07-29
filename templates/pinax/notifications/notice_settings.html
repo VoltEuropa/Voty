@@ -2,6 +2,8 @@
 
 {% load i18n %}
 {% load get_trans %}
+{% load get_setting %}
+{% load get_attr %}
 {% block body_id %}notification-settings{% endblock %}
 {% block head_title %}{% trans "Plenum: Notification Settings" %}{% endblock %}
 
@@ -31,8 +33,30 @@
                 {% endfor %}
               </tr>
               {% for row in notice_settings.rows %}
-                {% if row.notice_type.label|first in "user" %}
-                  {% if perms.auth.user_can_localise %}
+                {% with "NOTIFICATIONS.RESTRICTED."|add:row.notice_type.label as lookup %}
+                  {% with lookup|get_setting as pointer %}
+                    {% if pointer %}
+                      {% with "PLATFORM_NOTIFICATION_RESTRICTED_STATE_PERMISSION_MAPPING."|add:pointer|upper as perm_lookup %}
+                        {% with perm_lookup|get_setting as permission_name %}
+                          {% if perms.auth|get_attr:permission_name %}
+                            <tr class="notice-row">
+                              <td>
+                                <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
+                                <span class="notice_type_description">
+                                  {{ row.notice_type.description|get_trans }}
+                                </span>
+                              </td>
+                              {% for cell in row.cells %}
+                              <td>
+                                <input type="checkbox" name="{{ cell.0 }}" {% if cell.1 %}checked="yes"{% endif %} />
+                              </td>
+                              {% endfor %}
+                            </tr>
+                          {% endif %}
+                        {% endwith %}
+                      {% endwith %}
+
+                    {% else %}
                     <tr class="notice-row">
                       <td>
                         <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
@@ -47,24 +71,10 @@
                       {% endfor %}
                     </tr>
                   {% endif %}
-                {% else %}
-                  <tr class="notice-row">
-                    <td>
-                      <strong>{{ row.notice_type.display|get_trans }}</strong><br/>
-                      <span class="notice_type_description">
-                        {{ row.notice_type.description|get_trans }}
-                      </span>
-                    </td>
-                    {% for cell in row.cells %}
-                      <td>
-                        <input type="checkbox" name="{{ cell.0 }}" {% if cell.1 %}checked="yes"{% endif %} />
-                      </td>
-                    {% endfor %}
-                  </tr>
-                {% endif %}
-              {% endfor %}
+                {% endwith %}
+              {% endwith %}
+            {% endfor %}
             </table>
-
             <div class="form-actions">
               <button type="submit" class="btn btn-primary pull-right">{% trans "Change" %}</button>
             </div>

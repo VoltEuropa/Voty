@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
-# Make certain settings from .ini file accessible in templates
+# Using getattr in a template
 # ==============================================================================
 #
 # parameters (*default)
@@ -12,23 +12,21 @@
 import os
 from django.conf import settings
 from django import template
-from django.template.defaultfilters import stringfilter
 
 register = template.Library()
 
-# call: {% load get_setting %} then call {{ [setting_name]|get_setting %}
+# call: {% load get_attr %} then call {{ object|get_attr:key }}
 # note, this works only on first level settings
 @register.filter
-@stringfilter
-def get_setting(my_setting):
-  try:
-    lookup_path = [x.upper() for x in my_setting.split(".")]
-    if len(lookup_path) > 1:
-      reply = settings
-      for key in lookup_path:
-        reply = getattr(reply, key)
-      return reply
-    else:
-      return getattr(settings, my_setting.upper())
-  except AttributeError:
-    return None
+def get_attr(my_obj, my_key):
+  return my_obj[my_key]
+
+  #if hasattr(my_obj, str(my_key)):
+  #  return getattr(my_obj, my_key)
+  #elif hasattr(my_obj, 'has_key') and my_obj.has_key(my_key):
+  #  return my_obj[my_arg]
+  #elif numeric_test.match(str(my_key)) and len(my_obj) > int(my_key):
+  #  return my_obj[int(my_key)]
+  #else:
+  #  return my_obj.get(my_key)
+

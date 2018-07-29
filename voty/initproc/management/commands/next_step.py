@@ -29,12 +29,12 @@ class Command(BaseCommand):
                     i.state = STATES.DISCUSSION
                     i.went_to_discussion_at = datetime.now()
                     i.save()
-                    i.notify_followers(settings.NOTIFICATIONS.INITIATIVE.WENT_TO_DISCUSSION)
+                    i.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_DISCUSSION)
 
                 elif i.state == STATES.DISCUSSION:
                     i.state = STATES.FINAL_EDIT
                     i.save()
-                    i.notify_initiators(settings.NOTIFICATIONS.INITIATIVE.DISCUSSION_CLOSED)
+                    i.notify_initiators(settings.NOTIFICATIONS.PUBLIC.DISCUSSION_CLOSED)
 
                 # voting phase is entered through manual action of moderators
 
@@ -45,14 +45,14 @@ class Command(BaseCommand):
                             i.eligible_voters = get_user_model().objects.filter(is_active=True).count()
                             i.was_closed_at = datetime.now()
                             i.save()
-                            #i.notify_followers(settings.NOTIFICATIONS.INITIATIVE.ACCEPTED) todo: define accepted notification
+                            #i.notify_followers(settings.NOTIFICATIONS.PUBLIC.ACCEPTED) todo: define accepted notification
 
                         else:
                             i.state = STATES.REJECTED
                             i.eligible_voters = get_user_model().objects.filter(is_active=True).count()
                             i.was_closed_at = datetime.now()
                             i.save()
-                            #i.notify_followers(settings.NOTIFICATIONS.INITIATIVE.REJECTED) todo: define rejected notification
+                            #i.notify_followers(settings.NOTIFICATIONS.PUBLIC.REJECTED) todo: define rejected notification
 
                         #send feedback message to all initiators
                         EmailMessage(

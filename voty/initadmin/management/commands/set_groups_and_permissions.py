@@ -35,21 +35,14 @@ def create_deleted_user():
 def create_notice_types(**kwargs):
 
   # Moderations
-  for key, command in vars(settings.NOTIFICATIONS.MODERATE).items():
+  for key, command in vars(settings.NOTIFICATIONS.RESTRICTED).items():
     NoticeType.create(
       command,
       getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),
       getattr(settings.NOTIFICATIONS.I18N_DESCRIPTION_LIST, key),
     )
   
-  for key, command in vars(settings.NOTIFICATIONS.INVITE).items():
-    NoticeType.create(
-      command,
-      getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),
-      getattr(settings.NOTIFICATIONS.I18N_DESCRIPTION_LIST, key),
-    )
-
-  for key, command in vars(settings.NOTIFICATIONS.INITIATIVE).items():
+  for key, command in vars(settings.NOTIFICATIONS.PUBLIC).items():
     NoticeType.create(
       command,
       getattr(settings.NOTIFICATIONS.I18N_VALUE_LIST, key),

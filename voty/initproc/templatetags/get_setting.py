@@ -21,11 +21,14 @@ register = template.Library()
 @register.filter
 @stringfilter
 def get_setting(my_setting):
-  lookup_path = [x.upper() for x in my_setting.split(".")]
-  if len(lookup_path) > 1:
-    reply = settings
-    for key in lookup_path:
-      reply = getattr(reply, key)
-    return reply
-  else:
-    return getattr(settings, my_setting.upper())
+  try:
+    lookup_path = [x.upper() for x in my_setting.split(".")]
+    if len(lookup_path) > 1:
+      reply = settings
+      for key in lookup_path:
+        reply = getattr(reply, key)
+      return reply
+    else:
+      return getattr(settings, my_setting.upper())
+  except AttributeError:
+    return None

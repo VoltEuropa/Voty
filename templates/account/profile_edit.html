@@ -65,20 +65,12 @@
 
             <hr />
 
-            <h3>{% trans "Modify Password" %}</h3>
-            <form method="POST" action="{% url "profile_edit" %}">
-              {% csrf_token %}
-              {{ form_user_password|bootstrap }}
-              <button class="btn btn-primary" type="submit">{% trans "Update Password" %}</button>
-            </form>
-
-            <hr/>
-
             <h3>{% trans "Set Localisation" %}</h3>
             <p>{% trans "This setting determines on which initiatives you are able to particiapte and vote on." %}</p>
             <p>{% trans "By default, a <i>Europe</i> permission will only allow you to contribute to European initiatives. If you localise to a country and city, you can also vote on initiatives on these levels, so a setting of <i>Europe/France/Paris</i> allows to participate on European, French and Paris-based initiatives." %}</p>
             <form method="POST">
               {% csrf_token %}
+              {{ form_user_localisation.action }}
               {{ form_user_localisation.non_field_errors }}
               {{ form_user_localisation.source.errors }}
               {{ form_user_localisation.source }}
@@ -106,6 +98,11 @@
             <p>{% trans "This setting should be set once. Therefore changes need to be <b>confirmed my moderators</b> and <b>changes are not possible while waiting for moderation</b>." %}</p>
 
             <hr />
+  
+            <h3>{% trans "Notification Settings" %}</h3>
+            <p>{% trans "Please use the following link to set the type of notifications you want to receive:" %} <a href="{% url 'notification_notice_settings' %}">{% trans "Change Notifications" %}</a></p>
+
+            <hr />
 
             <h3>{% trans "Set Preferred Language" %}</h3>
             <form method="POST" action="{% url "profile_edit" %}">
@@ -115,6 +112,15 @@
             </form>
 
             <hr />
+
+            <h3>{% trans "Modify Password" %}</h3>
+            <form method="POST" action="{% url "profile_edit" %}">
+              {% csrf_token %}
+              {{ form_user_password|bootstrap }}
+              <button class="btn btn-primary" type="submit">{% trans "Update Password" %}</button>
+            </form>
+
+            <hr/>
 
             <h3>{% trans "Delete Account" %}</h3>
             {% if 'ACCOUNT_DELETION_EXPUNGE_HOURS'|get_setting == 0 %}
@@ -145,18 +151,11 @@
               </div>
               {{ form_user_delete.username.help_text }}
             </form>
-
-            <hr/>
-
-            <h3>{% trans "Additional Settings" %}</h3>
-            <ul>
-              <li><a href="{% url 'notification_notice_settings' %}">{% trans "Change Email Notifications" %}</a></li>
-              <li><a href="{% url 'avatar_change' %}">{% trans "Change Profile Picture" %}</a></li>
-            </ul>
+            <br/>
+            <br/>
           </div>
         </div>
       </div>
     </div>
   {% endblock %}
 {% endblock %}
-

@@ -292,15 +292,15 @@ PLATFORM_GROUP_VALUE_TITLE_LIST = ["{0}".format(v) for k,v in PLATFORM_GROUP_VAL
 PLATFORM_USER_PERMISSION_LIST = raw_parser.items("platform_user_permission_list")
 PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permission_value_list"]
 PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")
+PLATFORM_NOTIFICATION_RESTRICTED_STATE_PERMISSION_MAPPING = SimpleNamespace(**raw_parser._sections["notification_restricted_state_permission_mapping_list"])
 
 # notifications
 # cannot be translated here because python translation objects cannot be stored 
 # in the database and pinax stores titles and descriptions in noticetypes. 
 # => requires lazy translation whenever displayed
 NOTIFICATIONS = SimpleNamespace(**{
-  "MODERATE": SimpleNamespace(**raw_parser._sections["notification_moderation_state_list"]),
-  "INVITE": SimpleNamespace(**raw_parser._sections["notification_invitation_state_list"]),
-  "INITIATIVE": SimpleNamespace(**raw_parser._sections["notification_initiative_state_list"]),
+  "RESTRICTED": SimpleNamespace(**raw_parser._sections["notification_restricted_state_list"]),
+  "PUBLIC": SimpleNamespace(**raw_parser._sections["notification_public_state_list"]),
 
   # translation lookup values across all notifications
   "I18N_VALUE_LIST": _getTranslatedSimpleNameSpace("notification_i18n_value_list"),
