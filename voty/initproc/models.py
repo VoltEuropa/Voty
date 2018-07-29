@@ -18,7 +18,7 @@ from django.db import models
 import pytz
 
 from voty.initproc.globals import SUBJECT_CATEGORIES
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext as _
 
 @reversion.register()
 class Initiative(models.Model):

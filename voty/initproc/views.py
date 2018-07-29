@@ -436,7 +436,7 @@ def rm_support(request, initiative):
 @simple_form_verifier(NewArgumentForm, template="fragments/argument/new.html")
 def new_argument(request, form, initiative):
     data = form.cleaned_data
-    argCls = Pro if data['type'] == "👍" else Contr
+    argCls = Pro if data['type'] == "👍" else Contra
 
     arg = argCls(initiative=initiative,
                  user_id=request.user.id,
