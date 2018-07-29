@@ -89,32 +89,33 @@
                       <i class="material-icons edit">edit</i><span>{% trans "Edit" %}</span>
                     </button>
                   </form>
-                  <!-- unreachable? -->
-                  {% if initiative.ready_for_next_stage %}
-                    <form action="/initiative/{{initiative.id}}/submit_to_committee" style="display:inline"  method="POST">
-                      {% csrf_token %}
-                      {% if initiative.state != 'e' %}
-                        <button title="{% trans 'Submit' %}" class="btn btn-success submit" type="submit">
-                          <i class="material-icons public">public</i><span>{% trans "Submit" %}</span>
-                        </button>
-                      {% else %}
-                        <button title="{% trans 'Submit for Vote' %}" class="btn bg-vote submit" type="submit">
-                          <i class="material-icons thumbs-up-down">thumbs_up_down</i><span>{% trans "Submit for Vote" %}</span>
-                        </button>
-                      {% endif %}
-                    </form>
-                  {% else %}
-                    {% if initiative.state != 'e' %}
-                      <button title="{% trans 'Not possible to submit in current state' %}" class="btn btn-success submit" style="display:inline" disabled=True type="submit">
-                        <i class="material-icons public">public</i><span>{% trans "Submit" %}</span>
-                      </button>
-                    {% else %}
-                      <button title="{% trans 'Not possible to submit for vote in current state' %}" class="btn bg-vote submit" style="display:inline" disabled=True type="submit">
-                        <i class="material-icons thumbs-up-down">thumbs_up_down</i><span>{% trans "Submit for Vote" %}</span>
-                      </button>
-                    {% endif %}
-                  {% endif %}
+
                 </div>
+              {% endif %}
+              <!-- unreachable? -->
+              {% if initiative.ready_for_next_stage %}
+                <form action="/initiative/{{initiative.id}}/submit_to_committee" style="display:inline"  method="POST">
+                  {% csrf_token %}
+                  {% if initiative.state != 'e' %}
+                    <button title="{% trans 'Submit' %}" class="btn btn-success submit" type="submit">
+                      <i class="material-icons public">public</i><span>{% trans "Submit" %}</span>
+                    </button>
+                  {% else %}
+                    <button title="{% trans 'Submit for Vote' %}" class="btn bg-vote submit" type="submit">
+                      <i class="material-icons thumbs-up-down">thumbs_up_down</i><span>{% trans "Submit for Vote" %}</span>
+                    </button>
+                  {% endif %}
+                </form>
+              {% else %}
+                {% if initiative.state != 'e' %}
+                  <button title="{% trans 'Not possible to submit in current state' %}" class="btn btn-success submit" style="display:inline" disabled=True type="submit">
+                    <i class="material-icons public">public</i><span>{% trans "Submit" %}</span>
+                  </button>
+                {% else %}
+                  <button title="{% trans 'Not possible to submit for vote in current state' %}" class="btn bg-vote submit" style="display:inline" disabled=True type="submit">
+                    <i class="material-icons thumbs-up-down">thumbs_up_down</i><span>{% trans "Submit for Vote" %}</span>
+                  </button>
+                {% endif %}
               {% endif %}
             {% endif %}
           {% endif %}
