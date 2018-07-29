@@ -355,7 +355,7 @@ def submit_to_committee(request, initiative):
 @ajax
 @login_required
 @can_access_initiative(STATES.PREPARE, 'can_edit') 
-@simple_form_verifier(InviteUsersForm, submit_title="Einladen")
+@simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
 def invite(request, form, initiative, invite_type):
     for user in form.cleaned_data['user']:
         if user == request.user: continue # we skip ourselves
