@@ -1740,3 +1740,9 @@ button[type="submit"] {
   cursor: pointer;
 }
 
+/* ----------------- support/reject icon overextending ---------------------- */
+.approval .material-icons.warning, .approval .material-icons.done {
+  max-width: 2.5em;
+}
+
+
