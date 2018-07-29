@@ -1,10 +1,10 @@
 {% load i18n %}
 {% if target %}
-{% if sender == recipient %}{% trans "You have "%}{% else %}{{sender.get_full_name|default:sender.username}} {% trans "has" %}{% endif %}{% blocktrans %} published the Intiative "{{target}}" which now requires supporters{% endblocktrans %}.
-
-{% trans "The Initiative can be found at " %}{{ base_url }}/initiative/{{sender.id}}-{{sender.slug}}
-{% else %}
-{% blockquote %}"{{sender}}" was published and now requires supporters{% endblocktrans %}.
-
-{% trans "The Initiative can be found at " %}{{ base_url }}/initiative/{{sender.id}}-{{sender.slug}}
+  {% if sender == recipient %}{% trans "You have "%}{% else %}{{sender.get_full_name|default:sender.username}} {% trans "has" %}{% endif %}{% blocktrans %} published the Intiative "{{target}}" which now requires supporters{% endblocktrans %}.
+  
+  {% trans "The Initiative can be found at " %}{{ base_url }}/initiative/{{sender.id}}-{{sender.slug}}
+  {% else %}
+  "{{sender}}" {% trans "was published and now requires supporters" %}.
+  
+  {% trans "The Initiative can be found at " %}{{ base_url }}/initiative/{{sender.id}}-{{sender.slug}}
 {% endif %}
