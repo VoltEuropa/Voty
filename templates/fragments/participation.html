@@ -7,7 +7,7 @@
   <div class="progress-bar bg-vote{%if closed %}d{% endif %}" role="progressbar" style="width: {% widthratio initiative.votes.count user_count 100 %}%;" aria-valuenow="{{initiative.votes.count}}" aria-valuemin="0" aria-valuemax="{{user_count}}">
 </div>
 </div>
-<p>{% if closed %}{% trans "This represented" %}{% else %}{% trans "This represents" %}{% endif %} <strong>{% widthratio initiative.votes.count user_count 100 %}</strong>{% trans "percent of" %} <strong>{{user_count}}</strong> {% trans "eligible partipants" %}.{% endblocktrans %}
+<p>{% if closed %}{% trans "This represented" %}{% else %}{% trans "This represents" %}{% endif %} <strong>{% widthratio initiative.votes.count user_count 100 %}</strong>{% trans "percent of" %} <strong>{{user_count}}</strong> {% trans "eligible partipants" %}.
 </p>
 {% if vote %}
   <p>{% trans "You have voted with:" %}</p>
