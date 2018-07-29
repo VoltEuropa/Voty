@@ -81,11 +81,12 @@ def _update_notifications_and_flags(current_flag, permission):
 
       # XXX data stored as JSON but couldn't figure out how to search
       # XXX only way to access data is x.data["flag"], so filter() won't work
-      # XXX this can be costly
+      # XXX this can be a lot of notifications
       # https://docs.djangoproject.com/en/1.10/ref/contrib/postgres/fields/#std:fieldlookup-hstorefield.contains
       for note in Notification.objects.all():
-        if note.data["flag"] == flag:
-          note.delete()
+        if getattr(note, "data", None) is not None:
+          if note.data["flag"] == flag:
+            note.delete()
   return flag_update
 
 # -------------------------- Invite single user -------------------------------- 
