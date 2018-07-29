@@ -14,7 +14,7 @@
             <p>{% trans "This page is for managing your account settings." %}
             <hr/>
             <h3>{% trans "Profile" %}</h3>
-            <form method="POST" action="{% url "profile_edit" %}">
+            <form method="POST" action="{% url 'profile_edit' %}">
               {% csrf_token %}
               {{ form_user_profile.action }}
               {{ form_user_profile.non_field_errors }}
@@ -68,7 +68,7 @@
             <h3>{% trans "Set Localisation" %}</h3>
             <p>{% trans "This setting determines on which initiatives you are able to particiapte and vote on." %}</p>
             <p>{% trans "By default, a <i>Europe</i> permission will only allow you to contribute to European initiatives. If you localise to a country and city, you can also vote on initiatives on these levels, so a setting of <i>Europe/France/Paris</i> allows to participate on European, French and Paris-based initiatives." %}</p>
-            <form method="POST">
+            <form method="POST" action="{% url 'profile_edit' %}">
               {% csrf_token %}
               {{ form_user_localisation.action }}
               {{ form_user_localisation.non_field_errors }}
@@ -105,7 +105,7 @@
             <hr />
 
             <h3>{% trans "Set Preferred Language" %}</h3>
-            <form method="POST" action="{% url "profile_edit" %}">
+            <form method="POST" action="{% url 'profile_edit' %}">
               {% csrf_token %}
               {{ form_user_language|bootstrap }}
               <button class="btn btn-primary" type="submit">{% trans "Save Language Preference" %}</button>
@@ -114,7 +114,7 @@
             <hr />
 
             <h3>{% trans "Modify Password" %}</h3>
-            <form method="POST" action="{% url "profile_edit" %}">
+            <form method="POST" action="{% url 'profile_edit' %}">
               {% csrf_token %}
               {{ form_user_password|bootstrap }}
               <button class="btn btn-primary" type="submit">{% trans "Update Password" %}</button>
@@ -128,7 +128,7 @@
             {% else %}
               <p>{% trans "Please note that once you delete your account, all account-related data will be permanently and irrevocably deleted. All contributions you have made on the platform will be set to author 'deleted_user'." %}</p>
             {% endif %}
-            <form method="POST" action="">
+            <form method="POST" action="{% url 'profile_edit' %}">
               {% csrf_token %}
               {{ form_user_delete.action }}
               {{ form_user_delete.non_field_errors }}

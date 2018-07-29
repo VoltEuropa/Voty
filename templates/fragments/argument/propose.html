@@ -1,2 +1,2 @@
 {% load i18n %}
-<a data-ajax="true" href="/initiative/{{initiative.id}}/new_proposal?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Make a new Proposal" %}</a>
+<a data-ajax="true" href="{% url 'new_proposal' init_id=initiative.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Make a new Proposal" %}</a>

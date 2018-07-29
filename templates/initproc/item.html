@@ -3,6 +3,7 @@
 {% load markdown %}
 {% load fullurl %}
 {% load i18n %}
+{% load get_as_string %}
 
 {% block head_title %}
   {{initiative.title}} - {% blocktrans %}in the Plenum of {{ PLATFORM_TITLE }}{% endblocktrans %}
@@ -83,18 +84,16 @@
                     {% endif %}
                   {% endif %}
 
-                  <form action="/initiative/{{initiative.id}}/edit" style="display:inline"  method="GET">
-                    {% csrf_token %}
-                    <button title="{% trans 'Edit' %}" class="btn btn-success edit" type="submit">
-                      <i class="material-icons edit">edit</i><span>{% trans "Edit" %}</span>
-                    </button>
-                  </form>
+                  <a class="btn btn-success edit" href="{% url 'edit_initiative' init_id=initiative.id %}">
+                    <i class="material-icons edit">edit</i><span>{% trans "Edit" %}
+                  </a>
+
 
                 </div>
               {% endif %}
               <!-- unreachable? -->
               {% if initiative.ready_for_next_stage %}
-                <form action="/initiative/{{initiative.id}}/submit_to_committee" style="display:inline"  method="POST">
+                <form action="{% url 'submit_to_committee' init_id=initiative.id %}" style="display:inline"  method="POST">
                   {% csrf_token %}
                   {% if initiative.state != 'e' %}
                     <button title="{% trans 'Submit' %}" class="btn btn-success submit" type="submit">
@@ -206,13 +205,13 @@
                     {% if sup.user == user %}
                       <strong style="display:block">{% trans "Confirm now" %}</strong>
 
-                      <form action="/initiative/{{initiative.id}}/ack_support" style="display:inline" method="POST">
+                      <form action="{% url 'ack_support' init_id=initiative.id %}" style="display:inline" method="POST">
                         {% csrf_token %}
                         <button title="{% trans 'Support' %}" class="btn btn-success" type="submit">
                           <i class="material-icons">done</i>
                         </button>
                       </form>
-                      <form action="/initiative/{{initiative.id}}/rm_support" style="display:inline"  method="POST">
+                      <form action="{% url 'rm_support' init_id=initiative.id %}" style="display:inline"  method="POST">
                         {% csrf_token %}
                         <button title="{% trans 'No Support' %}" class="btn btn-danger" type="submit">
                           <i class="material-icons">not_interested</i>
@@ -229,7 +228,9 @@
   
           {% if request.guard.can_inivite_initiators %}
             <div id="invite-initiators">
-              <a data-ajax="true" href="/initiative/{{initiative.id}}/invite/initiators?fragment=%23invite-initiators" class="btn btn-success">{% trans "Invite additional Initiators" %}</a>
+              {% with 'initiators' as initiators %}
+                <a data-ajax="true" href="{% url 'invite' init_id=initiative.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">{% trans "Invite additional Initiators" %}</a>
+              {% endwith %}
             </div>
           {% endif %}
         </div>
@@ -288,7 +289,7 @@
               {% trans "You are supporting this Initiative!" %}
             </span>
           {% else %}
-            <form action="/initiative/{{initiative.id}}/support" method="GET">
+            <form action="{% url 'support' init_id=initiative.id %}" method="GET">
               <button class="btn bg-support" type="submit">
                 {% trans "Support this Initiative" %}
               </button>
@@ -417,8 +418,13 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h6 class="text-muted classification">Text der Initiative{% if initiative.versions.count > 1 %}
-          <a href="/initiative/{{initiative.id}}-{{initiative.slug}}/compare/{{initiative.versions.1.id}}" data-ajax="true" class="change-history">({% trans "View modification history" %} <span class="changes-badge"><span class="material-icons history">history</span> {{initiative.versions.count}}</span>)</a>{% endif %}</h6>
+          <h6 class="text-muted classification">{% trans "Text of the Initiative" %}
+            {% if initiative.versions.count > 1 %}
+              <a href="{% url 'compare' init_id=initiative.id slug=initiative.slug version_id=initiative.versions.1.id %}" data-ajax="true" class="change-history">({% trans "View modification history" %}
+                <span class="changes-badge"><span class="material-icons history">history</span> {{initiative.versions.count}}</span>)
+              </a>
+            {% endif %}
+          </h6>
         </div>
       </div>
 
@@ -525,7 +531,7 @@
                 {% trans "You are supporting this Initiative!" %}
               </span>
             {% else %}
-              <form action="/initiative/{{initiative.id}}/support" method="GET">
+              <form action="{% url 'support' init_id=initiative.id %}" method="GET">
                 <button class="btn bg-support" type="submit">
                   {% trans "Support this Initiative" %}
                 </button>
@@ -569,13 +575,13 @@
                       {% if sup.user == user %}
                         <strong style="display:block">{% trans "Confirm now" %}</strong>
 
-                        <form action="/initiative/{{initiative.id}}/ack_support"  style="display:inline"  method="POST">
+                        <form action="{% url 'ack_support' init_id=initiative.id"  style="display:inline"  method="POST">
                           {% csrf_token %}
                           <button title="{% trans 'Support' %}" class="btn btn-success" type="submit">
                             <i class="material-icons">done</i>
                           </button>
                         </form>
-                        <form action="/initiative/{{initiative.id}}/rm_support"  style="display:inline"  method="POST">
+                        <form action="{% url 'rm_support' init_id=initiative.id %}" style="display:inline"  method="POST">
                           {% csrf_token %}
                           <button title="{% trans 'No Support' %}" class="btn btn-danger" type="submit">
                               <i class="material-icons">not_interested</i>
@@ -616,10 +622,12 @@
       <div class="row">
         <div class="col-12">
           <div id="invite-supporters">
-            <a data-ajax="true" href="/initiative/{{initiative.id}}/invite/supporters?fragment=%23invite-supporters" class="btn btn-success">
+            {% with 'supporters' as supporters %}
+            <a data-ajax="true" href="{% url 'invite' init_id=initiative.id invite_type=supporters %}?fragment=%23invite-supporters" class="btn btn-success">
               <i class="material-icons person-add">person_add</i>
               <span>{% trans "Invite additional Initiators" %}</span>
             </a>
+            {% endwith %}
           </div>
         </div>
       </div>

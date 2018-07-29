@@ -1,14 +1,14 @@
 {% load i18n %}
 
 <div class="row">
-    <div class="{% if arguments %}offset-md-2 {% endif %}col text-center">
-        <a data-ajax="true" href="/initiative/{{initiative.id}}/new_argument?type=👍&amp;fragment=%23new-argument" class="btn">
-            <i class="material-icons">thumb_up</i> {% trans "Add Argument in Favor" %}
-        </a>
-    </div>
-    <div class="col text-center">
-        <a data-ajax="true" href="/initiative/{{initiative.id}}/new_argument?type=👎&amp;fragment=%23new-argument" class="btn">
-            <i class="material-icons">thumb_down</i> {% trans "Add Argument Against" %}
-        </a>
-    </div>
+  <div class="{% if arguments %}offset-md-2 {% endif %}col text-center">
+    <a data-ajax="true" href="{% url 'new_argument' init_id=initiative.id %}?type=👍&amp;fragment=%23new-argument" class="btn">
+      <i class="material-icons">thumb_up</i> {% trans "Add Argument in Favor" %}
+    </a>
+</div>
+<div class="col text-center">
+    <a data-ajax="true" href="{% url 'new_argument' init_id=initiative.id %}?type=👎&amp;fragment=%23new-argument" class="btn">
+      <i class="material-icons">thumb_down</i> {% trans "Add Argument Against" %}
+    </a>
+  </div>
 </div>

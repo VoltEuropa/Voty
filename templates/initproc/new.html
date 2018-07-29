@@ -6,30 +6,30 @@
 
 {% block content %}
   <div class="container new-initiative">
-  	<div class="card">
-  		{% if initiative.is_editable %}
-    		<div class="card-header">
-    			<h1>{% trans "Edit Initiative" %}</h1>
-    			<p>{% trans "More information on the required parts of an Initiative can be found:" %}<a href="{{ 'URL_HOWTO_INITIATIVE'|get_setting }}">{% trans "here" %}</a>.</p>
-    		</div>
-  		{% else %}
-    		<div class="card-header">
-    		  <h1>{% trans "Propose Initiative" %}</h1>
-    		  <p>{% trans "Create a new Initative to be voted on." %}<a href="{{ 'URL_HOWTO_INITIATIVE'|get_setting }}">{% trans "More information on how to create an Initiative" %}</a>.</p>
-    		</div>
-  		{% endif %}
-  		<form method="POST">
-  			 {% csrf_token %}
-  			<div class="card-body">
-  				<div class="container">
-  				{{form|bootstrap}}
-  				</div>
-  			</div>
-  			<div class="card-footer">
-  				<button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
-  			</div>
-  		</form>
-  	</div>
+    <div class="card">
+      {% if initiative.is_editable %}
+        <div class="card-header">
+          <h1>{% trans "Edit Initiative" %}</h1>
+          <p>{% trans "More information on the required parts of an Initiative can be found:" %}<a href="{{ 'URL_HOWTO_INITIATIVE'|get_setting }}">{% trans "here" %}</a>.</p>
+        </div>
+      {% else %}
+        <div class="card-header">
+          <h1>{% trans "Propose Initiative" %}</h1>
+          <p>{% trans "Create a new Initative to be voted on." %}<a href="{{ 'URL_HOWTO_INITIATIVE'|get_setting }}">{% trans "More information on how to create an Initiative" %}</a>.</p>
+        </div>
+      {% endif %}
+      <form method="POST" action="{% url 'edit_initiative' init_id=initiative.id %}">
+        {% csrf_token %}
+        <div class="card-body">
+          <div class="container">
+          {{form|bootstrap}}
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+        </div>
+      </form>
+    </div>
   </div>
 {% endblock %}
 

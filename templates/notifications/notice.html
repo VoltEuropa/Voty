@@ -13,7 +13,15 @@
       {% with lookup|get_setting as pointer %}
         {% with pointer|get_trans as action %}
           {% if notice.target_object_id %}
-            <a href="{% url notice.target_content_type|get_as_string object_id=notice.target_object_id %}#{{ notice.verb }}">
+            {% with notice.target_content_type|get_as_string as data_type %}
+              {% if data_type == "user" %}
+                <a href="{% url notice.target_content_type|get_as_string user_id=notice.target_object_id %}#{{ notice.verb }}">
+              {% else %}
+                {# fix this, slice is only way to make initiative with only init_id and deeplink work #}
+                {% url notice.target_content_type|get_as_string init_id=notice.target_object_id as forward_url %}
+                <a href="{{ forward_url|slice:':-1' }}#{{ notice.verb }}">
+              {% endif %}
+            {% endwith %}
           {% endif %}
           {{ notice.actor }}: {{ action }} {% if notice.target %}{% if notice.target %}- {{ notice.target }}{% endif %}{% endif %}
           {% if notice.target_object_id %} 
