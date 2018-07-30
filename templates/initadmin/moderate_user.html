@@ -15,224 +15,229 @@
         <div class="row">
           <div class="col">
             <h2>{% trans "Moderate User Settings" %}</h2>
-            <p>{% trans "This page is for helping users reset their password and modifying user access permissions." %}</p>
-            <hr/>
-            <h3>{{ viewed_user.username }}</h3>
-            {% if perms.auth.user_can_reset %}
-              <form method="POST" action="">
-                {% csrf_token %}
-                {{ form_user_moderate.action }}
-                {{ form_user_moderate.non_field_errors }}
-                {{ form_user_moderate.source.errors }}
-                {{ form_user_moderate.source }}
-  
-                <div class="form-inline-group">
-                  <div class="form-group">
-                    <img src="{% avatar_full_url viewed_user size %}" alt="{{viewed_user.firstname|default:viewed_user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_moderate.first_name.label_tag }}
-                    <div class="">
-                      {{ form_user_moderate.first_name }}
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_moderate.last_name.label_tag }}
-                    <div class="">
-                      {{ form_user_moderate.last_name }}
-                    </div>
-                  </div>
-                </div>
-                <div class="form-group">
-                  {{ form_user_moderate.email.label_tag }}
-                  <div class="">
-                    {{ form_user_moderate.email.errors }}
-                    {{ form_user_moderate.email }}
-                    {{ form_user_moderate.email.help_text }}
-                  </div>
-                </div>
-                <div class="form-group">
-                  <button class="btn btn-primary" type="submit">{% trans "Confirm this email and send password reset link" %}</button>
-                </div>
-              </form>
-  
-              <hr />
-            {% endif %}
-            {% if perms.auth.user_can_nominate %}
-              <form method="POST" action="">
-                {% csrf_token %}
-                {{ form_user_addgroup.action }}
-                {{ form_user_addgroup.non_field_errors }}
-                {{ form_user_addgroup.source.errors }}
-                {{ form_user_addgroup.source }}
-  
-                <h3>{% trans "Group Membership" %}</h3>
-                <div class="form-group form-input-group">
-                  {{ form_user_addgroup.groups.label_tag }}
-                  
-                  <ul id="id_groups">
-                    {% for id, value, check in form_user_addgroup.groups.field.choices %}
-                    <li>
-                      <label for="id_groups_{{ id }}">
-                        <input class="form-control" id="id_group_{{ id }}" {{ check }} name="groups_{{ id }}" type="checkbox" value="{{ id }}" />
-                        {{ value }}
-                      </label>
-                    </li>
-                    {% endfor %}
-                  </ul>
-                  {{ form_user_addgroup.groups.help_text }}
-                </div>
-  
-                <div class="form-group">
-                  <button class="btn btn-primary" type="submit">{% trans "Update group membership" %}</button>
-                </div>
-              </form>
-  
-              <hr />
-            {% endif %}
-            {% if perms.auth.user_can_localise %}
-              <form method="POST" action="">
-                {% csrf_token %}
-                {{ form_user_validate.action }}
-                {{ form_user_validate.non_field_errors }}
-                {{ form_user_validate.source.errors }}
-                {{ form_user_validate.source }}
-  
-                <h3 id="user_localisation_requested">{% trans "Participation Permission" %}</h3>
-                <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of <i>EU/France/Paris</i> will permit the user to vote on European, French and Paris-based initiatives." %}
-                <p>{% trans "When a user requests to change this setting, it has to be validated by a moderator to come into effect" %}</p>
-                <div class="form-inline-group">
-                  <div class="form-group">
-                    <span>{% trans "Current status:" %}</span>
-                    <div class="">
-                      <button type="button" disabled class="btn btn-default {% if viewed_user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
-                        <i class="material-icons {% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}">{% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}</i>{% if viewed_user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
-                      </button>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_validate.scope.label_tag }}
-                    <div class="">
-                      {{ form_user_validate.scope }}
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_validate.is_scope_confirmed.label_tag }}
-                    <div class="">
-                      {{ form_user_validate.is_scope_confirmed }}
-                    </div>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <button class="btn btn-primary" type="submit">{% trans "Update and validate Localisation" %}</button>
-                </div>
-              </form>
-  
-              <hr />
-            {% endif %}
-            {% with "USE_DIVERSE_MODERATION_TEAM"|get_setting as app_uses_diversity_moderators %}</h1>
-              {% if app_uses_diversity_moderators == '1' %}
-                {% if perms.auth.user_can_diversify %}
-                  {% if viewed_user_is_moderator %}
-                    <h3>{% trans "Set Diversity Categories" %}</h3>
-                    <p>
-                      {% trans "Define whether this user/moderator should have any diversity flags set. Moderation of initiatives will then require the following miniums:" %}
-                      <span>
-                        {% trans "Female moderators: " %}
-                        <b>{{ "MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES"|get_setting }}</b>,
-                        {% trans "Diverse moderators:" %}
-                        <b>{{ "MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES"|get_setting }}</b></span>
-                    </p>
-                  <form method="POST" action="">
-                      {% csrf_token %}
-                      {{ form_user_addflags.action }}
-                      {{ form_user_addflags.non_field_errors }}
-                      {{ form_user_addflags.source.errors }}
-                      {{ form_user_addflags.source }}
-                      <div class="form-group form-input-group">
-                        <ul>
-                          <li><label for="is_female_mod">{{ form_user_addflags.is_female_mod }}{% trans "Female Moderator" %}</label></li>
-                          <li><label for="is_diverse_mod">{{ form_user_addflags.is_diverse_mod }}{% trans "Diverse Moderator" %}</label></li>
-                        </ul>
-                      </diV>
-                      <div class="form-group">
-                        <button class="btn btn-primary" type="submit">{% trans "Add diversity flags" %}</button>
-                      </div>
-                  </form>
-  
-                  <hr/>
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-            {% endwith %}
-
-            {% if perms.auth.user_can_activate %}
-              <form method="POST" action="">
-                {% csrf_token %}
-                {{ form_user_activate.action }}
-                {{ form_user_activate.non_field_errors }}
-                {{ form_user_activate.source.errors }}
-                {{ form_user_activate.source }}
-  
-                <h3>{% trans "Activate/Disable Account" %}</h3>
-                <div class="form-inline-group">
-                  <div class="form-group">
-                    <span>{% trans "Current status:" %}</span>
-                    <div class="">
-                      <button type="button" disabled class="btn btn-default {% if viewed_user.is_active %}btn-success{% else %}btn-warning{% endif %}">
-                        <i class="material-icons {% if viewed_user.is_active %}done{% else %}warning{% endif %}">{% if viewed_user.is_active %}done{% else %}warning{% endif %}</i>{% if viewed_user.is_active %}Active{% else %}Disabled{% endif %}
-                      </button>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_activate.last_login.label_tag }}
-                    <div class="">
-                      {{ form_user_activate.last_login }}
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    {{ form_user_activate.status.label_tag }}
-                    <div class="">
-                      {{ form_user_activate.status.errors }}
-                      {{ form_user_activate.status }}
-                    </div>
-                  </div>
-                </div>
-                <p>{{ form_user_activate.status.help_text }}</p>
-                <div class="form-group">
-                  <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Change account status" %}</button>
-                </div>
-              </form>
-  
-              <hr />
-            {% endif %}
-            {% if perms.auth.user_can_delete %}
-               <form method="POST" action="">
+            {# not for superusers #}
+            {% if viewed_user.is_superuser %}
+              <p>{% trans "This user can only be edited through the administrator panel." %}</p>
+            {% else %}
+              <p>{% trans "This page is for helping users reset their password and modifying user access permissions." %}</p>
+              <hr/>
+              <h3>{{ viewed_user.username }}</h3>
+              {% if perms.auth.user_can_reset %}
+                <form method="POST" action="">
                   {% csrf_token %}
-                  {{ form_user_delete.action }}
-                  {{ form_user_delete.non_field_errors }}
-                  {{ form_user_delete.source.errors }}
-                  {{ form_user_delete.source }}
+                  {{ form_user_moderate.action }}
+                  {{ form_user_moderate.non_field_errors }}
+                  {{ form_user_moderate.source.errors }}
+                  {{ form_user_moderate.source }}
     
-                  <h3 id="user_deletion_requested">{% trans "Delete Account and anonymize contributions" %}</h3>
-                  <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
                   <div class="form-inline-group">
                     <div class="form-group">
-                      {{ form_user_delete.username.label_tag }}
+                      <img src="{% avatar_full_url viewed_user size %}" alt="{{viewed_user.firstname|default:viewed_user.username}}" width="{{ size }}" height="{{ size }}" class="avatar" />
+                    </div>
+                    <div class="form-group">
+                      {{ form_user_moderate.first_name.label_tag }}
                       <div class="">
-                        {{ form_user_delete.username.errors }}
-                        {{ form_user_delete.username }}
+                        {{ form_user_moderate.first_name }}
                       </div>
                     </div>
                     <div class="form-group">
-                      <label>Are you sure?</label>
+                      {{ form_user_moderate.last_name.label_tag }}
                       <div class="">
-                        <button type="submit" class="btn btn-danger" name="user_delete">Permanently delete account</button>
+                        {{ form_user_moderate.last_name }}
                       </div>
                     </div>
                   </div>
-                  {{ form_user_delete.username.help_text }}
-              </form>
+                  <div class="form-group">
+                    {{ form_user_moderate.email.label_tag }}
+                    <div class="">
+                      {{ form_user_moderate.email.errors }}
+                      {{ form_user_moderate.email }}
+                      {{ form_user_moderate.email.help_text }}
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <button class="btn btn-primary" type="submit">{% trans "Confirm this email and send password reset link" %}</button>
+                  </div>
+                </form>
+    
+                <hr />
+              {% endif %}
+              {% if perms.auth.user_can_nominate %}
+                <form method="POST" action="">
+                  {% csrf_token %}
+                  {{ form_user_addgroup.action }}
+                  {{ form_user_addgroup.non_field_errors }}
+                  {{ form_user_addgroup.source.errors }}
+                  {{ form_user_addgroup.source }}
+    
+                  <h3>{% trans "Group Membership" %}</h3>
+                  <div class="form-group form-input-group">
+                    {{ form_user_addgroup.groups.label_tag }}
+                    
+                    <ul id="id_groups">
+                      {% for id, value, check in form_user_addgroup.groups.field.choices %}
+                      <li>
+                        <label for="id_groups_{{ id }}">
+                          <input class="form-control" id="id_group_{{ id }}" {{ check }} name="groups_{{ id }}" type="checkbox" value="{{ id }}" />
+                          {{ value }}
+                        </label>
+                      </li>
+                      {% endfor %}
+                    </ul>
+                    {{ form_user_addgroup.groups.help_text }}
+                  </div>
+    
+                  <div class="form-group">
+                    <button class="btn btn-primary" type="submit">{% trans "Update group membership" %}</button>
+                  </div>
+                </form>
+    
+                <hr />
+              {% endif %}
+              {% if perms.auth.user_can_localise %}
+                <form method="POST" action="">
+                  {% csrf_token %}
+                  {{ form_user_validate.action }}
+                  {{ form_user_validate.non_field_errors }}
+                  {{ form_user_validate.source.errors }}
+                  {{ form_user_validate.source }}
+    
+                  <h3 id="user_localisation_requested">{% trans "Participation Permission" %}</h3>
+                  <p>{% trans "Users are allowed to participate depending on this setting. For example, a scope of <i>EU/France/Paris</i> will permit the user to vote on European, French and Paris-based initiatives." %}
+                  <p>{% trans "When a user requests to change this setting, it has to be validated by a moderator to come into effect" %}</p>
+                  <div class="form-inline-group">
+                    <div class="form-group">
+                      <span>{% trans "Current status:" %}</span>
+                      <div class="">
+                        <button type="button" disabled class="btn btn-default {% if viewed_user.config.is_scope_confirmed %}btn-success{% else %}btn-warning{% endif %}">
+                          <i class="material-icons {% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}">{% if viewed_user.config.is_scope_confirmed %}done{% else %}warning{% endif %}</i>{% if viewed_user.config.is_scope_confirmed %}Validated{% else %}Not Validated{% endif %}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      {{ form_user_validate.scope.label_tag }}
+                      <div class="">
+                        {{ form_user_validate.scope }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      {{ form_user_validate.is_scope_confirmed.label_tag }}
+                      <div class="">
+                        {{ form_user_validate.is_scope_confirmed }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <button class="btn btn-primary" type="submit">{% trans "Update and validate Localisation" %}</button>
+                  </div>
+                </form>
+    
+                <hr />
+              {% endif %}
+              {% with "USE_DIVERSE_MODERATION_TEAM"|get_setting as app_uses_diversity_moderators %}</h1>
+                {% if app_uses_diversity_moderators == '1' %}
+                  {% if perms.auth.user_can_diversify %}
+                    {% if viewed_user_is_moderator %}
+                      <h3>{% trans "Set Diversity Categories" %}</h3>
+                      <p>
+                        {% trans "Define whether this user/moderator should have any diversity flags set. Moderation of initiatives will then require the following miniums:" %}
+                        <span>
+                          {% trans "Female moderators: " %}
+                          <b>{{ "MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES"|get_setting }}</b>,
+                          {% trans "Diverse moderators:" %}
+                          <b>{{ "MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES"|get_setting }}</b></span>
+                      </p>
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        {{ form_user_addflags.action }}
+                        {{ form_user_addflags.non_field_errors }}
+                        {{ form_user_addflags.source.errors }}
+                        {{ form_user_addflags.source }}
+                        <div class="form-group form-input-group">
+                          <ul>
+                            <li><label for="is_female_mod">{{ form_user_addflags.is_female_mod }}{% trans "Female Moderator" %}</label></li>
+                            <li><label for="is_diverse_mod">{{ form_user_addflags.is_diverse_mod }}{% trans "Diverse Moderator" %}</label></li>
+                          </ul>
+                        </diV>
+                        <div class="form-group">
+                          <button class="btn btn-primary" type="submit">{% trans "Add diversity flags" %}</button>
+                        </div>
+                    </form>
+    
+                    <hr/>
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endwith %}
+  
+              {% if perms.auth.user_can_activate %}
+                <form method="POST" action="">
+                  {% csrf_token %}
+                  {{ form_user_activate.action }}
+                  {{ form_user_activate.non_field_errors }}
+                  {{ form_user_activate.source.errors }}
+                  {{ form_user_activate.source }}
+    
+                  <h3>{% trans "Activate/Disable Account" %}</h3>
+                  <div class="form-inline-group">
+                    <div class="form-group">
+                      <span>{% trans "Current status:" %}</span>
+                      <div class="">
+                        <button type="button" disabled class="btn btn-default {% if viewed_user.is_active %}btn-success{% else %}btn-warning{% endif %}">
+                          <i class="material-icons {% if viewed_user.is_active %}done{% else %}warning{% endif %}">{% if viewed_user.is_active %}done{% else %}warning{% endif %}</i>{% if viewed_user.is_active %}Active{% else %}Disabled{% endif %}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      {{ form_user_activate.last_login.label_tag }}
+                      <div class="">
+                        {{ form_user_activate.last_login }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      {{ form_user_activate.status.label_tag }}
+                      <div class="">
+                        {{ form_user_activate.status.errors }}
+                        {{ form_user_activate.status }}
+                      </div>
+                    </div>
+                  </div>
+                  <p>{{ form_user_activate.status.help_text }}</p>
+                  <div class="form-group">
+                    <button class="btn btn-primary" type="submit" name="user_moderate_groups">{% trans "Change account status" %}</button>
+                  </div>
+                </form>
+    
+                <hr />
+              {% endif %}
+              {% if perms.auth.user_can_delete %}
+                 <form method="POST" action="">
+                    {% csrf_token %}
+                    {{ form_user_delete.action }}
+                    {{ form_user_delete.non_field_errors }}
+                    {{ form_user_delete.source.errors }}
+                    {{ form_user_delete.source }}
+      
+                    <h3 id="user_deletion_requested">{% trans "Delete Account and anonymize contributions" %}</h3>
+                    <p><b>{% trans "Warning" %}</b>: {% trans "Deleting an account will remove this user from the database. Authorship of all initiatives, comments, votes etc of this user will be set to 'Deleted User'." %}</p> 
+                    <div class="form-inline-group">
+                      <div class="form-group">
+                        {{ form_user_delete.username.label_tag }}
+                        <div class="">
+                          {{ form_user_delete.username.errors }}
+                          {{ form_user_delete.username }}
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>Are you sure?</label>
+                        <div class="">
+                          <button type="submit" class="btn btn-danger" name="user_delete">Permanently delete account</button>
+                        </div>
+                      </div>
+                    </div>
+                    {{ form_user_delete.username.help_text }}
+                </form>
+              {% endif %}
             {% endif %}
           </div>
         </div>
