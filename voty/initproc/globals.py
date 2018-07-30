@@ -43,20 +43,6 @@ COMPARING_FIELDS = [
     "einordnung", "ebene", "bereich",
 ]
 
-SUBJECT_CATEGORIES = [
-    _("Global Politics & International Cooperation"),
-    _("Education, Research & Culture"),
-    _("Interior Politics"),
-    _("Net- & Media Politics"),
-    _("Gender Equality"),
-    _("Diversity & Integration"),
-    _("Democracy & Transparency"),
-    _("Health, Nutrition, Consumer Protection"),
-    _("Environment, Mobility, Infrastructural Development"),
-    _("Social Justice, Economy, Work & Finance"),
-    _("Other")
-]
-
 ABSTENTION_START = date(2017, 12, 1) # Everything published after this has abstentions
 SPEED_PHASE_END = date(2017, 8, 21) # Everything published before this has speed phase
 INITIATORS_COUNT = 3

@@ -315,7 +315,9 @@ NOTIFICATIONS = SimpleNamespace(**{
 # categories
 # should all be translated right away because they are only displayed not stored
 CATEGORIES = SimpleNamespace(**{
-  "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('scope_list')]
+  "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('scope_list')],
+  "TOPIC_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("topic_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('topic_list')],
+  "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('context_list')]
 })
 
 # listbox default options

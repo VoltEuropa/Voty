@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# ==============================================================================
+# voty initprocs models
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.utils.functional import cached_property
@@ -17,7 +24,6 @@ from .globals import STATES, VOTED, INITIATORS_COUNT, SPEED_PHASE_END, ABSTENTIO
 from django.db import models
 import pytz
 
-from voty.initproc.globals import SUBJECT_CATEGORIES
 from django.utils.translation import ugettext as _
 
 @reversion.register()
@@ -53,9 +59,9 @@ class Initiative(models.Model):
     arbeitsweise = models.TextField(blank=True)
     init_argument = models.TextField(blank=True)
 
-    einordnung = models.CharField(max_length=50, choices=[(_("Single Initiative"), _("Single Initiative"))])
+    einordnung = models.CharField(max_length=50, choices=settings.CATEGORIES.CONTEXT_CHOICES)
     ebene = models.CharField(max_length=100, choices=settings.CATEGORIES.SCOPE_CHOICES)
-    bereich = models.CharField(max_length=60, choices=[(item,item) for item in SUBJECT_CATEGORIES])
+    bereich = models.CharField(max_length=60, choices=settings.CATEGORIES.TOPIC_CHOICES)
 
     went_public_at = models.DateField(blank=True, null=True)
     went_to_discussion_at = models.DateField(blank=True, null=True)
