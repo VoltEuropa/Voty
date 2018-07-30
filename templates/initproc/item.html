@@ -125,12 +125,10 @@
             <p>{% trans "This Initiative " %}<strong class="badge-prepare">{% trans "is being finalized for a Vote" %}</strong>.</p>
           {% elif initiative.state == 'i' or initiative.state == 'm' %}
             <p>{% trans "This Initiative " %}<strong class="badge-prepare">{% trans "is being reviewed" %}</strong> {% trans "and" %} {% if initiative.state == 'i' %} {% trans "will then be published" %} {% else %} {% trans "will then be posted " %}<strong class="badge-prepare">{% trans "for a Vote" %}</strong>{% endif %}.</p>
-            {% if request.user.is_staff %}
-              {% if request.guard.can_moderate %}
-                  {% include 'fragments/moderation/index.html' %}
-              {% else %}
-                  <div class="alert alert-info">{{request.guard.reason}}</div>
-              {% endif %}
+            {% if request.guard.can_moderate %}
+                {% include 'fragments/moderation/index.html' %}
+            {% else %}
+                <div class="alert alert-info">{{request.guard.reason}}</div>
             {% endif %}
           {% endif %}
 
