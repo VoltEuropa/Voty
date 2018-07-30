@@ -275,12 +275,15 @@ SITE_FONT_CSS_URL = raw_parser.get("settings", "SITE_FONT_CSS_URL")
 SITE_THEME_CSS_URL = raw_parser.get("settings", "SITE_THEME_CSS_URL")
 SITE_JS_URL = raw_parser.get("settings", "SITE_JS_URL")
 
-
-
-USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
-
 # XXX why do those have to be classes? Nothing will ever change.
 VOTED = raw_parser._sections["initiative_vote_state_list"]
+
+# platform options
+USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
+USE_DIVERSE_MODERATION_TEAM = raw_parser.get("settings", "USER_USE_DIVERSE_MODERATION_TEAM")
+
+# moderation
+MODERATIONS = SimpleNamespace(**raw_parser._sections["moderation_setting_list"])
 
 # groups and permissions
 BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
@@ -321,4 +324,5 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
+
 

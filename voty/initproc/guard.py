@@ -1,6 +1,11 @@
-"""
-The Single one place, where all permissions are defined
-"""
+# -*- coding: utf-8 -*-
+# ==============================================================================
+# voty initprocs guard - single one place, where all permissions are defined
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
+
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -9,9 +14,28 @@ from django.db.models import Q
 from functools import wraps
 from voty.initadmin.models import UserConfig
 from voty.initproc.models import Moderation
-from .globals import STATES, PUBLIC_STATES, TEAM_ONLY_STATES, INITIATORS_COUNT, MINIMUM_MODERATOR_VOTES, MINIMUM_FEMALE_MODERATOR_VOTES, MINIMUM_DIVERSE_MODERATOR_VOTES
+from .globals import STATES, PUBLIC_STATES, TEAM_ONLY_STATES, INITIATORS_COUNT
 from .models import Initiative, Supporter
+from django.conf import settings
+from django.utils import six
 from django.utils.translation import ugettext as _
+
+
+# ----------------- determine number of moderators for initiative --------------
+def _get_initiative_minium_moderator_votes():
+  group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
+  if isinstance(group, six.string_types):
+    groups = (group, )
+  else:
+    groups = group
+
+  total_moderators = User.objects.filter(groups__name__in=groups).distinct()
+  minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.MODERATIONS.MINIMUM_MODERATOR_PERCENTAGE)/100)
+  minimum_moderators_by_count = int(settings.MODERATIONS.MINIMUM_MODERATOR_VOTES)
+
+  if minimum_moderators_by_percent >= minimum_moderators_by_count:
+    return minimum_moderators_by_percent
+  return minimum_moderators_by_count
 
 def can_access_initiative(states=None, check=None):
     def wrap(fn):
@@ -45,17 +69,43 @@ def _compound_action(func):
             return func(self, obj)
     return wrapped
 
-
+# ---------------- Instance of the guard for the given user --------------------
 class Guard:
-    """
-    An instance of the guard for the given user
-    """
+
     def __init__(self, user, request=None):
         self.user = user
         self.request = request
-        # REASON IS NOT THREAD SAFE, but works good enough for us
-        # for now.
+
+        # XXX? REASON IS NOT THREAD SAFE, but works good enough for us for now.
         self.reason = None
+
+    # ------------------- how many moderators' inputs are missing --------------
+    def _mods_missing_for_i(self, init):
+    
+      # total moderators required are based on percentage/minimum person
+      total = _get_initiative_minium_moderator_votes() 
+    
+      # overall moderations on this initiative
+      # XXX what if not enough moderators because all are initiators?
+      moderations = init.moderations.filter(stale=False)
+      total -= moderations.count()
+    
+      # diversity is a choice
+      if int(settings.USE_DIVERSE_MODERATION_TEAM) != 0:
+        female  = int(settings.MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES)
+        diverse = int(settings.MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES)
+    
+        # exclude moderator if initiator
+        for config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
+          if config.is_female_mod:
+            female -= 1
+          if config.is_diverse_mod:
+            diverse -= 1
+        return (female, diverse, total)
+
+      # by default only check for total
+      return (0, 0, total)
+
 
     def make_intiatives_query(self, filters):
         if not self.user.is_authenticated:
@@ -144,24 +194,6 @@ class Guard:
     #    -----------
     # 
 
-    # how many (female, diverse, total) moderators are missing?
-    def _mods_missing_for_i(self, init):
-        female  = MINIMUM_FEMALE_MODERATOR_VOTES
-        diverse = MINIMUM_DIVERSE_MODERATOR_VOTES
-        total   = MINIMUM_MODERATOR_VOTES
-
-        moderations = init.moderations.filter(stale=False)
-
-        total -= moderations.count()
-
-        for config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
-            if config.is_female_mod:
-                female -= 1
-            if config.is_diverse_mod:
-                diverse -= 1
-
-        return (female, diverse, total)
-
     def can_inivite_initiators(self, init=None):
         init = init or self.request.initiative
         if init.state != STATES.PREPARE:
@@ -185,7 +217,6 @@ class Guard:
             return False
 
         (female,diverse,total) = self._mods_missing_for_i(init)
-
         try:
             if female > 0:
                 if self.user.config.is_female_mod:
