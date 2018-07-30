@@ -26,7 +26,7 @@ urlpatterns = [
   #url(r"^initiative/(?P<init_id>\d+)/?$", views.item, name=_("initiative")),
   url(r"^initiative/(?P<init_id>\d+)/$", views.item, name=_("initiative")),
 
-  url(r"^initiative/new$", views.new, name="new_initiative"),
+  url(r"^initiative/new$", views.new, name="initiative_new"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/support$", views.support, name="support"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/ack_support$", views.ack_support, name="ack_support"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/rm_support$", views.rm_support, name="rm_support"),

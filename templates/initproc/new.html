@@ -18,17 +18,21 @@
           <p>{% trans "Create a new Initative to be voted on." %}<a href="{{ 'URL_HOWTO_INITIATIVE'|get_setting }}">{% trans "More information on how to create an Initiative" %}</a>.</p>
         </div>
       {% endif %}
-      <form method="POST" action="{% url 'edit_initiative' init_id=initiative.id %}">
-        {% csrf_token %}
-        <div class="card-body">
-          <div class="container">
-          {{form|bootstrap}}
+      {% if initiative.is_editable %}
+        <form method="POST" action="{% url 'edit_initiative' init_id=initiative.id %}">
+      {% else %}
+        <form method="POST" action="{% url 'initiative_new' %}">
+      {% endif %}
+          {% csrf_token %}
+          <div class="card-body">
+            <div class="container">
+            {{form|bootstrap}}
+            </div>
           </div>
-        </div>
-        <div class="card-footer">
-          <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
-        </div>
-      </form>
+          <div class="card-footer">
+            <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+          </div>
+        </form>
     </div>
   </div>
 {% endblock %}
