@@ -37,7 +37,8 @@ from .models import InviteBatch, UserConfig
 from .forms import (UploadFileForm, LoginEmailOrUsernameForm, UserEditForm,
   UserModerateForm, UserValidateLocalisationForm, UserActivateForm, UserDeleteForm,
   UserGiveGroupPrivilegeForm, ListboxSearchForm, UserLocaliseForm, UserInviteForm,
-  UserLanguageForm, DeleteSignupCodeForm, CustomPasswordChangeForm, UserDeleteAccount)
+  UserLanguageForm, DeleteSignupCodeForm, CustomPasswordChangeForm, UserDeleteAccount,
+  UserAddDiversityFlagsForm,)
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -435,6 +436,15 @@ def user_view(request, user_id):
         user.save()
         messages.success(request, "".join([_("Added the user to the following groups:"), ", ".join(new_group_list)]))
 
+    # --------------------- Add/Remove Diversity Flags -------------------------
+    elif request.POST.get("action", None) == "add_diversify_flags":
+      if request.user.has_perm("auth.user_can_diversify"):
+        user_config = UserConfig.objects.get(user_id=user_id)
+        user_config.is_female_mod = 1 if request.POST.get("is_female_mod", None) == "on" else 0
+        user_config.is_diverse_mod = 1 if request.POST.get("is_diverse_mod", None) == "on" else 0
+        user_config.save()
+        messages.success(request, _("Successfully update user diversity flags"))
+
     # ----------------------- Validate Localisation ----------------------------
     elif request.POST.get("action", None) == "validate_scope":
       if request.user.has_perm("auth.user_can_localise"):
@@ -508,6 +518,10 @@ def user_view(request, user_id):
       else:
         groups[group.id] = ""
     form_user_addgroup.fields["groups"].choices=[(x.id, x.name, groups[x.id]) for x in Group.objects.all()]
+    form_user_addflags = UserAddDiversityFlagsForm(initial={
+      "is_female_mod": user.config.is_female_mod,
+      "is_diverse_mod": user.config.is_diverse_mod
+    })
     form_user_validate = UserValidateLocalisationForm(initial={
       "scope": user.config.scope,
       "is_scope_confirmed": user.config.is_scope_confirmed
@@ -521,8 +535,10 @@ def user_view(request, user_id):
 
   return render(request, "initadmin/moderate_user.html", context={
     "viewed_user": user,
+    "viewed_user_is_moderator": user.has_perm("auth.user_can_diversify"),
     "form_user_moderate": form_user_moderate,
     "form_user_validate": form_user_validate,
+    "form_user_addflags": form_user_addflags,
     "form_user_addgroup": form_user_addgroup,
     "form_user_activate": form_user_activate,
     "form_user_delete": form_user_delete

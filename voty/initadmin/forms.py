@@ -265,6 +265,27 @@ class UserGiveGroupPrivilegeForm(forms.ModelForm):
     initial="give_group_privileges"
   )
 
+# ------------------------ Add/Remove Diversity Flags --------------------------
+class UserAddDiversityFlagsForm(forms.ModelForm):
+
+  class Meta:
+    model = UserConfig
+    fields = ["is_female_mod", "is_diverse_mod"]
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in iter(self.fields):
+      self.fields[field].widget.attrs.update({
+        'class': 'form-control'
+      })
+
+  action = forms.CharField(
+    max_length=24,
+    widget=forms.HiddenInput(),
+    initial="add_diversify_flags"
+  )
+
+
 # ----------------------------- Validate User Scope ----------------------------
 class UserValidateLocalisationForm(forms.ModelForm):
 
@@ -379,4 +400,3 @@ class ListboxSearchForm(forms.ModelForm):
     label=_("Records"),
     choices=settings.LISTBOX_OPTION_DICT.NUMBER_OF_RECORDS_OPTION_LIST
   )
-

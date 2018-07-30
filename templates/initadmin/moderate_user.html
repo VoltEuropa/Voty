@@ -4,6 +4,7 @@
 {% load bootstrap %}
 {% load fullurl %}
 {% load avatar_full_url %}
+{% load get_setting %}
 
 {% block head_title %}{% trans "Moderate User" %}{% endblock %}
 
@@ -129,6 +130,42 @@
   
               <hr />
             {% endif %}
+            {% with "USE_DIVERSE_MODERATION_TEAM"|get_setting as app_uses_diversity_moderators %}</h1>
+              {% if app_uses_diversity_moderators == '1' %}
+                {% if perms.auth.user_can_diversify %}
+                  {% if viewed_user_is_moderator %}
+                    <h3>{% trans "Set Diversity Categories" %}</h3>
+                    <p>
+                      {% trans "Define whether this user/moderator should have any diversity flags set. Moderation of initiatives will then require the following miniums:" %}
+                      <span>
+                        {% trans "Female moderators: " %}
+                        <b>{{ "MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES"|get_setting }}</b>,
+                        {% trans "Diverse moderators:" %}
+                        <b>{{ "MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES"|get_setting }}</b></span>
+                    </p>
+                  <form method="POST" action="">
+                      {% csrf_token %}
+                      {{ form_user_addflags.action }}
+                      {{ form_user_addflags.non_field_errors }}
+                      {{ form_user_addflags.source.errors }}
+                      {{ form_user_addflags.source }}
+                      <div class="form-group form-input-group">
+                        <ul>
+                          <li><label for="is_female_mod">{{ form_user_addflags.is_female_mod }}{% trans "Female Moderator" %}</label></li>
+                          <li><label for="is_diverse_mod">{{ form_user_addflags.is_diverse_mod }}{% trans "Diverse Moderator" %}</label></li>
+                        </ul>
+                      </diV>
+                      <div class="form-group">
+                        <button class="btn btn-primary" type="submit">{% trans "Add diversity flags" %}</button>
+                      </div>
+                  </form>
+  
+                  <hr/>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+
             {% if perms.auth.user_can_activate %}
               <form method="POST" action="">
                 {% csrf_token %}
