@@ -8,8 +8,9 @@
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.utils.functional import cached_property
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission, models
 from django.contrib.auth import get_user_model
+from django.utils.translation import ugettext as _
 from django.db.models import Q
 from django.utils.text import slugify
 from django.conf import settings
@@ -24,7 +25,69 @@ from .globals import STATES, VOTED, INITIATORS_COUNT, SPEED_PHASE_END, ABSTENTIO
 from django.db import models
 import pytz
 
-from django.utils.translation import ugettext as _
+# ------------------------ Dynamic Class Generator -----------------------------
+# allows to create dynamic abstracct classes from settings/ini file, more info,
+# see https://code.djangoproject.com/wiki/DynamicModels
+# XXX not sure this is the right place?
+def create_model(name, fields=None, app_label="", module="", options=None, admin_options=None):
+
+  # Using type("Meta", ...) gives a dictproxy error during model creation
+  class Meta:
+    pass
+
+  # app_label must be set using the Meta inner class
+  if app_label:
+    setattr(Meta, "app_label", app_label)
+
+  # Update Meta with any options that were provided
+  if options is not None:
+    for key, value in options.items():
+      setattr(Meta, key, value)
+
+  # Set up a dictionary to simulate declarations within a class
+  attrs = {"__module__": module, "Meta": Meta}
+
+  # Add in any fields that were provided
+  if fields:
+    attrs.update(fields)
+
+  # Create the class, which automatically triggers ModelBase processing
+  model = type(name, (models.Model,), attrs)
+
+  # Create an Admin class if admin options were provided
+  if admin_options is not None:
+    class Admin(admin.ModelAdmin):
+      pass
+    for key, value in admin_options:
+      setattr(Admin, key, value)
+    admin.site.register(model, Admin)
+
+  return model
+
+# ---------------------------- Policy Proxy Class ------------------------------
+# this creates an proxy base class which Policy will then inherit from. this 
+# allows to define the fields a policy should have in the init.ini file instead
+# of hardcoding them here
+PolicyBase = create_model(
+  name="PolicyBase",
+  fields=settings.PLATFORM_POLICY_BASE_CONFIG,
+  options={
+    "abstract": True,
+
+    # https://docs.djangoproject.com/en/1.10/topics/auth/customizing/#custom-permissions
+    "permissions": settings.PLATFORM_POLICY_PERMISSION_LIST
+  },
+  # {} doesn't work with abstract classes contrary to documentation
+  admin_options=None,
+  app_label="voty.initproc",
+)
+
+# ================================== Classes ===================================
+# -------------------------------- Policy --------------------------------------
+# our new home!
+@reversion.register()
+class Policy(PolicyBase):
+  foo = "bar"
 
 @reversion.register()
 class Initiative(models.Model):
@@ -490,3 +553,4 @@ class Moderation(Response):
             ('n', 'no!')
         ])
     text = models.CharField(max_length=500, blank=True)
+

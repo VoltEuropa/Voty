@@ -8,6 +8,7 @@
 
 from django.contrib import admin
 from reversion.admin import VersionAdmin
+from django.conf import settings
 
 from .models import Initiative, Quorum, Supporter, Pro, Contra, Proposal, Comment, Vote, Moderation
 
@@ -43,4 +44,3 @@ admin.site.register(Proposal)
 admin.site.register(Comment)
 admin.site.register(Moderation, ModerationAdmin)
 admin.site.register(Vote)
-

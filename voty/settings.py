@@ -242,7 +242,7 @@ MEDIA_ROOT = os.path.join( BASE_DIR, "public", "media")
 CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST").split(","))
 CORS_ALLOW_CREDENTIALS = True
 
-# ----------------------------- Customizations ---------------------------------
+# ============================ Customizations ==================================
 # XXX don't use _sections => {s:dict(config.items(s)) for s in config.sections()}
 DEFAULT_LANGUAGE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
 DEFAULT_CONTACT_EMAIL = raw_parser.get("settings", "DEFAULT_CONTACT_EMAIL")
@@ -275,17 +275,32 @@ SITE_FONT_CSS_URL = raw_parser.get("settings", "SITE_FONT_CSS_URL")
 SITE_THEME_CSS_URL = raw_parser.get("settings", "SITE_THEME_CSS_URL")
 SITE_JS_URL = raw_parser.get("settings", "SITE_JS_URL")
 
+# XXX make a method to build choice tuples
 # XXX why do those have to be classes? Nothing will ever change.
-VOTED = raw_parser._sections["initiative_vote_state_list"]
+# kept for initiative and policy
+VOTED = [(code_tuple[1], _strip(raw_parser._sections["policy_vote_state_value_list"][code_tuple[0]])) for code_tuple in raw_parser.items("policy_vote_state_list")]
+MODERATED =  [(code_tuple[1], _strip(raw_parser._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in raw_parser.items("policy_moderation_state_list")]
 
-# platform options
+# --------------------------- Application Options ------------------------------
 USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
 USE_DIVERSE_MODERATION_TEAM = raw_parser.get("settings", "USER_USE_DIVERSE_MODERATION_TEAM")
 
-# moderation
+# --------------------------- Policy (ex Initiative) ---------------------------
+PLATFORM_POLICY_BASE_CONFIG = raw_parser._sections["platform_policy_base_config"]
+PLATFORM_POLICY_PERMISSION_VALUE_LIST = raw_parser._sections["platform_policy_permission_value_list"]
+PLATFORM_POLICY_PERMISSION_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_PERMISSION_VALUE_LIST[code_tuple[0]])) for code_tuple in raw_parser.items("platform_policy_permission_list")]
+POLICY_STATE_VALUE_LIST = raw_parser._sections["platform_policy_state_value_list"]
+POLICY_STATE_LIST = [(code_tuple[1], _strip(POLICY_STATE_VALUE_LIST[code_tuple[0]])) for code_tuple in raw_parser.items("platform_policy_state_list")]
+
+#POLICY_FIELD_LABELS = raw_parser._sections["policy_field_title_dict"]
+#POLICY_FIELD_HELPER = raw_parser._sections["policy_field_description_dict"]
+
+
+# ---------------------------- Moderation Settings -----------------------------
+# minimum moderator votes, etc
 MODERATIONS = SimpleNamespace(**raw_parser._sections["moderation_setting_list"])
 
-# groups and permissions
+# ---------------------------- User (groups & permissions) ---------------------
 BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
 BACKCOMPAT_PERMISSION_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
 
@@ -297,7 +312,7 @@ PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permis
 PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")
 PLATFORM_NOTIFICATION_RESTRICTED_STATE_PERMISSION_MAPPING = SimpleNamespace(**raw_parser._sections["notification_restricted_state_permission_mapping_list"])
 
-# notifications
+# ------------------------------- Notifications --------------------------------
 # cannot be translated here because python translation objects cannot be stored 
 # in the database and pinax stores titles and descriptions in noticetypes. 
 # => requires lazy translation whenever displayed
@@ -312,7 +327,7 @@ NOTIFICATIONS = SimpleNamespace(**{
   "I18N_TODO_LIST": [k for k, _ in raw_parser._sections["notification_i18n_todo_list"].items()],
 })
 
-# categories
+# ------------------------------- Basic Categories -----------------------------
 # should all be translated right away because they are only displayed not stored
 CATEGORIES = SimpleNamespace(**{
   "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('scope_list')],
@@ -320,7 +335,7 @@ CATEGORIES = SimpleNamespace(**{
   "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('context_list')]
 })
 
-# listbox default options
+# ------------------------------- Default Listbox Config -----------------------
 LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "GLOSSARY_CHAR_LIST": _getCharDict(),
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
