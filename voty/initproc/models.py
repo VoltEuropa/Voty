@@ -115,288 +115,288 @@ PolicyBase = _create_model(
 # our new home!
 @reversion.register()
 class Policy(PolicyBase):
-
-  # fields provided via abstract class from init.ini, now they are configurable
-
-  #summary = models.TextField(blank=True)
-  #problem = models.TextField(blank=True)
-  #forderung = models.TextField(blank=True)
-  #kosten = models.TextField(blank=True)
-  #fin_vorschlag = models.TextField(blank=True)
-  #arbeitsweise = models.TextField(blank=True)
-  #init_argument = models.TextField(blank=True)
-
-  #einordnung = models.CharField(max_length=50, choices=settings.CATEGORIES.CONTEXT_CHOICES)
-  #ebene = models.CharField(max_length=100, choices=settings.CATEGORIES.SCOPE_CHOICES)
-  #bereich = models.CharField(max_length=60, choices=settings.CATEGORIES.TOPIC_CHOICES)
-
-  # there is so much text stored on an initiative/policy, state can also be
-  # human-readable => max-length:20, start in draft
-  state = models.CharField(
-    max_length=20,
-    choices=settings.PLATFORM_POLICY_STATE_LIST,
-    default=settings.PLATFORM_POLICY_STATE_DEFAULT
-  )
-
-  variant_of = models.ForeignKey('self', blank=True, null=True, default=None, related_name="variants")
-  supporters = models.ManyToManyField(User, through="Supporter")
-  eligible_voters = models.IntegerField(blank=True, null=True)
-
-  # staged is going from draft (private) to staged (public)
-  created_at = models.DateTimeField(auto_now_add=True)
-  staged_at = models.DateTimeField(auto_now=True)
-  changed_at = models.DateTimeField(auto_now=True)
-
-  # changed published to validated and closed (not used, no?) to published
-  was_validated_at = models.DateField(blank=True, null=True)
-  went_in_discussion_at = models.DateField(blank=True, null=True)
-  went_in_vote_at = models.DateField(blank=True, null=True)
-  was_published_at = models.DateField(blank=True, null=True)
-
-  @cached_property
-  def slug(self):
-    return slugify(self.title)
-
-  @cached_property
-  def versions(self):
-    return Version.objects.get_for_object(self)
-
-  @cached_property
-  def sort_index(self):
-    timezone = self.created_at.tzinfo
-
-    # recently published first
-    if self.was_published_at:
-      return datetime.today().date() - self.was_published_at
-
-    # closest to deadline first
-    elif self.end_of_this_phase:
-      return self.end_of_this_phase - datetime.today().date()
-
-    # newest first
-    else:
-      return datetime.now(timezone) - self.staged_at
-
-  @cached_property
-  def ready_for_next_stage(self):
-
-    # policy needs minimum initiators and all fields filled
-    # all fields required => len>0 = True [True, True, False] = 1*1*0 = 0
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
-      settings.PLATFORM_POLICY_STATE_DICT.FINALIZED,
-      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
-      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
-    ]:
-      return (
-        self.supporting.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT and
-        reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()])
-      )
-
-    if self.state in [settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED]:
-      return self.supporting.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT
-
-    # note, the Quorum will be specific to each policy
-    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-      return self.supporting.filter().count() >= self.quorum
-
-    # nothing to do
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
-      settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
-    ]:
-      return True
-
-    return False
-
-  @cached_property
-  def end_of_this_phase(self):
-    week = timedelta(days=7)
-
-    # a closed (rejected) policy can only be re-opened after 
-    if self.was_closed_at:
-      return self.was_closed_at + timedelta(days=settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS)
-
-    if self.was_validated_at:
-      if self.state == Initiative.STATES.SEEKING_SUPPORT:
-        if self.variant_of:
-          if self.variant_of.went_in_discussion_at:
-            return self.variant_of.went_in_discussion_at +(2 * week)
-
-        # once support is won, there is an additional waiting phase
-        if self.ready_for_next_stage:
-          return self.was_validated_at + (2 * week)
-
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION:
-        return self.went_in_discussion_at + (3 * week)
-
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
-        return self.went_in_discussion_at + (5 * week)
-
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
-        return self.went_in_vote_at + (3 * week)
-
-    return None
-
-  @cached_property
-  def quorum(self):
-    return Quorum.current_quorum()
-
-  @property
-  def show_supporters(self):
-    return self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
-      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
-      settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
-    ]
-
-  @property
-  def show_debate(self):
-    return self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW,
-      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
-      settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
-      settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
-      settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
-    ]
-
-  @cached_property
-  def yays(self):
-    return self.votes.filter(value=settings.VOTED.YES).count()
-
-  @cached_property
-  def nays(self):
-    return self.votes.filter(value=settings.VOTED.NO).count()
-
-  @cached_property
-  def abstains(self):
-    return self.votes.filter(value=settings.VOTED.ABSTAIN).count()
-
-  def is_accepted(self):
-    if self.yays <= self.nays:
-      return False
-
-    # find accepted variant with most yes-votes
-    if(self.all_variants):
-      most_votes = 0
-      for ini in self.all_variants:
-        if ini.yays > ini.nays:
-         if ini.yays > most_votes:
-           most_votes = ini.yays
-
-      # then check if current policy has more than the highest variant
-      if self.yays > most_votes:
-        return True
-      elif self.yays == most_votes:
-        # print("We have a tie. Problem! {}".format(self.title))
-        # self.notify_moderators("???")
-
-        # XXX prolong vote
-        raise Exception("Wait until one of them wins")
-      else:
-        return False
-
-    # no variants:
-    return self.yays > self.nays
-
-  @cached_property
-  def all_variants(self):
-    if self.variants.count():
-      return self.variants.all()
-
-    if self.variant_of:
-      variants = [self.variant_of]
-      if self.variant_of.variants.count() > 1:
-          for ini in self.variant_of.variants.all():
-            if ini.id == self.id: continue
-            variants.append(ini)
-
-      return variants 
-    return []
-
-  # FIXME: cache this
-  @cached_property
-  def absolute_supporters(self):
-    return self.supporting.count()
-
-  @cached_property
-  def relative_support(self):
-    return self.absolute_supporters / self.quorum * 100
-
-  @cached_property
-  def first_supporters(self):
-    return self.supporting.filter(first=True).order_by("-created_at")
-
-  @cached_property
-  def public_supporters(self):
-    return self.supporting.filter(public=True, first=False, initiator=False).order_by("-created_at")
-
-  @cached_property
-  def initiators(self):
-    return self.supporting.filter(initiator=True).order_by("created_at")
-
-  # XXX not used?
-  #@cached_property
-  #def custom_cls(self):
-  #  return 'item-{} state-{} area-{}'.format(slugify(self.title), slugify(self.state), slugify(self.scope))
-
-  @cached_property
-  def allows_abstention(self):
-    return True
-
-  @property
-  def current_moderations(self):
-    return self.moderations.filter(stale=False)
-
-  @property
-  def stale_moderations(self):
-    return self.moderations.filter(stale=True)
-
-  @cached_property
-  def eligible_voter_count(self):
-
-    # set when initiative is closed
-    # XXX but when is it closed?
-    if self.eligible_voters:
-      return self.eligible_voters
-
-    # while open, number of voters == number of users
-    # XXX, not so fast...
-    else:
-      return get_user_model().objects.filter(is_active=True).count()
-
-  def __str__(self):
-    return self.title;
-
-  def notify_moderators(self, *args, **kwargs):
-    return self.policy_notify([m.user for m in self.moderations.all()], *args, **kwargs)
-
-  def notify_followers(self, *args, **kwargs):
-
-    # while in state staged, we're looking for co-initiators, so followers are
-    # only the co-initiators. outside this state, notifying all supporters
-    query = [s.user for s in self.supporting.filter(ack=True).all()] if self.state == 'staged' else self.supporters.all()
-    return self.policy_notify(query, *args, **kwargs)
-
-  def notify_initiators(self, *args, **kwargs):
-    query = [s.user for s in self.initiators]
-    return self.policy_notify(query, *args, **kwargs)
-
-  # we wrap pinax:notify onto policy:notify
-  def policy_notify(self, recipients, notice_type, extra_context=None, subject=None, **kwargs):
-    context = extra_context or dict()
-    if subject:
-      kwargs['sender'] = subject
-      context['target'] = self
-    else:
-      kwargs['sender'] = self
-    notify(recipients, notice_type, context, **kwargs)
+  foo = "bar"
+#  # fields provided via abstract class from init.ini, now they are configurable
+#
+#  #summary = models.TextField(blank=True)
+#  #problem = models.TextField(blank=True)
+#  #forderung = models.TextField(blank=True)
+#  #kosten = models.TextField(blank=True)
+#  #fin_vorschlag = models.TextField(blank=True)
+#  #arbeitsweise = models.TextField(blank=True)
+#  #init_argument = models.TextField(blank=True)
+#
+#  #einordnung = models.CharField(max_length=50, choices=settings.CATEGORIES.CONTEXT_CHOICES)
+#  #ebene = models.CharField(max_length=100, choices=settings.CATEGORIES.SCOPE_CHOICES)
+#  #bereich = models.CharField(max_length=60, choices=settings.CATEGORIES.TOPIC_CHOICES)
+#
+#  # there is so much text stored on an initiative/policy, state can also be
+#  # human-readable => max-length:20, start in draft
+#  state = models.CharField(
+#    max_length=20,
+#    choices=settings.PLATFORM_POLICY_STATE_LIST,
+#    default=settings.PLATFORM_POLICY_STATE_DEFAULT
+#  )
+#
+#  variant_of = models.ForeignKey('self', blank=True, null=True, default=None, related_name="variants")
+#  supporters = models.ManyToManyField(User, through="Supporter")
+#  eligible_voters = models.IntegerField(blank=True, null=True)
+#
+#  # staged is going from draft (private) to staged (public)
+#  created_at = models.DateTimeField(auto_now_add=True)
+#  staged_at = models.DateTimeField(auto_now=True)
+#  changed_at = models.DateTimeField(auto_now=True)
+#
+#  # changed published to validated and closed (not used, no?) to published
+#  was_validated_at = models.DateField(blank=True, null=True)
+#  went_in_discussion_at = models.DateField(blank=True, null=True)
+#  went_in_vote_at = models.DateField(blank=True, null=True)
+#  was_published_at = models.DateField(blank=True, null=True)
+#
+#  @cached_property
+#  def slug(self):
+#    return slugify(self.title)
+#
+#  @cached_property
+#  def versions(self):
+#    return Version.objects.get_for_object(self)
+#
+#  @cached_property
+#  def sort_index(self):
+#    timezone = self.created_at.tzinfo
+#
+#    # recently published first
+#    if self.was_published_at:
+#      return datetime.today().date() - self.was_published_at
+#
+#    # closest to deadline first
+#    elif self.end_of_this_phase:
+#      return self.end_of_this_phase - datetime.today().date()
+#
+#    # newest first
+#    else:
+#      return datetime.now(timezone) - self.staged_at
+#
+#  @cached_property
+#  def ready_for_next_stage(self):
+#
+#    # policy needs minimum initiators and all fields filled
+#    # all fields required => len>0 = True [True, True, False] = 1*1*0 = 0
+#    if self.state in [
+#      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+#      settings.PLATFORM_POLICY_STATE_DICT.FINALIZED,
+#      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+#      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+#      settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
+#    ]:
+#      return (
+#        self.supporting.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT and
+#        reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()])
+#      )
+#
+#    if self.state in [settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED]:
+#      return self.supporting.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT
+#
+#    # note, the Quorum will be specific to each policy
+#    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+#      return self.supporting.filter().count() >= self.quorum
+#
+#    # nothing to do
+#    if self.state in [
+#      settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
+#      settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+#    ]:
+#      return True
+#
+#    return False
+#
+#  @cached_property
+#  def end_of_this_phase(self):
+#    week = timedelta(days=7)
+#
+#    # a closed (rejected) policy can only be re-opened after 
+#    if self.was_closed_at:
+#      return self.was_closed_at + timedelta(days=settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS)
+#
+#    if self.was_validated_at:
+#      if self.state == Initiative.STATES.SEEKING_SUPPORT:
+#        if self.variant_of:
+#          if self.variant_of.went_in_discussion_at:
+#            return self.variant_of.went_in_discussion_at +(2 * week)
+#
+#        # once support is won, there is an additional waiting phase
+#        if self.ready_for_next_stage:
+#          return self.was_validated_at + (2 * week)
+#
+#      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION:
+#        return self.went_in_discussion_at + (3 * week)
+#
+#      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
+#        return self.went_in_discussion_at + (5 * week)
+#
+#      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
+#        return self.went_in_vote_at + (3 * week)
+#
+#    return None
+#
+#  @cached_property
+#  def quorum(self):
+#    return Quorum.current_quorum()
+#
+#  @property
+#  def show_supporters(self):
+#    return self.state in [
+#      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+#      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+#      settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+#    ]
+#
+#  @property
+#  def show_debate(self):
+#    return self.state in [
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW,
+#      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+#      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+#      settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
+#      settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
+#      settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
+#    ]
+#
+#  @cached_property
+#  def yays(self):
+#    return self.votes.filter(value=settings.VOTED.YES).count()
+#
+#  @cached_property
+#  def nays(self):
+#    return self.votes.filter(value=settings.VOTED.NO).count()
+#
+#  @cached_property
+#  def abstains(self):
+#    return self.votes.filter(value=settings.VOTED.ABSTAIN).count()
+#
+#  def is_accepted(self):
+#    if self.yays <= self.nays:
+#      return False
+#
+#    # find accepted variant with most yes-votes
+#    if(self.all_variants):
+#      most_votes = 0
+#      for ini in self.all_variants:
+#        if ini.yays > ini.nays:
+#         if ini.yays > most_votes:
+#           most_votes = ini.yays
+#
+#      # then check if current policy has more than the highest variant
+#      if self.yays > most_votes:
+#        return True
+#      elif self.yays == most_votes:
+#        # print("We have a tie. Problem! {}".format(self.title))
+#        # self.notify_moderators("???")
+#
+#        # XXX prolong vote
+#        raise Exception("Wait until one of them wins")
+#      else:
+#        return False
+#
+#    # no variants:
+#    return self.yays > self.nays
+#
+#  @cached_property
+#  def all_variants(self):
+#    if self.variants.count():
+#      return self.variants.all()
+#
+#    if self.variant_of:
+#      variants = [self.variant_of]
+#      if self.variant_of.variants.count() > 1:
+#          for ini in self.variant_of.variants.all():
+#            if ini.id == self.id: continue
+#            variants.append(ini)
+#
+#      return variants 
+#    return []
+#
+#  # FIXME: cache this
+#  @cached_property
+#  def absolute_supporters(self):
+#    return self.supporting.count()
+#
+#  @cached_property
+#  def relative_support(self):
+#    return self.absolute_supporters / self.quorum * 100
+#
+#  @cached_property
+#  def first_supporters(self):
+#    return self.supporting.filter(first=True).order_by("-created_at")
+#
+#  @cached_property
+#  def public_supporters(self):
+#    return self.supporting.filter(public=True, first=False, initiator=False).order_by("-created_at")
+#
+#  @cached_property
+#  def initiators(self):
+#    return self.supporting.filter(initiator=True).order_by("created_at")
+#
+#  # XXX not used?
+#  #@cached_property
+#  #def custom_cls(self):
+#  #  return 'item-{} state-{} area-{}'.format(slugify(self.title), slugify(self.state), slugify(self.scope))
+#
+#  @cached_property
+#  def allows_abstention(self):
+#    return True
+#
+#  @property
+#  def current_moderations(self):
+#    return self.moderations.filter(stale=False)
+#
+#  @property
+#  def stale_moderations(self):
+#    return self.moderations.filter(stale=True)
+#
+#  @cached_property
+#  def eligible_voter_count(self):
+#
+#    # set when initiative is closed
+#    # XXX but when is it closed?
+#    if self.eligible_voters:
+#      return self.eligible_voters
+#
+#    # while open, number of voters == number of users
+#    # XXX, not so fast...
+#    else:
+#      return get_user_model().objects.filter(is_active=True).count()
+#
+#  def __str__(self):
+#    return self.title;
+#
+#  def notify_moderators(self, *args, **kwargs):
+#    return self.policy_notify([m.user for m in self.moderations.all()], *args, **kwargs)
+#
+#  def notify_followers(self, *args, **kwargs):
+#
+#    # while in state staged, we're looking for co-initiators, so followers are
+#    # only the co-initiators. outside this state, notifying all supporters
+#    query = [s.user for s in self.supporting.filter(ack=True).all()] if self.state == 'staged' else self.supporters.all()
+#    return self.policy_notify(query, *args, **kwargs)
+#
+#  def notify_initiators(self, *args, **kwargs):
+#    query = [s.user for s in self.initiators]
+#    return self.policy_notify(query, *args, **kwargs)
+#
+#  # we wrap pinax:notify onto policy:notify
+#  def policy_notify(self, recipients, notice_type, extra_context=None, subject=None, **kwargs):
+#    context = extra_context or dict()
+#    if subject:
+#      kwargs['sender'] = subject
+#      context['target'] = self
+#    else:
+#      kwargs['sender'] = self
+#    notify(recipients, notice_type, context, **kwargs)
 
 # ------------------------------ Initiative ------------------------------------
 @reversion.register()
@@ -697,8 +697,6 @@ class Vote(models.Model):
   value = models.IntegerField(choices=settings.VOTED_CHOICES)
   reason = models.CharField(max_length=100, blank=True)
 
-  policy = models.ForeignKey(Policy, related_name="policy_votes")
-
   @property
   def nay_survey_options(self):
     return [
@@ -746,9 +744,6 @@ class Supporter(models.Model):
   created_at = models.DateTimeField(auto_now_add=True)
   user = models.ForeignKey(User)
   initiative = models.ForeignKey(Initiative, related_name="supporting")
-
-  # here we come
-  policy = models.ForeignKey(Policy, related_name="policy_supporters")
 
   # whether this initiator has acknowledged they are
   ack = models.BooleanField(default=False)
@@ -821,15 +816,8 @@ class Response(Likeable, Commentable):
   # can't we just write Response instead of %(class)ss? no, we can't,
   # because Response is inherited from and heirs have different names
   user = models.ForeignKey(User, related_name="%(class)ss")
-
-  # XXX this needs a target-id and target-type because only one will be defined
-  # and both cannot be null
   initiative = models.ForeignKey(Initiative, related_name="%(class)ss")
-  #policy = models.ForeignKey(Policy, related_name="%(class)ss")
-  # XXX 
-  #destination_type
-  #destination_id 
-
+  
   @property
   def unique_id(self):
     return "{}-{}".format(self.type, self.id)
