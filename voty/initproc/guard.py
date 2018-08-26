@@ -155,10 +155,10 @@ class Guard:
         return obj.initiative if hasattr(obj, "initiative") else obj
 
     def is_initiator(self, init):
-        return init.supporting.filter(initiator=True, user_id=self.user.id)
+        return init.supporting_initiative.filter(initiator=True, user_id=self.user.id)
 
     def is_supporting(self, init):
-        return init.supporting.filter(user_id=self.user.id)
+        return init.supporting_initiative.filter(user_id=self.user.id)
 
     def my_vote(self, init):
         return init.votes.filter(user=self.user.id).first()
@@ -202,7 +202,7 @@ class Guard:
         if not self._can_edit_initiative(init):
             return False
 
-        return init.supporting.filter(initiator=True).count() < INITIATORS_COUNT
+        return init.supporting_initiative.filter(initiator=True).count() < INITIATORS_COUNT
 
 
     def should_moderate_initiative(self, init=None):
@@ -241,7 +241,7 @@ class Guard:
             return False
 
         if not self.user.has_perm('initproc.add_moderation') and \
-           not init.supporting.filter(Q(first=True) | Q(initiator=True), user_id=self.request.user.id):
+           not init.supporting_initiative.filter(Q(first=True) | Q(initiator=True), user_id=self.request.user.id):
             return False
 
         return True
@@ -253,7 +253,7 @@ class Guard:
             return False
         if self.user.is_superuser:
             return True
-        if not init.supporting.filter(initiator=True, user_id=self.request.user.id):
+        if not init.supporting_initiative.filter(initiator=True, user_id=self.request.user.id):
             return False
 
         return True
@@ -262,7 +262,7 @@ class Guard:
         if not self.user.has_perm('initproc.add_moderation'):
             return False
 
-        if init.supporting.filter(ack=True, initiator=True).count() != INITIATORS_COUNT:
+        if init.supporting_initiative.filter(ack=True, initiator=True).count() != INITIATORS_COUNT:
             return False
 
         if init.moderations.filter(stale=False, vote='n'): # We have NAYs
@@ -277,7 +277,7 @@ class Guard:
 
     def _can_moderate_initiative(self, init):
         if init.state in [STATES.INCOMING, STATES.MODERATION] and self.user.has_perm('initproc.add_moderation'):
-            if init.supporting.filter(user=self.user, initiator=True):
+            if init.supporting_initiative.filter(user=self.user, initiator=True):
                 self.reason = _("As Co-Initiator you are not authorized to moderate.")
                 return False
             return True

@@ -107,7 +107,7 @@ def index(request):
     else:
         filters = request.session.get('init_filters', DEFAULT_FILTERS)
 
-    inits = request.guard.make_intiatives_query(filters).prefetch_related("supporting")
+    inits = request.guard.make_intiatives_query(filters).prefetch_related("supporting_initiative")
 
     bereiche = [f for f in request.GET.getlist('b')]
     if bereiche:
@@ -224,7 +224,7 @@ def item(request, init, slug=None):
     if request.user.is_authenticated:
         user_id = request.user.id
 
-        ctx.update({'has_supported': init.supporting.filter(user=user_id).count()})
+        ctx.update({'has_supported': init.supporting_initiative.filter(user=user_id).count()})
 
         votes = init.votes.filter(user=user_id)
         if (votes.exists()):
@@ -316,7 +316,7 @@ def edit(request, initiative):
                 if request.POST.get('commit_message', None):
                     reversion.set_comment(request.POST.get('commit_message'))
 
-            initiative.supporting.filter(initiator=True).update(ack=False)
+            initiative.supporting_initiative.filter(initiator=True).update(ack=False)
 
             messages.success(request, _("Initiative saved."))
             initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=request.user)
@@ -360,29 +360,30 @@ def invite(request, form, initiative, invite_type):
     for user in form.cleaned_data['user']:
         if user == request.user: continue # we skip ourselves
         if invite_type == 'initiators' and \
-            initiative.supporting.filter(initiator=True).count() >= INITIATORS_COUNT:
+            initiative.supporting_initiative.filter(initiator=True).count() >= INITIATORS_COUNT:
             break
 
+        # XXX: supporting = initiative.supporting is confusing?
         try:
-            supporting = initiative.supporting.get(user_id=user.id)
+            supporting_supporter = initiative.supporting_initiative.get(user_id=user.id)
         except Supporter.DoesNotExist:
-            supporting = Supporter(user=user, initiative=initiative, ack=False)
+            supporting_supporter = Supporter(user=user, initiative=initiative, ack=False)
 
             if invite_type == 'initiators':
-                supporting.initiator = True
+                supporting_supporter.initiator = True
             elif invite_type == 'supporters':
-                supporting.first = True
+                supporting_supporter.first = True
         else:
-            if invite_type == 'initiators' and not supporting.initiator:
+            if invite_type == 'initiators' and not supporting_supporter.initiator:
                 # we only allow promoting of supporters to initiators
                 # not downwards.
-                supporting.initiator = True
-                supporting.first = False
-                supporting.ack = False
+                supporting_supporter.initiator = True
+                supporting_supporter.first = False
+                supporting_supporter.ack = False
             else:
                 continue
         
-        supporting.save()
+        supporting_supporter.save()
 
         notify([user], settings.NOTIFICATIONS.PUBLIC.SUPPORT_INVITE, {"target": initiative}, sender=request.user)
 
@@ -498,7 +499,7 @@ def moderate(request, form, initiative):
 
     if request.guard.can_publish(initiative):
         if initiative.state == STATES.INCOMING:
-            initiative.supporting.filter(ack=False).delete()
+            initiative.supporting_initiative.filter(ack=False).delete()
             initiative.went_public_at = datetime.now()
             initiative.state = STATES.SEEKING_SUPPORT
             initiative.save()
