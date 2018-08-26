@@ -1,0 +1,47 @@
+{% extends "_base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load get_setting %}
+
+{% block content %}
+  <div class="container new-initiative">
+    <div class="card">
+      {% if policy.is_editable %}
+      <div class="card-header">
+        <h1>{% trans "Edit Policy" %}</h1>
+        <p>{% trans "For more information on the how to write a policy proposal, see:" %}<a href="/howto" >{% trans "Guideline Policy Writing" %}</a>.</p>
+      </div>
+      {% else %}
+      <div class="card-header">
+        <h1>{% trans "Propose Policy" %}</h1>
+        <p>{% trans "Create a new policy proposal to be voted on." %}{% trans "For more information on the how to write a policy proposal, see:" %} <a href="/howto">{% trans "Guideline Policy Writing" %}</a>.</p>
+      </div>
+      {% endif %}
+
+      {% if policy.is_editable %}
+      <form method="POST" action="{% url 'policy_edit' policy_id=policy.id %}">
+      {% else %}
+      <form method="POST" action="{% url 'policy_new' %}">
+      {% endif %}
+
+        {% csrf_token %}
+        <div class="card-body">
+          <div class="container">
+          {{form|bootstrap}}
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+
+{% block body-javascript %}
+<script src="{% static 'js/vendor/jquery-3.2.1.min.js' %}"></script>
+
+{{ form.media }}
+{% endblock %}

@@ -32,7 +32,7 @@ urlpatterns = [
   url(r"^backoffice/users/$", views.user_list, name="users"),
   url(r"^backoffice/users/(?P<user_id>.*)/?$", views.user_view, name="user_moderate"),
   url(r"^backoffice/invite/", views.user_invite, name="user_invite"),
-  url(r"^backoffice/initiatives/", views.initiative_list, name="initiatives"),
+  url(r"^backoffice/policies/", views.policy_list, name="policies"),
   url(r"^backoffice/download/(?P<batch_id>.*)$", views.download_csv, name="download_user_batch_invite"),
   url(r"^backoffice/delete/(?P<batch_id>.*)$", views.delete_csv, name="delete_user_batch_invite"),
 

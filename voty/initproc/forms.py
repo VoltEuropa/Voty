@@ -1,14 +1,24 @@
+# -*- coding: utf-8 -*-
+# ==============================================================================
+# Voty initproc forms
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
+
 from django import forms
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 from dal import autocomplete
 from uuid import uuid4
 
-from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative
-from django.utils.translation import ugettext_lazy as _
+from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative, Policy
 
+# ============================= Helpers ========================================
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send")):
     def wrap(fn):
@@ -32,71 +42,17 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
         return view
     return wrap
 
+# ============================= Classes ========================================
+# ----------------------------- PolicyForm -------------------------------------
+class PolicyForm(forms.ModelForm):
 
-class SubmitButton(forms.Widget):
-    """
-    A widget that handles a submit button.
-    """
-    def __init__(self, name, value, label, attrs):
-        self.name, self.value, self.label = name, value, label
-        self.attrs = attrs
-        
-    def render(self):
-        label = self.label
-        icon = self.attrs.pop('icon', None)
-        if icon:
-            label = '<i class="material-icons">{}</i>'.format(icon)
+  class Meta:
+    model = Policy
+    fields = settings.PLATFORM_POLICY_BASE_CONFIG
+    labels = settings.PLATFORM_POLICY_FIELD_LABELS
+    help_texts = settings.PLATFORM_POLICY_FIELD_HELPER
 
-        final_attrs = self.build_attrs(
-            self.attrs,
-            type="submit",
-            name="{}-btn".format(self.name),
-            value=self.value,
-            )
-
-        return mark_safe(u'<button {}>{}</button>'.format(
-            forms.widgets.flatatt(final_attrs),
-            label,
-            ))
-
-class MultipleSubmitButton(forms.Select):
-    """
-    A widget that handles a list of submit buttons.
-    """
-    def __init__(self, attrs={}, btn_attrs={}, choices=()):
-        self.attrs = attrs
-        self.choices = choices
-        self.btn_attrs = btn_attrs
-        self.uid  = uuid4().hex
-
-    def buttons(self):
-        for value, label in self.choices:
-            attrs = self.attrs.copy()
-            if value in self.btn_attrs:
-                attrs.update(self.btn_attrs[value])
-            # attrs['class'] = attrs.get('class','') + " {}-submit-btn".format(self.uid)
-            yield SubmitButton(self.name, value, label, attrs)
-
-        
-    def render(self, name, value, attrs=None, choices=()):
-        self.name = name
-        return mark_safe('\n'.join([w.render() for w in self.buttons()]))
-
-    def value_from_datadict(self, data, files, name):
-        """
-        returns the value of the widget: IE posts inner HTML of the button
-        instead of the value.
-        """
-        value = data.get(name, None)
-        if value in dict(self.choices):
-            print("found")
-            return value
-        else:
-            inside_out_choices = dict([(v, k) for (k, v) in self.choices])
-            if value in inside_out_choices:
-                return inside_out_choices[value]
-        return None
-
+# --------------------------- InviteUsersForm ----------------------------------
 class InviteUsersForm(forms.Form):
     user = forms.ModelMultipleChoiceField(
         label=_("Invite"),
@@ -107,7 +63,7 @@ class InviteUsersForm(forms.Form):
                     attrs={"data-placeholder": _("Type to search"),
                            'data-html': "True"}))
 
-
+# ----------------------------- InitiativeForm ---------------------------------
 class InitiativeForm(forms.ModelForm):
 
     class Meta:
@@ -143,6 +99,7 @@ class InitiativeForm(forms.ModelForm):
         }
 
 
+# --------------------------- NewArgumentForm ----------------------------------
 class NewArgumentForm(forms.Form):
     TITLE = _("Add New Argument")
     type = forms.ChoiceField(choices=[('👍', '👍'), ('👎', '👎')], widget=forms.HiddenInput())
@@ -156,6 +113,7 @@ class NewArgumentForm(forms.Form):
                            widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("If a similar Argument already exits, please add a comment to this Argument.")}))
 
 
+# --------------------------- NewProposalForm ----------------------------------
 class NewProposalForm(forms.Form):
     title = forms.CharField(required=True,
                             label=_("Summary"),
@@ -167,6 +125,7 @@ class NewProposalForm(forms.Form):
                            widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("If a similar Proposal already exits, please add a comment to this Proposal.")}))
 
 
+# --------------------------- NewCommentForm -----------------------------------
 class NewCommentForm(forms.ModelForm):
     text = forms.CharField(required=True, label=_("Your comment"),
                            help_text=_("Paragraphs and urls will be formatted"),
@@ -176,7 +135,7 @@ class NewCommentForm(forms.ModelForm):
         model = Comment
         fields = ['text']
 
-
+# -------------------------- NewModerationForm ---------------------------------
 QESTIONS_COUNT = 11
 class NewModerationForm(forms.ModelForm):
 
@@ -199,12 +158,6 @@ class NewModerationForm(forms.ModelForm):
     vote = forms.ChoiceField(required=True, label=_("Your Assessment"),
             choices=[('y', 'yay'),('n', 'nope')],
             widget=forms.RadioSelect())
-            # widget=MultipleSubmitButton(btn_attrs={
-            #     'y': { 'class': 'btn btn-outline-success',
-            #            'icon': 'thumb_up' },
-            #     'n': {'class': 'btn btn-outline-danger',
-            #            'icon': 'thumb_down'}
-            #     }))
 
     def clean(self):
         cleanded_data = super().clean()
@@ -220,4 +173,3 @@ class NewModerationForm(forms.ModelForm):
     class Meta:
         model = Moderation
         fields = ['q{}'.format(i) for i in range(QESTIONS_COUNT)] + ['text', 'vote']
-

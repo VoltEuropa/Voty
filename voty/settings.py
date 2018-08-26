@@ -150,10 +150,21 @@ WSGI_APPLICATION = "voty.wsgi.application"
 SITE_ID = 1
 
 # Database
+# https://github.com/kennethreitz/dj-database-url
+# => sqlite:////full/path/to/your/database/file.sqlite
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 
 DATABASES = {
-  "default": dj_database_url.config(default="sqlite://./db.sqlite3")
+  #"default": dj_database_url.config(default="sqlite://./db.sqlite3")
+  #"default": dj_database_url.config(default="sqlite:////usr/local/demo/abstimmungstool/db.sqlite3")
+   'default': {
+      'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+      'NAME': '/usr/local/demo/abstimmungstool/db.sqlite3',                       # Or path to database file if using sqlite3.
+      'USER': '',                      # Not used with sqlite3.
+      'PASSWORD': '',                  # Not used with sqlite3.
+      'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+      'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
 }
 
 
@@ -308,9 +319,8 @@ PLATFORM_POLICY_STATE_DICT = SimpleNamespace(**raw_parser._sections["platform_po
 PLATFORM_POLICY_STATE_DEFAULT = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_STATE_DEFAULT")
 PLATFORM_POLICY_INITIATORS_COUNT = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
 PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
-
-#POLICY_FIELD_LABELS = raw_parser._sections["policy_field_title_dict"]
-#POLICY_FIELD_HELPER = raw_parser._sections["policy_field_description_dict"]
+PLATFORM_POLICY_FIELD_LABELS = dict(raw_parser.items("platform_policy_field_title_dict"))
+PLATFORM_POLICY_FIELD_HELPER = dict(raw_parser.items("platform_policy_field_description_dict"))
 
 
 # ---------------------------- Moderation Settings -----------------------------

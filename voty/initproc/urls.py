@@ -22,6 +22,10 @@ urlpatterns = [
   # autocomplete for mass invitations  
   url(r"^user_autocomplete$", views.UserAutocomplete.as_view(), name="user_autocomplete"),
 
+  # policies
+  url(r"^policy/new$", views.policy_new, name="policy_new"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/edit$", views.policy_edit, name="policy_edit"),
+  
   # notification forward to initiative, careful, this autotranslates unfortunately
   #url(r"^initiative/(?P<init_id>\d+)/?$", views.item, name=_("initiative")),
   url(r"^initiative/(?P<init_id>\d+)/$", views.item, name=_("initiative")),

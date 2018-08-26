@@ -208,9 +208,9 @@ def notification_list(request):
     "notifications": request.user.notifications
   })
 
-# -------------------------- Initiative List  ----------------------------------
-def initiative_list(request):
-  return render(request, "Hello Initiative List", context={})
+# -------------------------- Policy List  ----------------------------------
+def policy_list(request):
+  return render(request, "Hello Policy List", context={})
 
 # ---------------------------- User List  --------------------------------------
 @login_required

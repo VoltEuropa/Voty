@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# ==============================================================================
+# Voty initproc views/actions
+# ==============================================================================
+#
+# parameters (*default)
+# ------------------------------------------------------------------------------
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -30,8 +38,8 @@ import json
 
 from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
 from .guard import can_access_initiative
-from .models import (Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
-from .forms import (simple_form_verifier, InitiativeForm, NewArgumentForm, NewCommentForm,
+from .models import (Policy, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
+from .forms import (simple_form_verifier, PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
 from .serializers import SimpleInitiativeSerializer
 from django.contrib.auth.models import Permission
@@ -43,8 +51,6 @@ DEFAULT_FILTERS = [
     STATES.SEEKING_SUPPORT,
     STATES.DISCUSSION,
     STATES.VOTING]
-
-
 
 def param_as_bool(param):
     try:
@@ -84,6 +90,27 @@ def get_voting_fragments(vote, initiative, request):
 #     \__/     |__| |_______|   \__/  \__/  |_______/    
 #
 #                                                       
+
+# ----------------------------- Policy New -------------------------------------
+@login_required
+def policy_new(request):
+  form = PolicyForm(request.POST or None)
+  if request.method == 'POST':
+    if form.is_valid():
+      policy_object = form.save(commit=False)
+      with reversion.create_revision():
+        policy_object.state = STATES.DRAFT
+        policy_object.save()
+
+        # Store some meta-information.
+        reversion.set_user(request.user)
+
+      Supporter(policy=policy_object, user=request.user, initiator=True, ack=True, public=True).save()
+      return redirect('/policy/{}-{}'.format(policy_object.id, policy_object.slug))
+    else:
+      messages.warning(request, _("Please correct the following problems:"))
+
+  return render(request, 'initproc/policy_new.html', context=dict(form=form))
 
 
 def personalize_argument(arg, user_id):
@@ -301,6 +328,30 @@ def show_moderation(request, initiative, target_id, slug=None):
 #
 #
 #                                                                        
+# ----------------------------- Policy Edit ------------------------------------
+@login_required
+#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
+def policy_edit(request, initiative):
+  form = PolicyForm(request.POST or None, instance=policy)
+  if request.method == 'POST':
+    if form.is_valid():
+      with reversion.create_revision():
+        policy.save()
+        reversion.set_user(request.user)
+
+      # this requires initial supporters to re-acknowledge policy
+      policy.supporting_initiative.filter(initiator=True).update(ack=False)
+
+      messages.success(request, _("Initiative saved."))
+      initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=request.user)
+      return redirect("/policy/{}".format(policy.id))
+    else:
+      messages.warning(request, _("Please correct the following problems:"))
+
+  return render(request, "initproc/policy_new.html", context=dict(form=form, policy=policy))
+
+
+
 
 @login_required
 @can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
