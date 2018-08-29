@@ -29,6 +29,7 @@ from rest_framework.renderers import JSONRenderer
 from django_ajax.shortcuts import render_to_json
 from django_ajax.decorators import ajax
 from pinax.notifications.models import send as notify
+from notifications.models import Notification
 from reversion_compare.helpers import html_diff
 from reversion.models import Version
 import reversion
@@ -162,9 +163,18 @@ def policy_edit(request, policy, *args, **kwargs):
         policy.save()
         reversion.set_user(user)
 
-      # keep asking initial supporters to repledge?
-      policy.supporting_initiative.filter(initiator=True).exclude(id=user.id).update(ack=False)
-      policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=user)
+      # ask initial supporters to repledge? in draft, only author can edit, 
+      # will not be notified. if staged, initiators will be notified to repledge
+      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+      supporters.update(ack=False)
+      supporter_list = [supporter.user for _, supporter in enumerate(supporters)]
+      notify(
+        #get_user_model().objects.filter(id__in=supporter_list),
+        supporter_list,
+        settings.NOTIFICATIONS.PUBLIC.EDITED, {
+        "description": "".join([_("Policy edited:"), " ", policy.title, ". ", _("Please reconfirm your support.")])
+        }, sender=user
+      )
       messages.success(request, _("Policy updated."))
       return redirect("/policy/{}".format(policy.id))
     else:
@@ -188,7 +198,7 @@ def policy_new(request, *args, **kwargs):
         # Store some meta-information.
         reversion.set_user(user)
 
-      Supporter(policy=policy_object, user=user, initiator=True, ack=True, public=True).save()
+      Supporter(policy=policy_object, user=user, first=True, initiator=True, ack=True, public=True).save()
       messages.success(request, _("Created new Policy draft."))
       return redirect('/policy/{}-{}'.format(policy_object.id, policy_object.slug))
     else:
