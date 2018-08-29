@@ -85,17 +85,14 @@ def get_voting_fragments(vote, initiative, request):
 # moved here from guard.py
 def policy_state_access(states=None):
   def wrap(fn):
-    def view(request, policy_id, slug, *args, **kwargs):
+    def view(request, policy_id, *args, **kwargs):
       policy = get_object_or_404(Policy, pk=policy_id)
-
-      if policy is None:
-        message.warning(request, _("Policy not found"))
-        return redirect(request, "")
 
       if states:
         assert policy.state in states, "{} Not in expected state: {}".format(policy.state, states)
 
-      # NOTE: this adds the policy on the request
+      # NOTE: this adds the policy on the request, that's why the decorator has
+      # to be called on all views which need the current policy.
       request.policy = policy
       return fn(request, policy, *args, **kwargs)
     return view
@@ -122,7 +119,7 @@ def policy_item(request, policy, *args, **kwargs):
 
   if not request.guard.policy_view(policy):
     messages.warning(request, _("Permission denied."))
-    return redirect("")
+    return redirect("home")
 
   payload = dict(
     policy=policy,
@@ -153,13 +150,9 @@ def policy_item(request, policy, *args, **kwargs):
 @policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
 def policy_edit(request, policy, *args, **kwargs):
 
-  if not request.guard.policy_view(policy):
+  if not request.guard.policy_view(policy) or not request.guard.policy_edit(policy):
     messages.warning(request, _("Permission denied."))
-    return redirect("/")
-
-  if not request.guard.policy_edit(policy):
-    messages.warning(request, _("Permission denied."))
-    return redirect("/")
+    return policy_item(request, policy.id, *args, **kwargs)
 
   form = PolicyForm(request.POST or None, instance=policy)
   if request.method == 'POST':

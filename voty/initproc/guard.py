@@ -225,16 +225,12 @@ class Guard:
       return True
 
   def _can_edit_initiative(self, init):
-      # state-decorator
       if not init.state in [STATES.PREPARE, STATES.FINAL_EDIT]:
           return False
-      # login-required
       if not self.user.is_authenticated:
           return False
-      # can edit anyway
       if self.user.is_superuser:
           return True
-      # ? user is initial supporter
       if not init.supporting_initiative.filter(initiator=True, user_id=self.request.user.id):
           return False
 
@@ -283,7 +279,10 @@ class Guard:
   # ---------------------------- view policy -----------------------------------
   # used to be in can_access_initiative
   def policy_view(self, policy):
-    
+
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
+      not policy.supporting_policy.filter(first=True, user_id=self.user.id):
+      return False
     if policy.state not in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
       return True
 
