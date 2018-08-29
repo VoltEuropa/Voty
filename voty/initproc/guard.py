@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
-# voty initprocs guard - single one place, where all permissions are defined
+# voty initproc guard - single one place, where all permissions are defined
 # ==============================================================================
 #
 # parameters (*default)
@@ -37,25 +37,6 @@ def _get_initiative_minium_moderator_votes():
     return minimum_moderators_by_percent
   return minimum_moderators_by_count
 
-def can_access_initiative(states=None, check=None):
-    def wrap(fn):
-        def view(request, init_id, slug, *args, **kwargs):
-            init = get_object_or_404(Initiative, pk=init_id)
-            if states:
-                assert init.state in states, "{} Not in expected state: {}".format(init.state, states)
-            if  not request.guard.can_view(init):
-                raise PermissionDenied()
-
-            if check:
-                if not getattr(request.guard, check)(init):
-                    raise PermissionDenied()
-
-            request.initiative = init
-
-            return fn(request, init, *args, **kwargs)
-        return view
-    return wrap
-
 class ContinueChecking(Exception): pass
 
 def _compound_action(func):
@@ -72,244 +53,273 @@ def _compound_action(func):
 # ---------------- Instance of the guard for the given user --------------------
 class Guard:
 
-    def __init__(self, user, request=None):
-        self.user = user
-        self.request = request
+  def __init__(self, user, request=None):
+    self.user = user
+    self.request = request
 
-        # XXX? REASON IS NOT THREAD SAFE, but works good enough for us for now.
-        self.reason = None
+    # XXX? REASON IS NOT THREAD SAFE, but works good enough for us for now.
+    self.reason = None
 
-    # ------------------- how many moderators' inputs are missing --------------
-    def _mods_missing_for_i(self, init):
-    
-      # total moderators required are based on percentage/minimum person
-      total = _get_initiative_minium_moderator_votes() 
-    
-      # overall moderations on this initiative
-      # XXX what if not enough moderators because all are initiators?
+  # ------------------- how many moderators' inputs are missing --------------
+  def _mods_missing_for_i(self, init):
+  
+    # total moderators required are based on percentage/minimum person
+    total = _get_initiative_minium_moderator_votes() 
+  
+    # overall moderations on this initiative
+    # XXX what if not enough moderators because all are initiators?
+    moderations = init.moderations.filter(stale=False)
+    total -= moderations.count()
+  
+    # diversity is a choice
+    if int(settings.USE_DIVERSE_MODERATION_TEAM) != 0:
+      female  = int(settings.MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES)
+      diverse = int(settings.MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES)
+  
+      # exclude moderator if initiator
+      for config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
+        if config.is_female_mod:
+          female -= 1
+        if config.is_diverse_mod:
+          diverse -= 1
+      return (female, diverse, total)
+
+    # by default only check for total
+    return (0, 0, total)
+
+
+  def make_intiatives_query(self, filters):
+      if not self.user.is_authenticated:
+          filters = [f for f in filters if f in PUBLIC_STATES]
+      elif not self.user.has_perm('initproc.add_moderation'):
+          filters = [f for f in filters if f not in TEAM_ONLY_STATES]
+
+      if self.user.is_authenticated and not self.user.has_perm('initproc.add_moderation'):
+          return Initiative.objects.filter(Q(state__in=filters) | Q(state__in=TEAM_ONLY_STATES,
+                  id__in=Supporter.objects.filter(Q(first=True) | Q(initiator=True), user_id=self.user.id).values('initiative_id')))
+
+      return Initiative.objects.filter(state__in=filters)
+
+  @_compound_action
+  def can_comment(self, obj=None):
+      if (isinstance (obj,Moderation)):
+          return True
+
+      self.reason = None
+      latest_comment = obj.comments.order_by("-created_at").first()
+
+      if not latest_comment and obj.user == self.user:
+          self.reason = _("You can comment on your Argument only after another person has added a comment.")
+          return False
+      elif latest_comment and latest_comment.user == self.user:
+          self.reason = _("To foster the discussion you can comment on your Argument only after another person has added a comment.")
+          return False
+
+      return True
+
+  def can_like(self, obj=None):
+      if obj.user == self.user: # should apply for both arguments and comments
+          return False
+
+      return True
+
+  def is_editable(self, obj=None): #likes
+      initiative = self.find_parent_initiative(obj)
+      if initiative and initiative.state in [STATES.ACCEPTED, STATES.REJECTED]: # no liking of closed inis
+          return False
+      return True
+
+  def find_parent_initiative(self, obj=None):
+      # find initiative in object tree
+      while not hasattr(obj, "initiative") and hasattr(obj, "target"):
+          obj = obj.target
+      return obj.initiative if hasattr(obj, "initiative") else obj
+
+  def is_initiator(self, init):
+      return init.supporting_initiative.filter(initiator=True, user_id=self.user.id)
+
+  def is_supporting(self, init):
+      return init.supporting_initiative.filter(user_id=self.user.id)
+
+  def my_vote(self, init):
+      return init.votes.filter(user=self.user.id).first()
+
+  @_compound_action
+  def can_view(self, obj=None):
+      # fallback if compound doesn't match
+      return False
+
+  @_compound_action
+  def can_edit(self, obj=None):
+      # fallback if compound doesn't match
+      return False
+
+  @_compound_action
+  def can_publish(self, obj=None):
+      # fallback if compound doesn't match
+      return False
+
+  @_compound_action
+  def can_support(self, obj=None):
+      # fallback if compound doesn't match
+      return False
+
+  @_compound_action
+  def can_moderate(self, obj=None):
+      # fallback if compound doesn't match
+      return False
+
+  # 
+  #    INITIATIVES
+  #    -----------
+  # 
+  def should_moderate_initiative(self, init=None):
+      init = init or self.request.initiative
+      if not self._can_moderate_initiative(init):
+          return False
+
       moderations = init.moderations.filter(stale=False)
-      total -= moderations.count()
+
+      if moderations.filter(user=self.user):
+          # has already voted, thanks, bye
+          return False
+
+      (female,diverse,total) = self._mods_missing_for_i(init)
+      try:
+          if female > 0:
+              if self.user.config.is_female_mod:
+                  return True
+
+          if diverse > 0:
+              if self.user.config.is_diverse_mod:
+                  return True
+      except User.config.RelatedObjectDoesNotExist:
+          pass
+
+      # user cannot contribute to fulfilling quota -- should moderate unless we already know it'll be wasted
+      return (total > female) & (total > diverse)
+
+  def can_inivite_initiators(self, init=None):
+      init = init or self.request.initiative
+      if init.state != STATES.PREPARE:
+          return False
+
+      if not self._can_edit_initiative(init):
+          return False
+
+      return init.supporting_initiative.filter(initiator=True).count() < INITIATORS_COUNT
+
+  ## compounds
+
+  def _can_view_initiative(self, init):
+      if init.state not in TEAM_ONLY_STATES:
+          return True
+
+      if not self.user.is_authenticated:
+          return False
+
+      if not self.user.has_perm('initproc.add_moderation') and \
+         not init.supporting_initiative.filter(Q(first=True) | Q(initiator=True), user_id=self.request.user.id):
+          return False
+
+      return True
+
+  def _can_edit_initiative(self, init):
+      # state-decorator
+      if not init.state in [STATES.PREPARE, STATES.FINAL_EDIT]:
+          return False
+      # login-required
+      if not self.user.is_authenticated:
+          return False
+      # can edit anyway
+      if self.user.is_superuser:
+          return True
+      # ? user is initial supporter
+      if not init.supporting_initiative.filter(initiator=True, user_id=self.request.user.id):
+          return False
+
+      return True
+
+  def _can_publish_initiative(self, init):
+      if not self.user.has_perm('initproc.add_moderation'):
+          return False
+
+      if init.supporting_initiative.filter(ack=True, initiator=True).count() != INITIATORS_COUNT:
+          return False
+
+      if init.moderations.filter(stale=False, vote='n'): # We have NAYs
+          return False
+
+      (female,diverse,total) = self._mods_missing_for_i(init)
+
+      return (female <= 0) & (diverse <= 0) & (total <= 0)
+
+  def _can_support_initiative(self, init):
+      return init.state == STATES.SEEKING_SUPPORT and self.user.is_authenticated
+
+  def _can_moderate_initiative(self, init):
+      if init.state in [STATES.INCOMING, STATES.MODERATION] and self.user.has_perm('initproc.add_moderation'):
+          if init.supporting_initiative.filter(user=self.user, initiator=True):
+              self.reason = _("As Co-Initiator you are not authorized to moderate.")
+              return False
+          return True
+      return False
+
+  def _can_comment_pro(self, obj=None):
+      if obj.initiative.state == STATES.DISCUSSION:
+          raise ContinueChecking()
+      return False
+
+  def _can_comment_contra(self, obj=None):
+      if obj.initiative.state == STATES.DISCUSSION:
+          raise ContinueChecking()
+      return False
+
+  def _can_comment_proposal(self, obj=None):
+      if obj.initiative.state == STATES.DISCUSSION:
+          raise ContinueChecking()
+      return False
+
+  # ---------------------------- view policy -----------------------------------
+  # used to be in can_access_initiative
+  def policy_view(self, policy):
     
-      # diversity is a choice
-      if int(settings.USE_DIVERSE_MODERATION_TEAM) != 0:
-        female  = int(settings.MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES)
-        diverse = int(settings.MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES)
-    
-        # exclude moderator if initiator
-        for config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
-          if config.is_female_mod:
-            female -= 1
-          if config.is_diverse_mod:
-            diverse -= 1
-        return (female, diverse, total)
+    if policy.state not in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
+      return True
 
-      # by default only check for total
-      return (0, 0, total)
+    # from here onward it's for moderators only
+    if not self.user.is_authenticated:
+      return False
+    if not self.user.has_perm('initproc.can_moderate_policy') and \
+      not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=self.user.id):
+      return False
 
+    return True
 
-    def make_intiatives_query(self, filters):
-        if not self.user.is_authenticated:
-            filters = [f for f in filters if f in PUBLIC_STATES]
-        elif not self.user.has_perm('initproc.add_moderation'):
-            filters = [f for f in filters if f not in TEAM_ONLY_STATES]
+  # ---------------------------- edit policy -----------------------------------
+  def policy_edit(self, policy):
+    if not policy.state in settings.PLATFORM_POLICY_EDIT_STATE_LIST:
+      return False
+    if not self.user.is_authenticated:
+      return False
+    if self.user.is_superuser:
+      return True
+    if not policy.supporting_policy.filter(initiator=True, user_id=self.user.id):
+      return False
 
-        if self.user.is_authenticated and not self.user.has_perm('initproc.add_moderation'):
-            return Initiative.objects.filter(Q(state__in=filters) | Q(state__in=TEAM_ONLY_STATES,
-                    id__in=Supporter.objects.filter(Q(first=True) | Q(initiator=True), user_id=self.user.id).values('initiative_id')))
+    return True
 
-        return Initiative.objects.filter(state__in=filters)
-
-    @_compound_action
-    def can_comment(self, obj=None):
-        if (isinstance (obj,Moderation)):
-            return True
-
-        self.reason = None
-        latest_comment = obj.comments.order_by("-created_at").first()
-
-        if not latest_comment and obj.user == self.user:
-            self.reason = _("You can comment on your Argument only after another person has added a comment.")
-            return False
-        elif latest_comment and latest_comment.user == self.user:
-            self.reason = _("To foster the discussion you can comment on your Argument only after another person has added a comment.")
-            return False
-
-        return True
-
-    def can_like(self, obj=None):
-        if obj.user == self.user: # should apply for both arguments and comments
-            return False
-
-        return True
-
-    def is_editable(self, obj=None): #likes
-        initiative = self.find_parent_initiative(obj)
-        if initiative and initiative.state in [STATES.ACCEPTED, STATES.REJECTED]: # no liking of closed inis
-            return False
-        return True
-
-    def find_parent_initiative(self, obj=None):
-        # find initiative in object tree
-        while not hasattr(obj, "initiative") and hasattr(obj, "target"):
-            obj = obj.target
-        return obj.initiative if hasattr(obj, "initiative") else obj
-
-    def is_initiator(self, init):
-        return init.supporting_initiative.filter(initiator=True, user_id=self.user.id)
-
-    def is_supporting(self, init):
-        return init.supporting_initiative.filter(user_id=self.user.id)
-
-    def my_vote(self, init):
-        return init.votes.filter(user=self.user.id).first()
-
-    @_compound_action
-    def can_view(self, obj=None):
-        # fallback if compound doesn't match
-        return False
-
-    @_compound_action
-    def can_edit(self, obj=None):
-        # fallback if compound doesn't match
-        return False
-
-    @_compound_action
-    def can_publish(self, obj=None):
-        # fallback if compound doesn't match
-        return False
-
-    @_compound_action
-    def can_support(self, obj=None):
-        # fallback if compound doesn't match
-        return False
-
-    @_compound_action
-    def can_moderate(self, obj=None):
-        # fallback if compound doesn't match
-        return False
-
-
-    # 
-    #    INITIATIVES
-    #    -----------
-    # 
-
-    def can_inivite_initiators(self, init=None):
-        init = init or self.request.initiative
-        if init.state != STATES.PREPARE:
-            return False
-
-        if not self._can_edit_initiative(init):
-            return False
-
-        return init.supporting_initiative.filter(initiator=True).count() < INITIATORS_COUNT
-
-
-    def should_moderate_initiative(self, init=None):
-        init = init or self.request.initiative
-        if not self._can_moderate_initiative(init):
-            return False
-
-        moderations = init.moderations.filter(stale=False)
-
-        if moderations.filter(user=self.user):
-            # has already voted, thanks, bye
-            return False
-
-        (female,diverse,total) = self._mods_missing_for_i(init)
-        try:
-            if female > 0:
-                if self.user.config.is_female_mod:
-                    return True
-
-            if diverse > 0:
-                if self.user.config.is_diverse_mod:
-                    return True
-        except User.config.RelatedObjectDoesNotExist:
-            pass
-
-        # user cannot contribute to fulfilling quota -- should moderate unless we already know it'll be wasted
-        return (total > female) & (total > diverse)
-
-    ## compounds
-
-    def _can_view_initiative(self, init):
-        if init.state not in TEAM_ONLY_STATES:
-            return True
-
-        if not self.user.is_authenticated:
-            return False
-
-        if not self.user.has_perm('initproc.add_moderation') and \
-           not init.supporting_initiative.filter(Q(first=True) | Q(initiator=True), user_id=self.request.user.id):
-            return False
-
-        return True
-
-    def _can_edit_initiative(self, init):
-        if not init.state in [STATES.PREPARE, STATES.FINAL_EDIT]:
-            return False
-        if not self.user.is_authenticated:
-            return False
-        if self.user.is_superuser:
-            return True
-        if not init.supporting_initiative.filter(initiator=True, user_id=self.request.user.id):
-            return False
-
-        return True
-
-    def _can_publish_initiative(self, init):
-        if not self.user.has_perm('initproc.add_moderation'):
-            return False
-
-        if init.supporting_initiative.filter(ack=True, initiator=True).count() != INITIATORS_COUNT:
-            return False
-
-        if init.moderations.filter(stale=False, vote='n'): # We have NAYs
-            return False
-
-        (female,diverse,total) = self._mods_missing_for_i(init)
-
-        return (female <= 0) & (diverse <= 0) & (total <= 0)
-
-    def _can_support_initiative(self, init):
-        return init.state == STATES.SEEKING_SUPPORT and self.user.is_authenticated
-
-    def _can_moderate_initiative(self, init):
-        if init.state in [STATES.INCOMING, STATES.MODERATION] and self.user.has_perm('initproc.add_moderation'):
-            if init.supporting_initiative.filter(user=self.user, initiator=True):
-                self.reason = _("As Co-Initiator you are not authorized to moderate.")
-                return False
-            return True
-        return False
-
-
-    def _can_comment_pro(self, obj=None):
-        if obj.initiative.state == STATES.DISCUSSION:
-            raise ContinueChecking()
-        return False
-
-    def _can_comment_contra(self, obj=None):
-        if obj.initiative.state == STATES.DISCUSSION:
-            raise ContinueChecking()
-        return False
-
-    def _can_comment_proposal(self, obj=None):
-        if obj.initiative.state == STATES.DISCUSSION:
-            raise ContinueChecking()
-        return False
-
-
+# ----------------------------- Publish Guard ----------------------------------
+# Add guard of the request.user and make it accessible directly at request.guard
+# This will be called from middleware, see settings.py
 def add_guard(get_response):
-    """
-    Add the guard of the `request.user` to it and make it accessible directly at `request.guard`
-    """
-    def middleware(request):
-        guard = Guard(request.user, request)
-        request.guard = guard
-        request.user.guard = guard
+  def middleware(request):
+    guard = Guard(request.user, request)
+    request.guard = guard
+    request.user.guard = guard
 
-        response = get_response(request)
-        return response
+    response = get_response(request)
+    return response
 
-    return middleware
+  return middleware
+

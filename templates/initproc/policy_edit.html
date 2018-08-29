@@ -1,0 +1,42 @@
+{% extends "_base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load get_setting %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="container new-initiative">
+    <div class="row">
+      <div class="col">
+
+        {% if request.policy %}
+          <h2>{% trans "Edit Policy" %}</h2>
+          <p>{% trans "For more information on the how to write a policy proposal, see:" %} <a href="/howto" >{% trans "Policy Writing Guidelines" %}</a>.</p>
+        {% else %}
+          <h2>{% trans "New Policy" %}</h2>
+          <p>{% trans "Create a new policy proposal to be voted on." %} {% trans "For more information on the how to write a policy proposal, see:" %} <a href="/howto">{% trans "Policy Writing Guidelines" %}</a>.</p>
+        {% endif %}
+
+        {% if request.policy %}
+          <form method="POST" action="{% url 'policy_edit' policy_id=policy.id %}">
+        {% else %}
+          <form method="POST" action="{% url 'policy_new' %}">
+        {% endif %}
+          {% csrf_token %}
+          {{form|bootstrap}}
+          <div class="form-group">
+            <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{#{% block body-javascript %}#}
+{#<script src="{% static 'js/vendor/jquery-3.2.1.min.js' %}"></script>#}
+{#{{ form.media }}#}
+{#{% endblock %}#}
+

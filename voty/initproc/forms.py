@@ -18,7 +18,7 @@ from uuid import uuid4
 
 from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative, Policy
 
-# ============================= Helpers ========================================
+# ============================= Classes ========================================
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send")):
     def wrap(fn):
@@ -52,6 +52,16 @@ class PolicyForm(forms.ModelForm):
     labels = settings.PLATFORM_POLICY_FIELD_LABELS
     help_texts = settings.PLATFORM_POLICY_FIELD_HELPER
 
+  # add choices, sadly hardcoded field names here manually
+  scope = forms.ChoiceField(
+    choices=sorted(settings.CATEGORIES.SCOPE_CHOICES, key=lambda x: x[1]),
+  )
+  context = forms.ChoiceField(
+    choices = sorted(settings.CATEGORIES.CONTEXT_CHOICES, key=lambda x: x[1]),
+  )
+  topic = forms.ChoiceField(
+    choices = sorted(settings.CATEGORIES.TOPIC_CHOICES, key=lambda x: x[1]),
+  )
 # --------------------------- InviteUsersForm ----------------------------------
 class InviteUsersForm(forms.Form):
     user = forms.ModelMultipleChoiceField(

@@ -782,7 +782,7 @@ class Vote(models.Model):
   value = models.IntegerField(choices=settings.VOTED_CHOICES)
   reason = models.CharField(max_length=100, blank=True)
 
-  initiative = models.ForeignKey(Initiative, related_name="votes", null=True)
+  initiative = models.ForeignKey(Initiative, related_name="initiative_votes", null=True)
   policy = models.ForeignKey(Policy, related_name="policy_votes", null=True)
 
   #target_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -852,8 +852,8 @@ class Response(Likeable, Commentable):
   # ISSUE #2: how to use GenericForeignKey while keeping Response abstract,
   #           because we don't want a new table for convenience storing data
   #           that might as well be stored somewhere else
-  initiative = models.ForeignKey(Initiative, related_name="%(class)ss", null=True)
-  policy = models.ForeignKey(Policy, related_name="%(class)ss", null=True)
+  initiative = models.ForeignKey(Initiative, related_name="initiative_%(class)ss", null=True)
+  policy = models.ForeignKey(Policy, related_name="policy_%(class)ss", null=True)
   #source_type = models.CharField(
   #  max_length=1,
   #  choices=[("i", _("Initiative")), ("p", _("Policy"))],

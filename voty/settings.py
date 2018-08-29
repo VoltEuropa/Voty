@@ -23,13 +23,16 @@ def _getCharDict():
   return char_dict
 
 def _getItemsAsDict(section):
-  return dict(raw_parser.items(section))
+  return dict(config.items(section))
   
 def _strip(snippet):
   return snippet.partition('{% trans "')[2].partition('" %}')[0]
 
+def _getTranslatedDict(section):
+  return dict([(key, _(_strip(snippet))) for key, snippet in config._sections[section].items()])
+
 def _getTranslatedSimpleNameSpace(section):
-  return SimpleNamespace(**dict([(key, _(_strip(snippet))) for key, snippet in raw_parser._sections[section].items()]))
+  return SimpleNamespace(**dict([(key, _(_strip(snippet))) for key, snippet in config._sections[section].items()]))
 
 # ----------------------------- SETTINGS ---------------------------------------
 # Quick-start development settings - unsuitable for production
@@ -42,13 +45,13 @@ SECRET_KEY = os.environ.get("SECRET", "&v--b40hjwtfre(o^(4=-s!g7!x&za1u_=v#140ex
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Retrieve initialization configuration, use raw parser i18n-texts
-raw_parser = configparser.RawConfigParser()
-raw_parser.optionxform=str
-raw_parser.read(os.path.join(BASE_DIR, "init.ini"))
+config = configparser.RawConfigParser()
+config.optionxform=str
+config.read(os.path.join(BASE_DIR, "init.ini"))
 
 DEBUG = not os.environ.get("VIRTUAL_HOST", False)
 
-ALLOWED_HOSTS = os.environ.get("VIRTUAL_HOST", raw_parser.get("settings", "VIRTUAL_HOST_LIST")).split(",")
+ALLOWED_HOSTS = os.environ.get("VIRTUAL_HOST", config.get("settings", "VIRTUAL_HOST_LIST")).split(",")
 
 INSTALLED_APPS = [
   "django.contrib.auth",
@@ -187,9 +190,9 @@ LOCALE_PATHS = (
   os.path.join( BASE_DIR, "locale"),
 )
 
-ACCOUNT_LANGUAGES = tuple([(x[0], _(_strip(x[1]))) for x in raw_parser.items("alternative_language_list")])
-LANGUAGE_CODE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
-TIME_ZONE = raw_parser.get("settings", "DEFAULT_TIMEZONE")
+ACCOUNT_LANGUAGES = tuple([(x[0], _(_strip(x[1]))) for x in config.items("alternative_language_list")])
+LANGUAGE_CODE = config.get("settings", "DEFAULT_LANGUAGE")
+TIME_ZONE = config.get("settings", "DEFAULT_TIMEZONE")
 LANGUAGES = ACCOUNT_LANGUAGES
 
 # not sure which one?
@@ -200,7 +203,7 @@ ACCOUNT_EMAIL_UNIQUE = True
 ACCOUNT_OPEN_SIGNUP = False
 AVATAR_GRAVATAR_DEFAULT = "retro"
 
-DEFAULT_FROM_EMAIL = raw_parser.get("settings", "DEFAULT_FROM_EMAIL")
+DEFAULT_FROM_EMAIL = config.get("settings", "DEFAULT_FROM_EMAIL")
 EMAIL_BACKEND = "mailer.backend.DbBackend"
 
 if DEBUG:
@@ -251,112 +254,115 @@ STATIC_ROOT = os.path.join( BASE_DIR, "public", "static")
 MEDIA_ROOT = os.path.join( BASE_DIR, "public", "media")
 
 # CORS
-CORS_ORIGIN_WHITELIST = tuple(raw_parser.get("settings", "CORS_ORIGIN_WHITELIST").split(","))
+CORS_ORIGIN_WHITELIST = tuple(config.get("settings", "CORS_ORIGIN_WHITELIST").split(","))
 CORS_ALLOW_CREDENTIALS = True
 
 # ============================ Customizations ==================================
 # XXX don't use _sections => {s:dict(config.items(s)) for s in config.sections()}
-DEFAULT_LANGUAGE = raw_parser.get("settings", "DEFAULT_LANGUAGE")
-DEFAULT_CONTACT_EMAIL = raw_parser.get("settings", "DEFAULT_CONTACT_EMAIL")
-THEME_CONTACT_EMAIL = raw_parser.get("settings", "THEME_CONTACT_EMAIL")
-INITIATIVE_SUPPORT_EMAIL = raw_parser.get("settings", "INITIATIVE_SUPPORT_EMAIL")
-MIN_SEARCH_LENGTH = raw_parser.get("settings", "MIN_SEARCH_LENGTH")
-URL_HOWTO_INITIATIVE = raw_parser.get("settings", "URL_HOWTO_INITIATIVE")
+DEFAULT_LANGUAGE = config.get("settings", "DEFAULT_LANGUAGE")
+DEFAULT_CONTACT_EMAIL = config.get("settings", "DEFAULT_CONTACT_EMAIL")
+THEME_CONTACT_EMAIL = config.get("settings", "THEME_CONTACT_EMAIL")
+INITIATIVE_SUPPORT_EMAIL = config.get("settings", "INITIATIVE_SUPPORT_EMAIL")
+MIN_SEARCH_LENGTH = config.get("settings", "MIN_SEARCH_LENGTH")
+URL_HOWTO_INITIATIVE = config.get("settings", "URL_HOWTO_INITIATIVE")
 
-ACCOUNT_DELETION_EXPUNGE_HOURS = raw_parser.get("settings", "ACCOUNT_DELETION_EXPUNGE_HOURS")
-PLATFORM_TITLE = raw_parser.get("settings", "PLATFORM_TITLE")
-PLATFORM_SUB_TITLE = raw_parser.get("settings", "PLATFORM_SUB_TITLE")
-PLATFORM_TITLE_ACRONYM = raw_parser.get("settings", "PLATFORM_TITLE_ACRONYM")
+ACCOUNT_DELETION_EXPUNGE_HOURS = config.get("settings", "ACCOUNT_DELETION_EXPUNGE_HOURS")
+PLATFORM_TITLE = config.get("settings", "PLATFORM_TITLE")
+PLATFORM_SUB_TITLE = config.get("settings", "PLATFORM_SUB_TITLE")
+PLATFORM_TITLE_ACRONYM = config.get("settings", "PLATFORM_TITLE_ACRONYM")
 
-PLATFORM_DEFAULT_URL = raw_parser.get("settings", "PLATFORM_DEFAULT_URL")
-PLATFORM_MARKETPLACE_URL = raw_parser.get("settings", "PLATFORM_MARKETPLACE_URL")
-PLATFORM_REGISTRATION_URL = raw_parser.get("settings", "PLATFORM_REGISTRATION_URL")
-PLATFORM_LEGAL_URL = raw_parser.get("settings", "PLATFORM_LEGAL_URL")
-PLATFORM_DATA_PROTECTION_URL = raw_parser.get("settings", "PLATFORM_DATA_PROTECTION_URL")
-INITIATIVE_TEMPLATE_URL = raw_parser.get("settings", "INITIATIVE_TEMPLATE_URL")
-INITIATIVE_EXPLANATION_URL = raw_parser.get("settings", "INITIATIVE_EXPLANATION_URL")
-PLATFORM_VOTING_REGULATION_URL = raw_parser.get("settings", "PLATFORM_VOTING_REGULATION_URL")
-PLATFORM_TECH_DEVELOPMENT_URL = raw_parser.get("settings", "PLATFORM_TECH_DEVELOPMENT_URL")
-PLATFORM_TECH_SUPPORT_URL = raw_parser.get("settings", "PLATFORM_TECH_SUPPORT_URL")
-PLATFORM_TECH_SOURCE_CODE_URL = raw_parser.get("settings", "PLATFORM_TECH_SOURCE_CODE_URL")
-PLATFORM_TECH_DEVELOPMENT_TICKET_URL = raw_parser.get("settings", "PLATFORM_TECH_DEVELOPMENT_TICKET_URL")
-PLATFORM_SOCIAL_MEDIA_LOGO_URL = raw_parser.get("settings", "PLATFORM_SOCIAL_MEDIA_LOGO_URL")
-PLATFORM_LOGO_URL = raw_parser.get("settings", "PLATFORM_LOGO_URL")
+PLATFORM_DEFAULT_URL = config.get("settings", "PLATFORM_DEFAULT_URL")
+PLATFORM_MARKETPLACE_URL = config.get("settings", "PLATFORM_MARKETPLACE_URL")
+PLATFORM_REGISTRATION_URL = config.get("settings", "PLATFORM_REGISTRATION_URL")
+PLATFORM_LEGAL_URL = config.get("settings", "PLATFORM_LEGAL_URL")
+PLATFORM_DATA_PROTECTION_URL = config.get("settings", "PLATFORM_DATA_PROTECTION_URL")
+INITIATIVE_TEMPLATE_URL = config.get("settings", "INITIATIVE_TEMPLATE_URL")
+INITIATIVE_EXPLANATION_URL = config.get("settings", "INITIATIVE_EXPLANATION_URL")
+PLATFORM_VOTING_REGULATION_URL = config.get("settings", "PLATFORM_VOTING_REGULATION_URL")
+PLATFORM_TECH_DEVELOPMENT_URL = config.get("settings", "PLATFORM_TECH_DEVELOPMENT_URL")
+PLATFORM_TECH_SUPPORT_URL = config.get("settings", "PLATFORM_TECH_SUPPORT_URL")
+PLATFORM_TECH_SOURCE_CODE_URL = config.get("settings", "PLATFORM_TECH_SOURCE_CODE_URL")
+PLATFORM_TECH_DEVELOPMENT_TICKET_URL = config.get("settings", "PLATFORM_TECH_DEVELOPMENT_TICKET_URL")
+PLATFORM_SOCIAL_MEDIA_LOGO_URL = config.get("settings", "PLATFORM_SOCIAL_MEDIA_LOGO_URL")
+PLATFORM_LOGO_URL = config.get("settings", "PLATFORM_LOGO_URL")
 
-SITE_FONT_CSS_URL = raw_parser.get("settings", "SITE_FONT_CSS_URL")
-SITE_THEME_CSS_URL = raw_parser.get("settings", "SITE_THEME_CSS_URL")
-SITE_JS_URL = raw_parser.get("settings", "SITE_JS_URL")
+SITE_FONT_CSS_URL = config.get("settings", "SITE_FONT_CSS_URL")
+SITE_THEME_CSS_URL = config.get("settings", "SITE_THEME_CSS_URL")
+SITE_JS_URL = config.get("settings", "SITE_JS_URL")
 
 # -------------------------------- back compat ---------------------------------
-BACKCOMPAT_ROLE_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
-BACKCOMPAT_PERMISSION_LIST = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
-BACKCOMPAT_INITIATORS_COUNT = raw_parser.get("settings", "PLATFORM_BACKCOMPAT_INITIATORS_COUNT")
-BACKCOMPAT_SUBJECT_TYPES = [(item, item) for item in raw_parser.get("settings", "PLATFORM_BACKCOMPAT_SUBJECT_TYPES")]
-BACKCOMPAT_INITIATIVE_TYPES = [(item, item) for item in raw_parser.get("settings", "PLATFORM_BACKCOMPAT_INITIATIVE_TYPES").split(",")]
-BACKCOMPAT_LEVEL_TYPES = [(item, item) for item in raw_parser.get("settings", "PLATFORM_BACKCOMPAT_LEVEL_TYPES").split(",")]
-BACKCOMPAT_ABSTENTION_START = datetime.strptime(" ".join(raw_parser.get("settings", "PLATFORM_BACKCOMPAT_ABSTENTION_START").split(",")), "%Y %m %d")
-BACKCOMPAT_SPEED_PHASE_END = datetime.strptime(" ".join(raw_parser.get("settings", "PLATFORM_BACKCOMPAT_SPEED_PHASE_END").split(",")), "%Y %m %d")
+BACKCOMPAT_ROLE_LIST = config.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
+BACKCOMPAT_PERMISSION_LIST = config.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
+BACKCOMPAT_INITIATORS_COUNT = config.get("settings", "PLATFORM_BACKCOMPAT_INITIATORS_COUNT")
+BACKCOMPAT_SUBJECT_TYPES = [(item, item) for item in config.get("settings", "PLATFORM_BACKCOMPAT_SUBJECT_TYPES")]
+BACKCOMPAT_INITIATIVE_TYPES = [(item, item) for item in config.get("settings", "PLATFORM_BACKCOMPAT_INITIATIVE_TYPES").split(",")]
+BACKCOMPAT_LEVEL_TYPES = [(item, item) for item in config.get("settings", "PLATFORM_BACKCOMPAT_LEVEL_TYPES").split(",")]
+BACKCOMPAT_ABSTENTION_START = datetime.strptime(" ".join(config.get("settings", "PLATFORM_BACKCOMPAT_ABSTENTION_START").split(",")), "%Y %m %d")
+BACKCOMPAT_SPEED_PHASE_END = datetime.strptime(" ".join(config.get("settings", "PLATFORM_BACKCOMPAT_SPEED_PHASE_END").split(",")), "%Y %m %d")
 
   
 # XXX create a method to build choice tuples
 # XXX why do those have to be classes? Nothing will ever change
 # kept for initiative and policy
-VOTED = SimpleNamespace(**raw_parser._sections["policy_vote_state_list"])
-VOTED_CHOICES = [(code_tuple[1], _strip(raw_parser._sections["policy_vote_state_value_list"][code_tuple[0]])) for code_tuple in raw_parser.items("policy_vote_state_list")]
-MODERATED_CHOICES =  [(code_tuple[1], _strip(raw_parser._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in raw_parser.items("policy_moderation_state_list")]
+VOTED = SimpleNamespace(**config._sections["policy_vote_state_list"])
+VOTED_CHOICES = [(code_tuple[1], _strip(config._sections["policy_vote_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_vote_state_list")]
+MODERATED_CHOICES =  [(code_tuple[1], _strip(config._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_moderation_state_list")]
 
 # --------------------------- Application Options ------------------------------
-USE_UNIQUE_EMAILS = raw_parser.get("settings", "USER_USE_UNIQUE_EMAILS")
-USE_DIVERSE_MODERATION_TEAM = raw_parser.get("settings", "USER_USE_DIVERSE_MODERATION_TEAM")
+USE_UNIQUE_EMAILS = config.get("settings", "USER_USE_UNIQUE_EMAILS")
+USE_DIVERSE_MODERATION_TEAM = config.get("settings", "USER_USE_DIVERSE_MODERATION_TEAM")
 
 # --------------------------- Policy (ex Initiative) ---------------------------
-PLATFORM_POLICY_BASE_CONFIG = dict(raw_parser.items("platform_policy_base_config"))
-PLATFORM_POLICY_PERMISSION_VALUE_LIST = raw_parser._sections["platform_policy_permission_value_list"]
-PLATFORM_POLICY_PERMISSION_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_PERMISSION_VALUE_LIST[code_tuple[0]])) for code_tuple in raw_parser.items("platform_policy_permission_list")]
-PLATFORM_POLICY_STATE_VALUE_LIST = raw_parser._sections["platform_policy_state_value_list"]
-PLATFORM_POLICY_STATE_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_STATE_VALUE_LIST[code_tuple[0]])) for code_tuple in raw_parser.items("platform_policy_state_list")]
-PLATFORM_POLICY_STATE_DICT = SimpleNamespace(**raw_parser._sections["platform_policy_state_list"])
-PLATFORM_POLICY_STATE_DEFAULT = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_STATE_DEFAULT")
-PLATFORM_POLICY_INITIATORS_COUNT = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
-PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = raw_parser.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
-PLATFORM_POLICY_FIELD_LABELS = dict(raw_parser.items("platform_policy_field_title_dict"))
-PLATFORM_POLICY_FIELD_HELPER = dict(raw_parser.items("platform_policy_field_description_dict"))
+PLATFORM_POLICY_BASE_CONFIG = dict(config.items("platform_policy_base_config"))
+PLATFORM_POLICY_PERMISSION_VALUE_LIST = config._sections["platform_policy_permission_value_list"]
+PLATFORM_POLICY_PERMISSION_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_PERMISSION_VALUE_LIST[code_tuple[0]])) for code_tuple in config.items("platform_policy_permission_list")]
+PLATFORM_POLICY_STATE_VALUE_LIST = config._sections["platform_policy_state_value_list"]
+PLATFORM_POLICY_STATE_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_STATE_VALUE_LIST[code_tuple[0]])) for code_tuple in config.items("platform_policy_state_list")]
+PLATFORM_POLICY_STATE_DICT = SimpleNamespace(**config._sections["platform_policy_state_list"])
+PLATFORM_POLICY_STATE_DEFAULT = config.get("platform_policy_settings", "PLATFORM_POLICY_STATE_DEFAULT")
+PLATFORM_POLICY_ADMIN_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_ADMIN_STATE_LIST").split(",")
+PLATFORM_POLICY_EDIT_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_EDIT_STATE_LIST").split(",")
+PLATFORM_POLICY_INITIATORS_COUNT = config.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
+PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
+
+PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_dict")
+PLATFORM_POLICY_FIELD_HELPER = _getTranslatedDict("platform_policy_field_description_dict")
 
 
 # ---------------------------- Moderation Settings -----------------------------
 # minimum moderator votes, etc
-MODERATIONS = SimpleNamespace(**raw_parser._sections["moderation_setting_list"])
+MODERATIONS = SimpleNamespace(**config._sections["moderation_setting_list"])
 
 # ---------------------------- User (groups & permissions) ---------------------
-PLATFORM_GROUP_LIST = raw_parser.items("platform_group_list")
-PLATFORM_GROUP_VALUE_LIST = raw_parser._sections["platform_group_value_list"]
+PLATFORM_GROUP_LIST = config.items("platform_group_list")
+PLATFORM_GROUP_VALUE_LIST = config._sections["platform_group_value_list"]
 PLATFORM_GROUP_VALUE_TITLE_LIST = ["{0}".format(v) for k,v in PLATFORM_GROUP_VALUE_LIST.items() if not k.startswith("__")]
-PLATFORM_USER_PERMISSION_LIST = raw_parser.items("platform_user_permission_list")
-PLATFORM_USER_PERMISSION_VALUE_LIST = raw_parser._sections["platform_user_permission_value_list"]
-PLATFORM_GROUP_USER_PERMISSION_MAPPING = raw_parser.items("platform_group_user_permission_mapping")
-PLATFORM_NOTIFICATION_RESTRICTED_STATE_PERMISSION_MAPPING = SimpleNamespace(**raw_parser._sections["notification_restricted_state_permission_mapping_list"])
+PLATFORM_USER_PERMISSION_LIST = config.items("platform_user_permission_list")
+PLATFORM_USER_PERMISSION_VALUE_LIST = config._sections["platform_user_permission_value_list"]
+PLATFORM_GROUP_USER_PERMISSION_MAPPING = config.items("platform_group_user_permission_mapping")
+PLATFORM_NOTIFICATION_RESTRICTED_STATE_PERMISSION_MAPPING = SimpleNamespace(**config._sections["notification_restricted_state_permission_mapping_list"])
 
 # ------------------------------- Notifications --------------------------------
 # cannot be translated here because python translation objects cannot be stored 
 # in the database and pinax stores titles and descriptions in noticetypes. 
 # => requires lazy translation whenever displayed
 NOTIFICATIONS = SimpleNamespace(**{
-  "RESTRICTED": SimpleNamespace(**raw_parser._sections["notification_restricted_state_list"]),
-  "PUBLIC": SimpleNamespace(**raw_parser._sections["notification_public_state_list"]),
+  "RESTRICTED": SimpleNamespace(**config._sections["notification_restricted_state_list"]),
+  "PUBLIC": SimpleNamespace(**config._sections["notification_public_state_list"]),
 
   # translation lookup values across all notifications
   "I18N_VALUE_LIST": _getTranslatedSimpleNameSpace("notification_i18n_value_list"),
   "I18N_DESCRIPTION_LIST": _getTranslatedSimpleNameSpace("notification_i18n_description_list"),
   "I18N_TODO_TITLE_LIST": _getTranslatedSimpleNameSpace("notification_i18n_todo_list"),
-  "I18N_TODO_LIST": [k for k, _ in raw_parser._sections["notification_i18n_todo_list"].items()],
+  "I18N_TODO_LIST": [k for k, _ in config._sections["notification_i18n_todo_list"].items()],
 })
 
 # ------------------------------- Basic Categories -----------------------------
 # should all be translated right away because they are only displayed not stored
 CATEGORIES = SimpleNamespace(**{
-  "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('scope_list')],
-  "TOPIC_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("topic_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('topic_list')],
-  "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in raw_parser.items('context_list')]
+  "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in config.items('scope_list')],
+  "TOPIC_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("topic_value_list")[code_tuple[0]]))) for code_tuple in config.items('topic_list')],
+  "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in config.items('context_list')]
 })
 
 # ------------------------------- Default Listbox Config -----------------------

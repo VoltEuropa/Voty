@@ -1,0 +1,55 @@
+{% extends "_base.html" %}
+{% load mathfilters %}
+{% load markdown %}
+{% load fullurl %}
+{% load i18n %}
+{% load get_as_string %}
+
+{% block head_title %}
+  {{policy.title}}
+{% endblock %}
+
+{% block custom_sm_title %}
+  <meta property="og:title" content="{{policy.title}}">
+  <meta property="og:description" content="{{policy.subtitle}}">
+  <meta property="og:url" content="{% fullurl 'policy_item' policy_id=policy.id slug=policy.slug %}">
+{% endblock %}
+
+{% block custom_header %}
+  <div class="container-fluid">
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <a href="/" class="go-to-index"><i class="material-icons chevron-left">chevron_left</i>{% trans "Return to Overview" %}</a>
+        </div>
+      </div>
+      <div class="row initiative-title">
+        <div class="col-12">
+            <h1 class="display-4">{{policy.title}}</h1>
+        </div>
+      </div>
+      <div class="row initiative-subtitle">
+        <div class="col-12">
+          <p>{{policy.subtitle}}</p>
+        </div>
+      </div>
+      <div class="row skip-meta">
+        <div class="col-12">
+            <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block body-javascript %} {{ block.super }}
+<script type="text/javascript">
+// Initialize Tooltips
+$(document).ready(function () {
+  //$(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+  //});
+});
+</script>
+{% endblock %}
+

@@ -37,7 +37,6 @@ from functools import wraps
 import json
 
 from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
-from .guard import can_access_initiative
 from .models import (Policy, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
 from .forms import (simple_form_verifier, PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
@@ -81,6 +80,32 @@ def get_voting_fragments(vote, initiative, request):
                                     context=context)
         }}
 
+
+# --------------------- State Permission decorator -----------------------------
+# moved here from guard.py
+def policy_state_access(states=None):
+  def wrap(fn):
+    def view(request, policy_id, slug, *args, **kwargs):
+      policy = get_object_or_404(Policy, pk=policy_id)
+
+      if policy is None:
+        message.warning(request, _("Policy not found"))
+        return redirect(request, "")
+
+      if states:
+        assert policy.state in states, "{} Not in expected state: {}".format(policy.state, states)
+
+      # NOTE: this adds the policy on the request
+      request.policy = policy
+      return fn(request, policy, *args, **kwargs)
+    return view
+  return wrap
+
+# --------------------------- personalise arguments ----------------------------
+def personalize_argument(arg, user_id):
+  arg.has_liked = arg.likes.filter(user=user_id).exists()
+  arg.has_commented = arg.comments.filter(user__id=user_id).exists()
+
 #
 # ____    ____  __   ___________    __    ____   _______.
 # \   \  /   / |  | |   ____\   \  /  \  /   /  /       |
@@ -91,31 +116,96 @@ def get_voting_fragments(vote, initiative, request):
 #
 #                                                       
 
-# ----------------------------- Policy New -------------------------------------
+# ----------------------------- Policy Item ------------------------------------
+@policy_state_access()
+def policy_item(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_view(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("")
+
+  payload = dict(
+    policy=policy,
+    user_count=policy.eligible_voter_count,
+    policy_proposals=[x for x in policy.policy_proposals.prefetch_related("likes").all()],
+    policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
+      [x for x in policy.policy_contras.prefetch_related("likes").all()]
+  )
+
+  payload["policy_arguments"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
+  payload["policy_proposals"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
+  payload["is_editable"] = request.guard.is_editable (policy)
+
+  # personalise if authenticated user interacted with policy
+  if request.user.is_authenticated:
+    user_id = request.user.id
+    payload.update({"has_supported": policy.supporting_policy.filter(user=user_id).count()})
+    policy_votes = policy.policy_votes.filter(user=user_id)
+    if (policy_votes.exists()):
+      payload['policy_vote'] = policy_votes.first()
+    for arg in payload['policy_arguments'] + payload['policy_proposals']:
+      personalize_argument(arg, user_id)
+
+  return render(request, 'initproc/policy_item.html', context=payload)
+
+# ----------------------------- Policy Edit ------------------------------------
 @login_required
-def policy_new(request):
-  form = PolicyForm(request.POST or None)
+@policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
+def policy_edit(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_view(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/")
+
+  if not request.guard.policy_edit(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/")
+
+  form = PolicyForm(request.POST or None, instance=policy)
   if request.method == 'POST':
+    user = request.user
     if form.is_valid():
-      policy_object = form.save(commit=False)
       with reversion.create_revision():
-        policy_object.state = STATES.DRAFT
-        policy_object.save()
+        policy.save()
+        reversion.set_user(user)
 
-        # Store some meta-information.
-        reversion.set_user(request.user)
-
-      Supporter(policy=policy_object, user=request.user, initiator=True, ack=True, public=True).save()
-      return redirect('/policy/{}-{}'.format(policy_object.id, policy_object.slug))
+      # keep asking initial supporters to repledge?
+      policy.supporting_initiative.filter(initiator=True).exclude(id=user.id).update(ack=False)
+      policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=user)
+      messages.success(request, _("Policy updated."))
+      return redirect("/policy/{}".format(policy.id))
     else:
       messages.warning(request, _("Please correct the following problems:"))
 
-  return render(request, 'initproc/policy_new.html', context=dict(form=form))
+  return render(request, "initproc/policy_edit.html", context=dict(form=form, policy=policy))
+
+# ----------------------------- Policy New -------------------------------------
+@login_required
+def policy_new(request, *args, **kwargs):
+
+  form = PolicyForm(request.POST or None)
+  if request.method == 'POST':
+    if form.is_valid():
+      user = request.user
+      policy_object = form.save(commit=False)
+      with reversion.create_revision():
+        policy_object.state = settings.PLATFORM_POLICY_STATE_DEFAULT
+        policy_object.save()
+
+        # Store some meta-information.
+        reversion.set_user(user)
+
+      Supporter(policy=policy_object, user=user, initiator=True, ack=True, public=True).save()
+      messages.success(request, _("Created new Policy draft."))
+      return redirect('/policy/{}-{}'.format(policy_object.id, policy_object.slug))
+    else:
+      messages.warning(request, _("Please fill out all required fields."))
+
+  return render(request, 'initproc/policy_edit.html', context=dict(form=form))
 
 
-def personalize_argument(arg, user_id):
-    arg.has_liked = arg.likes.filter(user=user_id).exists()
-    arg.has_commented = arg.comments.filter(user__id=user_id).exists()
+
+
 
 def about(request):
     return render(request, 'static/about.html', context=dict(
@@ -233,8 +323,8 @@ def new(request):
 
     return render(request, 'initproc/new.html', context=dict(form=form))
 
-
-@can_access_initiative()
+#@states_required(raise_exception=True)
+#@can_access_initiative()
 def item(request, init, slug=None):
 
     ctx = dict(initiative=init,
@@ -265,7 +355,7 @@ def item(request, init, slug=None):
 
 
 @ajax
-@can_access_initiative()
+#@can_access_initiative()
 def show_resp(request, initiative, target_type, target_id, slug=None):
 
     model_cls = apps.get_model('initproc', target_type)
@@ -294,7 +384,7 @@ def show_resp(request, initiative, target_type, target_id, slug=None):
 
 @ajax
 @login_required
-@can_access_initiative(None, 'can_moderate')
+#@can_access_initiative(None, 'can_moderate')
 def show_moderation(request, initiative, target_id, slug=None):
     arg = get_object_or_404(Moderation, pk=target_id)
 
@@ -328,33 +418,11 @@ def show_moderation(request, initiative, target_id, slug=None):
 #
 #
 #                                                                        
-# ----------------------------- Policy Edit ------------------------------------
+
+
+
 @login_required
 #@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
-def policy_edit(request, initiative):
-  form = PolicyForm(request.POST or None, instance=policy)
-  if request.method == 'POST':
-    if form.is_valid():
-      with reversion.create_revision():
-        policy.save()
-        reversion.set_user(request.user)
-
-      # this requires initial supporters to re-acknowledge policy
-      policy.supporting_initiative.filter(initiator=True).update(ack=False)
-
-      messages.success(request, _("Initiative saved."))
-      initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=request.user)
-      return redirect("/policy/{}".format(policy.id))
-    else:
-      messages.warning(request, _("Please correct the following problems:"))
-
-  return render(request, "initproc/policy_new.html", context=dict(form=form, policy=policy))
-
-
-
-
-@login_required
-@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
 def edit(request, initiative):
     form = InitiativeForm(request.POST or None, instance=initiative)
     if request.method == 'POST':
@@ -379,7 +447,7 @@ def edit(request, initiative):
 
 
 @login_required
-@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
+#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
 def submit_to_committee(request, initiative):
     if initiative.ready_for_next_stage:
         initiative.state = STATES.INCOMING if initiative.state == STATES.PREPARE else STATES.MODERATION
@@ -405,7 +473,7 @@ def submit_to_committee(request, initiative):
 
 @ajax
 @login_required
-@can_access_initiative(STATES.PREPARE, 'can_edit') 
+#@can_access_initiative(STATES.PREPARE, 'can_edit') 
 @simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
 def invite(request, form, initiative, invite_type):
     for user in form.cleaned_data['user']:
@@ -444,7 +512,7 @@ def invite(request, form, initiative, invite_type):
 
 
 @login_required
-@can_access_initiative(STATES.SEEKING_SUPPORT, 'can_support') # must be seeking for supporters
+#@can_access_initiative(STATES.SEEKING_SUPPORT, 'can_support') # must be seeking for supporters
 def support(request, initiative):
     Supporter(initiative=initiative, user_id=request.user.id,
               public=not not request.GET.get("public", False)).save()
@@ -454,7 +522,7 @@ def support(request, initiative):
 
 @require_POST
 @login_required
-@can_access_initiative([STATES.PREPARE, STATES.INCOMING, STATES.FINAL_EDIT])
+#@can_access_initiative([STATES.PREPARE, STATES.INCOMING, STATES.FINAL_EDIT])
 def ack_support(request, initiative):
     sup = get_object_or_404(Supporter, initiative=initiative, user_id=request.user.id)
     sup.ack = True
@@ -468,7 +536,7 @@ def ack_support(request, initiative):
 
 @require_POST
 @login_required
-@can_access_initiative([STATES.SEEKING_SUPPORT, STATES.INCOMING, STATES.PREPARE])
+#@can_access_initiative([STATES.SEEKING_SUPPORT, STATES.INCOMING, STATES.PREPARE])
 def rm_support(request, initiative):
     sup = get_object_or_404(Supporter, initiative=initiative, user_id=request.user.id)
     sup.delete()
@@ -484,7 +552,7 @@ def rm_support(request, initiative):
 @non_ajax_redir('/')
 @ajax
 @login_required
-@can_access_initiative(STATES.DISCUSSION) # must be in discussion
+#@can_access_initiative(STATES.DISCUSSION) # must be in discussion
 @simple_form_verifier(NewArgumentForm, template="fragments/argument/new.html")
 def new_argument(request, form, initiative):
     data = form.cleaned_data
@@ -515,7 +583,7 @@ def new_argument(request, form, initiative):
 @non_ajax_redir('/')
 @ajax
 @login_required
-@can_access_initiative(STATES.DISCUSSION) # must be in discussion
+#@can_access_initiative(STATES.DISCUSSION) # must be in discussion
 @simple_form_verifier(NewProposalForm)
 def new_proposal(request, form, initiative):
     data = form.cleaned_data
@@ -540,7 +608,7 @@ def new_proposal(request, form, initiative):
 
 @ajax
 @login_required
-@can_access_initiative([STATES.INCOMING, STATES.MODERATION], 'can_moderate') # must be in discussion
+#@can_access_initiative([STATES.INCOMING, STATES.MODERATION], 'can_moderate') # must be in discussion
 @simple_form_verifier(NewModerationForm)
 def moderate(request, form, initiative):
     model = form.save(commit=False)
@@ -686,7 +754,7 @@ def unlike(request, target_type, target_id):
 @ajax
 @login_required
 @require_POST
-@can_access_initiative(STATES.VOTING) # must be in voting
+#@can_access_initiative(STATES.VOTING) # must be in voting
 def vote(request, init):
     voted_value = request.POST.get('voted')
     if voted_value == 'no':
@@ -713,7 +781,7 @@ def vote(request, init):
 
 @non_ajax_redir('/')
 @ajax
-@can_access_initiative()
+#@can_access_initiative()
 def compare(request, initiative, version_id):
     versions = Version.objects.get_for_object(initiative)
     latest = versions.first()
@@ -742,7 +810,7 @@ def compare(request, initiative, version_id):
 @ajax
 @login_required
 @require_POST
-@can_access_initiative(STATES.VOTING) # must be in voting
+#@can_access_initiative(STATES.VOTING) # must be in voting
 def reset_vote(request, init):
     Vote.objects.filter(initiative=init, user_id=request.user).delete()
     return get_voting_fragments(None, init, request)
