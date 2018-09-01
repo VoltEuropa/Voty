@@ -3,7 +3,7 @@
 {% load markdown %}
 {% load fullurl %}
 {% load i18n %}
-{% load get_as_string %}
+{% load get_setting %}
 
 {% block head_title %}
   {{policy.title}}
@@ -33,13 +33,89 @@
           <p>{{policy.subtitle}}</p>
         </div>
       </div>
+
+      {% include "initproc/blocks/meta.html" %}
+
       <div class="row skip-meta">
+        <div class="col-6">
+          <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
+        </div>
+        <div class="col-6">
+          {% if request.guard.policy_stage %}
+          <form action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
+            {% csrf_token %}
+            <button title="{% trans 'Stage Policy (public draft)' %}" class="btn btn-success" type="submit">
+              <i class="material-icons forward">forward</i>&nbsp;{% trans "Stage Policy (public draft)" %}
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+
+  {# vote #}
+
+  <div class="container-fluid initiators">
+    <div class="container">
+      <div class="row">
         <div class="col-12">
-            <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
+          <h6 class="text-muted classification">{% trans "Initiators" %}</h6>
+        </div>
+      </div>
+      <div class="row no-gutters avatar">
+        <div class="d-flex flex-wrap">
+          {% for supporter in policy.initiators %}
+              {% include "fragments/avatar.html" with user=supporter.user %}
+              <div class="name">
+                {{ supporter.user.get_full_name|default:supporter.user.username }}
+              </div>
+              {% with "PLATFORM_POLICY_EDIT_STATE_LIST"|get_setting as state_list %}
+                {% if policy.state in state_list %}
+                  <div class="approval">
+                    {% if supporter.ack %}
+                      <span title="{% trans 'confirmed' %}" class=""><i class="material-icons done">done</i></span>
+                    {% else %}
+                      {% if supporter.user == user %}
+                        <strong style="display:block">{% trans "Confirm now" %}</strong>
+  
+                        <form action="{% url 'policy_acknowledge_support' policy_id=policy.id %}" style="display:inline" method="POST">
+                          {% csrf_token %}
+                          <button title="{% trans 'Support' %}" class="btn btn-success" type="submit">
+                            <i class="material-icons">done</i>
+                          </button>
+                        </form>
+                        <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline"  method="POST">
+                          {% csrf_token %}
+                          <button title="{% trans 'No Support' %}" class="btn btn-danger" type="submit">
+                            <i class="material-icons">not_interested</i>
+                          </button>
+                        </form>
+                      {% else %}
+                        <span title="{% trans 'unconfirmed' %}" class=""><i class="material-icons warning">warning</i></span>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endwith %}
+            </div>
+          {% endfor %}
+  
+          {% if request.guard.policy_invite %}
+            <div id="invite-initiators">
+              {% with 'initiators' as initiators %}
+                <a data-ajax="true" href="{% url 'policy_invite' policy_id=policy.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">{% trans "Invite Co-Initiators" %}</a>
+              {% endwith %}
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
+
 {% endblock %}
 
 {% block body-javascript %} {{ block.super }}
@@ -52,4 +128,3 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-

@@ -26,6 +26,10 @@ urlpatterns = [
   url(r"^policy/new$", views.policy_new, name="policy_new"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/$", views.policy_item, name="policy_item"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/edit$", views.policy_edit, name="policy_edit"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/ack_support$", views.policy_acknowledge_support, name="policy_acknowledge_support"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/rm_support$", views.policy_remove_support, name="policy_remove_support"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/invite/(?P<invite_type>.*)$", views.policy_invite, name="policy_invite"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/stage$", views.policy_stage, name="policy_stage"),
   
   # notification forward to initiative, careful, this autotranslates unfortunately
   #url(r"^initiative/(?P<init_id>\d+)/?$", views.item, name=_("initiative")),

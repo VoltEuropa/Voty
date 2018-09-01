@@ -1,37 +1,41 @@
 {% load i18n %}
-<div class="container-fluid meta">
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-12 col-md-4">
-                <h6 class="text-muted classification">{% trans "Published on" %}</h6>
-                <div>
-                {% if initiative.went_public_at %}
-                    {{initiative.went_public_at}}
-                {% else %}
-                    {% trans "Not published yet" %}
-                {% endif %}
-                </div>
-            </div>
-            <div class="col-sm-12 col-md-8">
-                <h6 class="text-muted classification">{% trans "Context" %}</h6>
-                <div>
-                    {{initiative.bereich}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm-12 col-md-4">
-                <h6 class="text-muted classification">{% trans "Scope" %}</h6>
-                <div>
-                    {{initiative.einordnung}}
-                </div>
-            </div>
-            <div class="col-sm-12 col-md-8">
-                <h6 class="text-muted classification">{% trans "Topic" %}</h6>
-                <div>
-                    {{initiative.ebene}}
-                </div>
-            </div>
-        </div>
+{% load get_setting %}
+{% load get_as_string %}
+
+<div class="row">
+  <div class="col-sm-12 col-md-4">
+    <h6 class="text-muted classification">{% trans "Published on" %}</h6>
+    <div>
+    {% if policy.was_published_at %}
+      {{ policy.was_published_at }}
+    {% else %}
+      {% trans "Not published yet" %}
+    {% endif %}
     </div>
+  </div>
+  <div class="col-sm-12 col-md-4">
+    <h6 class="text-muted classification">{% trans "Current State" %}</h6>
+    {{ policy.state|title }}
+  </div>
+</div>
+<br/>
+<div class="row">
+  <div class="col-sm-12 col-md-4">
+    <h6 class="text-muted classification">{% trans "Scope" %}</h6>
+    {% with "CATEGORIES.SCOPE_DICT."|add:policy.scope|upper|get_setting as SCOPE %}
+      <div>{{ SCOPE }}</div>
+    {% endwith %}
+  </div>
+  <div class="col-sm-12 col-md-4">
+    <h6 class="text-muted classification">{% trans "Context" %}</h6>
+    {% with "CATEGORIES.CONTEXT_DICT."|add:policy.context|upper|get_setting as CONTEXT %}
+      <div>{{ CONTEXT }}</div>
+    {% endwith %}
+  </div>
+  <div class="col-sm-12 col-md-4">
+    <h6 class="text-muted classification">{% trans "Topic" %}</h6>
+    {% with "CATEGORIES.TOPIC_DICT."|add:policy.topic|upper|get_setting as TOPIC %}
+      <div>{{ TOPIC }}</div>
+    {% endwith %}
+  </div>
 </div>

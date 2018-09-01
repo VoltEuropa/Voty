@@ -21,26 +21,32 @@ from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative
 # ============================= Classes ========================================
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send")):
-    def wrap(fn):
-        def view(request, *args, **kwargs):
-            if request.method == "POST":
-                form = form_cls(request.POST)
-                if form.is_valid():
-                    return fn(request, form, *args, **kwargs)
-            else:
-                form = form_cls(initial=request.GET)
+  def wrap(fn):
+    def view(request, *args, **kwargs):
+      if request.method == "POST":
+        form = form_cls(request.POST)
+        if form.is_valid():
+          return fn(request, form, *args, **kwargs)
+      else:
+        form = form_cls(initial=request.GET)
 
-            fragment = request.GET.get('fragment')
-            rendered = render_to_string(template,
-                        context=dict(fragment=fragment, form=form, ajax=via_ajax,
-                                     submit_klasses=submit_klasses,
-                                     submit_title=submit_title),
-                        request=request)
-            if fragment:
-                return {'inner-fragments': {fragment: rendered}}
-            return rendered
-        return view
-    return wrap
+      fragment = request.GET.get("fragment")
+      rendered = render_to_string(
+        template,
+        context=dict(
+          fragment=fragment,
+          form=form,
+          ajax=via_ajax,
+          submit_klasses=submit_klasses,
+          submit_title=submit_title
+        ),
+        request=request
+      )
+      if fragment:
+        return {"inner-fragments": {fragment: rendered}}
+      return rendered
+    return view
+  return wrap
 
 # ============================= Classes ========================================
 # ----------------------------- PolicyForm -------------------------------------
@@ -64,14 +70,16 @@ class PolicyForm(forms.ModelForm):
   )
 # --------------------------- InviteUsersForm ----------------------------------
 class InviteUsersForm(forms.Form):
-    user = forms.ModelMultipleChoiceField(
-        label=_("Invite"),
-        queryset=get_user_model().objects,
-        required=False,
-        widget=autocomplete.ModelSelect2Multiple(
-                    url='user_autocomplete',
-                    attrs={"data-placeholder": _("Type to search"),
-                           'data-html': "True"}))
+
+  user = forms.ModelMultipleChoiceField(
+    label=_("Invite Co-Initiators"),
+    queryset=get_user_model().objects,
+    required=False,
+    widget=autocomplete.ModelSelect2Multiple(
+      url='user_autocomplete',
+      attrs={"data-placeholder": _("Type to search"), 'data-html': "True"}
+    )
+  )
 
 # ----------------------------- InitiativeForm ---------------------------------
 class InitiativeForm(forms.ModelForm):

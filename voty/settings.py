@@ -362,7 +362,13 @@ NOTIFICATIONS = SimpleNamespace(**{
 CATEGORIES = SimpleNamespace(**{
   "SCOPE_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("scope_value_list")[code_tuple[0]]))) for code_tuple in config.items('scope_list')],
   "TOPIC_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("topic_value_list")[code_tuple[0]]))) for code_tuple in config.items('topic_list')],
-  "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in config.items('context_list')]
+  "CONTEXT_CHOICES": [(code_tuple[1], _(_strip(_getItemsAsDict("context_value_list")[code_tuple[0]]))) for code_tuple in config.items('context_list')],
+
+  # XXX also required as dict - try to live without
+  # XXX careful SimpleNamespace converts to uppercase and replaces -/_ on keys
+  "SCOPE_DICT": SimpleNamespace(**dict([(tup[0], _(_strip(tup[1]))) for tup in config.items("scope_value_list")])),
+  "TOPIC_DICT": SimpleNamespace(**dict([(tup[0], _(_strip(tup[1]))) for tup in config.items("topic_value_list")])),
+  "CONTEXT_DICT": SimpleNamespace(**dict([(tup[0], _(_strip(tup[1]))) for tup in config.items("context_value_list")])),
 })
 
 # ------------------------------- Default Listbox Config -----------------------

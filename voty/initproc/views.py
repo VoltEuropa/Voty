@@ -163,14 +163,12 @@ def policy_edit(request, policy, *args, **kwargs):
         policy.save()
         reversion.set_user(user)
 
-      # ask initial supporters to repledge? in draft, only author can edit, 
+      # ask initial supporters to repledge? draft, only author can edit, 
       # will not be notified. if staged, initiators will be notified to repledge
       supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
       supporters.update(ack=False)
-      supporter_list = [supporter.user for _, supporter in enumerate(supporters)]
       notify(
-        #get_user_model().objects.filter(id__in=supporter_list),
-        supporter_list,
+        [supporter.user for _, supporter in enumerate(supporters)],
         settings.NOTIFICATIONS.PUBLIC.EDITED, {
         "description": "".join([_("Policy edited:"), " ", policy.title, ". ", _("Please reconfirm your support.")])
         }, sender=user
@@ -421,6 +419,125 @@ def show_moderation(request, initiative, target_id, slug=None):
 #
 #
 #                                                                        
+  
+# ---------------------------- Policy Invite -----------------------------------
+@ajax
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.STAGED)
+@simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
+def policy_invite(request, form, policy, invite_type):
+
+  if not request.guard.policy_edit(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
+
+  # skip ourselves,nothing to do if sufficient amount of co-initiators reached
+  for user in form.cleaned_data["user"]:
+    if user == request.user:
+      continue
+    if invite_type == 'initiators' and \
+        policy.supporting_policy.filter(initiator=True).count() >= INITIATORS_COUNT:
+        break
+
+    # XXX maybe supporting_supporter is not such a good choice
+    try:
+      supporting_supporter = policy.supporting_initiative.get(user_id=user.id)
+    except Supporter.DoesNotExist:
+      supporting_supporter = Supporter(user=user, policy=policy, ack=False)
+
+      if invite_type == 'initiators':
+        supporting_supporter.initiator = True
+      elif invite_type == 'supporters':
+        supporting_supporter.first = True
+
+    # XXX indent - where does this belong to?
+    # ? only allow promoting of supporters to initiators not downwards
+    else:
+      if invite_type == 'initiators' and not supporting_supporter.initiator:
+        supporting_supporter.initiator = True
+        supporting_supporter.first = False
+        supporting_supporter.ack = False
+      else:
+        continue
+
+    supporting_supporter.save()
+    notify([user], settings.NOTIFICATIONS.PUBLIC.SUPPORT_INVITE, {
+      "target": policy,
+      "description": "".join([_("Invitation to support Policy:"), " ", policy.title])
+      }, sender=request.user)
+
+  messages.success(request, _("Co-Initiators invited.") if invite_type == 'initiators' else _("Supporters invited."))
+  return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# -------------------------- Policy Acknowledge Support ------------------------
+@require_POST
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
+def policy_acknowledge_support(request, policy, *args, **kwargs):
+  user = request.user
+  user_id = user.id
+  ack_supporter = get_object_or_404(Supporter, policy=policy, user_id=user_id)
+  ack_supporter.ack = True
+  ack_supporter.save()
+
+  if ack_supporter.initiator == True:
+    notify(
+      [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
+      settings.NOTIFICATIONS.PUBLIC.SUPPORT_ACCEPTED,
+      {"description": "".join([user.first_name, " ", user.last_name, _(" confirmed to be co-initiator on policy: "), policy.title])},
+      sender=user
+    )
+
+  messages.success(request, _("Thank you for the confirmation."))
+  return redirect('/policy/{}'.format(initiative.id))
+
+# ---------------------------- Policy Remove Support ---------------------------
+@require_POST
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
+def policy_remove_support(request, policy, *args, **kwargs):
+  user = request.user
+  user_id = user.id
+  rm_supporter = get_object_or_404(Supporter, policy=policy, user_id=user_id)
+  
+  if rm_supporter.initiator == True:
+    notify(
+      [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
+      settings.NOTIFICATIONS.PUBLIC.SUPPORT_REJECTED,
+      {"description": "".join([user.first_name, " ", user.last_name, _(" resigned as co-initiator of policy: "), policy.title])},
+      sender=user
+    )
+
+  rm_supporter.delete()
+  messages.success(request, _("Your support has been retracted."))
+  if policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      return redirect('/policy/{}'.format(policy.id))
+  return redirect("home")
+
+# ---------------------------- Policy Stage ------------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.DRAFT)
+def policy_stage(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_edit(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
+
+  with reversion.create_revision():
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.STAGED
+    policy.staged_at =datetime.now()
+    policy.save()
+
+    # Store some meta-information.
+    reversion.set_user(request.user)
+
+    messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
+    return redirect('/policy/{}-{}'.format(policy.id, policy.slug))  
+
+
+
+
+
 
 
 

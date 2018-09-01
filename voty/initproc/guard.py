@@ -276,6 +276,17 @@ class Guard:
           raise ContinueChecking()
       return False
 
+  # ----------------- invite co-initiators/supporters to policy ----------------
+  def policy_invite(self, policy=None):
+    policy = policy or self.request.policy
+    if policy.state != settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+      return False
+
+    if not self.policy_edit(policy):
+      return False
+
+    return policy.supporting_policy.filter(initiator=True).count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
+
   # ---------------------------- view policy -----------------------------------
   # used to be in can_access_initiative
   def policy_view(self, policy):
@@ -307,6 +318,19 @@ class Guard:
       return False
 
     return True
+
+  # ---------------------------- stage policy -----------------------------------
+  def policy_stage(self, policy=None):
+    policy = policy or self.request.policy
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
+      policy.supporting_policy.filter(initiator=True):
+      return True
+    if not self.user.is_authenticated:
+      return False
+    if self.user.is_superuser:
+      return True
+
+    return False
 
 # ----------------------------- Publish Guard ----------------------------------
 # Add guard of the request.user and make it accessible directly at request.guard
