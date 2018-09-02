@@ -13,6 +13,8 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils.decorators import available_attrs
 from django.utils.safestring import mark_safe
+from django.utils.encoding import force_text
+from django.utils.http import urlsafe_base64_decode
 from django.contrib.postgres.search import SearchVector
 from django.contrib.auth import get_user_model
 from django.contrib import messages
@@ -41,6 +43,7 @@ from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
 from .models import (Policy, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
 from .forms import (simple_form_verifier, PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
+from .undo import UndoUrlTokenGenerator
 from .serializers import SimpleInitiativeSerializer
 from django.contrib.auth.models import Permission
 from django.utils.translation import ugettext as _
@@ -203,9 +206,6 @@ def policy_new(request, *args, **kwargs):
       messages.warning(request, _("Please fill out all required fields."))
 
   return render(request, 'initproc/policy_edit.html', context=dict(form=form))
-
-
-
 
 
 def about(request):
@@ -419,13 +419,40 @@ def show_moderation(request, initiative, target_id, slug=None):
 #
 #
 #                                                                        
-  
+
+# ----------------------------- Undo action ------------------------------------
+@login_required
+@policy_state_access()
+def policy_undo(self, request, policy, uidb64, token):
+
+  try:
+    uid = force_text(urlsafe_base64_decode(uidb64))
+    user = User.objects.get(pk=uid)
+  except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+    user = None
+    action = UndoUrlTokenGenerator.validate_token(user, token)
+
+  # undo is not a regular workflow action, can only be triggered by user that
+  # made the last transition within 30 sec of this transition
+  if user is not None and action is not None:
+    with reversion.create_revision():
+      policy.state = token
+      policy.save()
+
+      reversion.set_user(request.user)
+      messages.success(_("Reverted to previous state."))
+      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+    
+  else:
+    messages.warning(request, _("Undo not possible. Please contact the Policy team in case you require assistance."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
 # ---------------------------- Policy Invite -----------------------------------
 @ajax
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.STAGED)
 @simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
-def policy_invite(request, form, policy, invite_type):
+def policy_invite(request, form, policy, invite_type, *args, **kwargs):
 
   if not request.guard.policy_edit(policy):
     messages.warning(request, _("Permission denied."))
@@ -441,19 +468,19 @@ def policy_invite(request, form, policy, invite_type):
 
     # XXX maybe supporting_supporter is not such a good choice
     try:
-      supporting_supporter = policy.supporting_initiative.get(user_id=user.id)
+      supporting_supporter = policy.supporting_policy.get(user_id=user.id)
     except Supporter.DoesNotExist:
       supporting_supporter = Supporter(user=user, policy=policy, ack=False)
 
-      if invite_type == 'initiators':
+      if invite_type == "initiators":
         supporting_supporter.initiator = True
-      elif invite_type == 'supporters':
+      elif invite_type == "supporters":
         supporting_supporter.first = True
 
     # XXX indent - where does this belong to?
     # ? only allow promoting of supporters to initiators not downwards
     else:
-      if invite_type == 'initiators' and not supporting_supporter.initiator:
+      if invite_type == "initiators" and not supporting_supporter.initiator:
         supporting_supporter.initiator = True
         supporting_supporter.first = False
         supporting_supporter.ack = False
@@ -463,10 +490,14 @@ def policy_invite(request, form, policy, invite_type):
     supporting_supporter.save()
     notify([user], settings.NOTIFICATIONS.PUBLIC.SUPPORT_INVITE, {
       "target": policy,
-      "description": "".join([_("Invitation to support Policy:"), " ", policy.title])
+      "description": "".join([
+        _("Invitation to support Policy:"),
+        " ",
+        policy.title
+      ])
       }, sender=request.user)
 
-  messages.success(request, _("Co-Initiators invited.") if invite_type == 'initiators' else _("Supporters invited."))
+  messages.success(request, _("Co-Initiators invited.") if invite_type == "initiators" else _("Supporters invited."))
   return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 # -------------------------- Policy Acknowledge Support ------------------------
@@ -480,6 +511,7 @@ def policy_acknowledge_support(request, policy, *args, **kwargs):
   ack_supporter.ack = True
   ack_supporter.save()
 
+  # only inform if co-initiator signed on
   if ack_supporter.initiator == True:
     notify(
       [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
@@ -489,7 +521,7 @@ def policy_acknowledge_support(request, policy, *args, **kwargs):
     )
 
   messages.success(request, _("Thank you for the confirmation."))
-  return redirect('/policy/{}'.format(initiative.id))
+  return redirect("/policy/{}".format(policy.id))
 
 # ---------------------------- Policy Remove Support ---------------------------
 @require_POST
@@ -511,7 +543,7 @@ def policy_remove_support(request, policy, *args, **kwargs):
   rm_supporter.delete()
   messages.success(request, _("Your support has been retracted."))
   if policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-      return redirect('/policy/{}'.format(policy.id))
+    return redirect("/policy/{}".format(policy.id))
   return redirect("home")
 
 # ---------------------------- Policy Stage ------------------------------------
@@ -525,21 +557,36 @@ def policy_stage(request, policy, *args, **kwargs):
 
   with reversion.create_revision():
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.STAGED
-    policy.staged_at =datetime.now()
+    policy.staged_at = datetime.now()
     policy.save()
 
-    # Store some meta-information.
     reversion.set_user(request.user)
 
     messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
-    return redirect('/policy/{}-{}'.format(policy.id, policy.slug))  
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+# --------------------------------- Policy Delete ------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_DELETE_STATE_LIST)
+def policy_delete(request, policy, *args, **kwargs):
 
+  if not request.guard.policy_edit(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
 
+  if not request.guard.policy_delete(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+  with reversion.create_revision():
+    revert_url = UndoUrlTokenGenerator.create_token(user, policy)
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.DELETED
+    policy.save()
 
-
-
+    reversion.set_user(request.user)
+    messages.success(request, "".join([_("Policy deleted. Click here to UNDO: "),
+      mark_safe('<a href="{}">{}</a>'.format(revert_url, _("Revert Deletion")))]))
+    return redirect('/policy/{}-{}'.format(policy.id, policy.slug))
 
 @login_required
 #@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')

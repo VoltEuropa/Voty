@@ -30,7 +30,9 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/rm_support$", views.policy_remove_support, name="policy_remove_support"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/invite/(?P<invite_type>.*)$", views.policy_invite, name="policy_invite"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/stage$", views.policy_stage, name="policy_stage"),
-  
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/delete$", views.policy_delete, name="policy_delete"),
+  url(r'^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undo/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', views.policy_undo, name="policy_undo"),
+
   # notification forward to initiative, careful, this autotranslates unfortunately
   #url(r"^initiative/(?P<init_id>\d+)/?$", views.item, name=_("initiative")),
   url(r"^initiative/(?P<init_id>\d+)/$", views.item, name=_("initiative")),
@@ -55,3 +57,4 @@ urlpatterns = [
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.like, name="like"),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.unlike, name="unlike")
 ]
+

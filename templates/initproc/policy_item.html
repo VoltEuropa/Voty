@@ -37,19 +37,39 @@
       {% include "initproc/blocks/meta.html" %}
 
       <div class="row skip-meta">
-        <div class="col-6">
+        <div class="col-4">
           <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
         </div>
-        <div class="col-6">
+        <div class="col-8">
           {% if request.guard.policy_stage %}
-          <form action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
-            {% csrf_token %}
-            <button title="{% trans 'Stage Policy (public draft)' %}" class="btn btn-success" type="submit">
-              <i class="material-icons forward">forward</i>&nbsp;{% trans "Stage Policy (public draft)" %}
-            </button>
-          </form>
+          <div class="align-right">
+            <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Put policy into public draft and find co-initiators' %}" class="btn btn-success" type="submit">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Stage Policy (public draft)" %}</span>
+              </button>
+            </form>
+            <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                <i class="material-icons delete_outline">delete_outline</i>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+         
+          {% if request.guard.policy_invite %}
+          <div class="align-right" id="invite-initiators">
+            {% with 'initiators' as initiators %}
+              <a data-ajax="true" href="{% url 'policy_invite' policy_id=policy.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Invite Co-Initiators" %}</span>
+              </a>
+            {% endwith %}
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -67,21 +87,21 @@
         </div>
       </div>
       <div class="row no-gutters avatar">
-        <div class="d-flex flex-wrap">
-          {% for supporter in policy.initiators %}
-              {% include "fragments/avatar.html" with user=supporter.user %}
-              <div class="name">
-                {{ supporter.user.get_full_name|default:supporter.user.username }}
-              </div>
-              {% with "PLATFORM_POLICY_EDIT_STATE_LIST"|get_setting as state_list %}
-                {% if policy.state in state_list %}
-                  <div class="approval">
-                    {% if supporter.ack %}
-                      <span title="{% trans 'confirmed' %}" class=""><i class="material-icons done">done</i></span>
-                    {% else %}
-                      {% if supporter.user == user %}
+        {% for supporter in policy.initiators %}
+          <div class="d-flex flex-wrap">
+            {% include "fragments/avatar.html" with user=supporter.user %}
+            <div class="name">
+              {{ supporter.user.get_full_name|default:supporter.user.username }}
+            </div>
+            {% with "PLATFORM_POLICY_EDIT_STATE_LIST"|get_setting as state_list %}
+              {% if policy.state in state_list %}
+                <div class="approval">
+                  {% if supporter.ack %}
+                    <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
+                  {% else %}
+                    {% if supporter.user == user %}
+                      <div class="action-box">
                         <strong style="display:block">{% trans "Confirm now" %}</strong>
-  
                         <form action="{% url 'policy_acknowledge_support' policy_id=policy.id %}" style="display:inline" method="POST">
                           {% csrf_token %}
                           <button title="{% trans 'Support' %}" class="btn btn-success" type="submit">
@@ -94,24 +114,16 @@
                             <i class="material-icons">not_interested</i>
                           </button>
                         </form>
-                      {% else %}
-                        <span title="{% trans 'unconfirmed' %}" class=""><i class="material-icons warning">warning</i></span>
-                      {% endif %}
+                      </div>
+                    {% else %}
+                      <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
                     {% endif %}
-                  </div>
-                {% endif %}
-              {% endwith %}
-            </div>
-          {% endfor %}
-  
-          {% if request.guard.policy_invite %}
-            <div id="invite-initiators">
-              {% with 'initiators' as initiators %}
-                <a data-ajax="true" href="{% url 'policy_invite' policy_id=policy.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">{% trans "Invite Co-Initiators" %}</a>
-              {% endwith %}
-            </div>
-          {% endif %}
-        </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -128,3 +140,4 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+

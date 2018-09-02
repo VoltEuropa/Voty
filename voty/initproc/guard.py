@@ -314,7 +314,7 @@ class Guard:
       return False
     if self.user.is_superuser:
       return True
-    if not policy.supporting_policy.filter(initiator=True, user_id=self.user.id):
+    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=self.user.id):
       return False
 
     return True
@@ -323,6 +323,19 @@ class Guard:
   def policy_stage(self, policy=None):
     policy = policy or self.request.policy
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
+      policy.supporting_policy.filter(initiator=True):
+      return True
+    if not self.user.is_authenticated:
+      return False
+    if self.user.is_superuser:
+      return True
+
+    return False
+
+  # ---------------------------- stage policy -----------------------------------
+  def policy_delete(self, policy=None):
+    policy = policy or self.request.policy
+    if policy.state == settings.PLATFORM_POLICY_DELETE_STATE_LIST and \
       policy.supporting_policy.filter(initiator=True):
       return True
     if not self.user.is_authenticated:

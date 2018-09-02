@@ -26,7 +26,7 @@ def get_setting(my_setting):
     if len(lookup_path) > 1:
       reply = settings
       for key in lookup_path:
-        reply = getattr(reply, key)
+        reply = getattr(reply, key.replace("-", "_"))
       return reply
     else:
       return getattr(settings, my_setting.upper())

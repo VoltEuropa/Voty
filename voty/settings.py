@@ -286,11 +286,13 @@ PLATFORM_TECH_DEVELOPMENT_TICKET_URL = config.get("settings", "PLATFORM_TECH_DEV
 PLATFORM_SOCIAL_MEDIA_LOGO_URL = config.get("settings", "PLATFORM_SOCIAL_MEDIA_LOGO_URL")
 PLATFORM_LOGO_URL = config.get("settings", "PLATFORM_LOGO_URL")
 
+PLATFORM_UNDO_TIMEOUT = config.get("settings", "PLATFORM_UNDO_TIMEOUT")
+
 SITE_FONT_CSS_URL = config.get("settings", "SITE_FONT_CSS_URL")
 SITE_THEME_CSS_URL = config.get("settings", "SITE_THEME_CSS_URL")
 SITE_JS_URL = config.get("settings", "SITE_JS_URL")
 
-# -------------------------------- back compat ---------------------------------
+# -------------------------------- backcompat ----------------------------------
 BACKCOMPAT_ROLE_LIST = config.get("settings", "PLATFORM_BACKCOMPAT_GROUP_LIST").split(",")
 BACKCOMPAT_PERMISSION_LIST = config.get("settings", "PLATFORM_BACKCOMPAT_PERMISSION_LIST").split(",")
 BACKCOMPAT_INITIATORS_COUNT = config.get("settings", "PLATFORM_BACKCOMPAT_INITIATORS_COUNT")
@@ -300,7 +302,7 @@ BACKCOMPAT_LEVEL_TYPES = [(item, item) for item in config.get("settings", "PLATF
 BACKCOMPAT_ABSTENTION_START = datetime.strptime(" ".join(config.get("settings", "PLATFORM_BACKCOMPAT_ABSTENTION_START").split(",")), "%Y %m %d")
 BACKCOMPAT_SPEED_PHASE_END = datetime.strptime(" ".join(config.get("settings", "PLATFORM_BACKCOMPAT_SPEED_PHASE_END").split(",")), "%Y %m %d")
 
-  
+
 # XXX create a method to build choice tuples
 # XXX why do those have to be classes? Nothing will ever change
 # kept for initiative and policy
@@ -322,12 +324,12 @@ PLATFORM_POLICY_STATE_DICT = SimpleNamespace(**config._sections["platform_policy
 PLATFORM_POLICY_STATE_DEFAULT = config.get("platform_policy_settings", "PLATFORM_POLICY_STATE_DEFAULT")
 PLATFORM_POLICY_ADMIN_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_ADMIN_STATE_LIST").split(",")
 PLATFORM_POLICY_EDIT_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_EDIT_STATE_LIST").split(",")
+PLATFORM_POLICY_DELETE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_DELETE_STATE_LIST").split(",")
 PLATFORM_POLICY_INITIATORS_COUNT = config.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
 PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
 
 PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_dict")
 PLATFORM_POLICY_FIELD_HELPER = _getTranslatedDict("platform_policy_field_description_dict")
-
 
 # ---------------------------- Moderation Settings -----------------------------
 # minimum moderator votes, etc

@@ -1745,4 +1745,37 @@ button[type="submit"] {
   max-width: 2.5em;
 }
 
+/* ----------------------- initiators/supporters ---------------------------- */
+.initiators .avatar img {
+  width: 40px;
+  height: 40px;
+}
+.initiators .name {
+  line-height: 40px;
+  padding: 0 .5em;
+}
+.initiators .name + .approval {
+  display: flex;
+  width: 100%;
+  height: 4.5rem;
+  text-align: center;
+}
+.initiators .name + .approval .action-box {
+  display: inline-block;
+  align-self: flex-end
+}
+.initiators .action-form {
+  display: inline-block;
+  padding: 0 .25em;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+/* ------------------ action button/icon alignment -------------------------- */
+a.btn span, a.btn i {
+  vertical-align: middle;
+}
+.align-right {
+  text-align: right;
+}
 
