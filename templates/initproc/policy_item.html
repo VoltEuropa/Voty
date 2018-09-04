@@ -39,8 +39,9 @@
         </div>
       </div>
 
+      <hr/>
       {% include "initproc/blocks/meta.html" %}
-
+      <hr/>
       <div class="row skip-meta">
         <div class="col-4">
           <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
@@ -97,6 +98,12 @@
                 <span>{% trans "Invite Co-Initiators" %}</span>
               </a>
             {% endwith %}
+            <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                <i class="material-icons delete_outline">delete_outline</i>
+              </button>
+            </form>
           </div>
           {% endif %}
         </div>
@@ -109,7 +116,7 @@
 
   {# vote #}
 
-  <div class="container-fluid initiators">
+  <div class="container-fluid initiators container-fluid-{{ policy.state }}">
     <div class="container">
       <div class="row">
         <div class="col-12">
@@ -127,13 +134,15 @@
               {% if policy.state in state_list %}
                 <div class="approval">
                   {% if supporter.ack %}
-                    {% if supporter.user == user %}
-                      <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline" method="POST">
-                        {% csrf_token %}
-                        <button title="{% trans 'Remove Support' %}" class="btn btn-warning" type="submit">
-                          <i class="material-icons">not_interested</i>
-                        </button>
-                      </form>
+                    {% if supporter.user == user and not supporter.first %}
+                      <div class="action-box">
+                        <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline" method="POST">
+                          {% csrf_token %}
+                          <button title="{% trans 'Remove Support' %}" class="btn btn-warning" type="submit">
+                            <i class="material-icons">not_interested</i>
+                          </button>
+                        </form>
+                      </div>
                     {% else %}
                       <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
                     {% endif %}
@@ -179,6 +188,7 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
 
 
 

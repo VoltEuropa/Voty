@@ -583,12 +583,12 @@ def policy_delete(request, policy, *args, **kwargs):
     user = request.user
     tokeniser = UndoUrlTokenGenerator()
     revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
+    revert_message = "Policy deleted. <a href='%s'>%s</a>." % (revert_url, _("Click here to undo"))
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.DELETED
     policy.save()
 
     reversion.set_user(user)
-    messages.success(request, "".join([_("Policy deleted. Click here to UNDO: "),
-      mark_safe('<a href="{}">{}</a>'.format(revert_url, _("Revert Deletion")))]))
+    messages.success(request, mark_safe(revert_message))
     return redirect('/policy/{}-{}'.format(policy.id, policy.slug))
 
 # ------------------------------- Policy Undelete ------------------------------
