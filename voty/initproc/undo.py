@@ -17,11 +17,11 @@ import base64
 # ------------------------ Undo Token Generator --------------------------------
 class UndoUrlTokenGenerator(PasswordResetTokenGenerator):
 
-  def _make_hash_value(self, key, state, timestamp):
+  def _make_hash_value(self, key, timestamp):
     return (six.text_type(key) + six.text_type(timestamp))
 
   def _make_token_with_timestamp(self, key, state, timestamp):
-    ts_b64 = base64.b64encode(bytes(six.text_type(timestamp) + "-" + state))
+    ts_b64 = base64.b64encode(bytes((six.text_type(timestamp) + "-" + state), 'utf-8'))
 
     hash = salted_hmac(
       settings.SECRET_KEY,
@@ -53,3 +53,4 @@ class UndoUrlTokenGenerator(PasswordResetTokenGenerator):
       return None
 
     return state
+

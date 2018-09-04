@@ -8,6 +8,11 @@
 <div class="container-fluid">
   <div class="container new-initiative">
     <div class="row">
+      <div class="col-6">
+        <a href="{% url 'policy_item' policy_id=policy.id %}" class="go-to-index"><i class="material-icons chevron-left">chevron_left</i><span>{% trans "Return to Policy" %}</span></a>
+      </div>
+    </div>
+    <div class="row">
       <div class="col">
 
         {% if request.policy %}
@@ -25,8 +30,9 @@
         {% endif %}
           {% csrf_token %}
           {{form|bootstrap}}
-          <div class="form-group">
+          <div class="form-group cancel-wrap">
             <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+            <a class="align-right" href="{% url 'policy_item' policy_id=policy.id %}">{% trans "Cancel" %}</a>
           </div>
         </form>
       </div>
@@ -39,4 +45,3 @@
 {#<script src="{% static 'js/vendor/jquery-3.2.1.min.js' %}"></script>#}
 {#{{ form.media }}#}
 {#{% endblock %}#}
-

@@ -168,7 +168,7 @@ def policy_edit(request, policy, *args, **kwargs):
 
       # ask initial supporters to repledge? draft, only author can edit, 
       # will not be notified. if staged, initiators will be notified to repledge
-      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+      supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
       supporters.update(ack=False)
       notify(
         [supporter.user for _, supporter in enumerate(supporters)],
@@ -430,7 +430,8 @@ def policy_undo(self, request, policy, uidb64, token):
     user = User.objects.get(pk=uid)
   except (TypeError, ValueError, OverflowError, User.DoesNotExist):
     user = None
-    action = UndoUrlTokenGenerator.validate_token(user, token)
+    tokeniser = UndoUrlTokenGenerator()
+    action = tokeniser.validate_token(user, token)
 
   # undo is not a regular workflow action, can only be triggered by user that
   # made the last transition within 30 sec of this transition
@@ -579,14 +580,52 @@ def policy_delete(request, policy, *args, **kwargs):
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
   with reversion.create_revision():
-    revert_url = UndoUrlTokenGenerator.create_token(user, policy)
+    user = request.user
+    tokeniser = UndoUrlTokenGenerator()
+    revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.DELETED
     policy.save()
 
-    reversion.set_user(request.user)
+    reversion.set_user(user)
     messages.success(request, "".join([_("Policy deleted. Click here to UNDO: "),
       mark_safe('<a href="{}">{}</a>'.format(revert_url, _("Revert Deletion")))]))
     return redirect('/policy/{}-{}'.format(policy.id, policy.slug))
+
+# ------------------------------- Policy Undelete ------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.DELETED)
+def policy_undelete(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_undelete(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  with reversion.create_revision():
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.HIDDEN
+    policy.save()
+
+    reversion.set_user(request.user)
+    messages.success(request, _("Policy moved to hidden status. Unhide to put it back in Draft."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ------------------------------- Policy Unhide ------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.HIDDEN)
+def policy_unhide(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_unhide(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  with reversion.create_revision():
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.DRAFT
+    policy.save()
+
+    reversion.set_user(request.user)
+    messages.success(request, _("Policy moved to draft status. It can now be edited again by users."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+
 
 @login_required
 #@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')

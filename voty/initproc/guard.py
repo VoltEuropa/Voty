@@ -20,8 +20,6 @@ from django.conf import settings
 from django.utils import six
 from django.utils.translation import ugettext as _
 
-
-# ----------------- determine number of moderators for initiative --------------
 def _get_initiative_minium_moderator_votes():
   group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
   if isinstance(group, six.string_types):
@@ -279,70 +277,104 @@ class Guard:
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):
     policy = policy or self.request.policy
+    user = self.user
+
     if policy.state != settings.PLATFORM_POLICY_STATE_DICT.STAGED:
       return False
-
     if not self.policy_edit(policy):
       return False
+    if user.is_superuser:
+      return False
 
+    # XXX Initiators will change depending on level
     return policy.supporting_policy.filter(initiator=True).count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
 
   # ---------------------------- view policy -----------------------------------
   # used to be in can_access_initiative
-  def policy_view(self, policy):
+  def policy_view(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
 
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
-      not policy.supporting_policy.filter(first=True, user_id=self.user.id):
+      not policy.supporting_policy.filter(first=True, user_id=user.id):
       return False
+
     if policy.state not in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
       return True
 
-    # from here onward it's for moderators only
-    if not self.user.is_authenticated:
+    # XXX should be public, no?
+    if not user.is_authenticated:
       return False
-    if not self.user.has_perm('initproc.can_moderate_policy') and \
-      not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=self.user.id):
+    if not user.has_perm('initproc.can_moderate_policy') and \
+      not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=user.id):
       return False
 
     return True
 
   # ---------------------------- edit policy -----------------------------------
-  def policy_edit(self, policy):
+  def policy_edit(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
     if not policy.state in settings.PLATFORM_POLICY_EDIT_STATE_LIST:
       return False
-    if not self.user.is_authenticated:
-      return False
-    if self.user.is_superuser:
+    if user.is_superuser:
       return True
-    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=self.user.id):
+    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
-
     return True
 
   # ---------------------------- stage policy -----------------------------------
   def policy_stage(self, policy=None):
     policy = policy or self.request.policy
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
-      policy.supporting_policy.filter(initiator=True):
-      return True
-    if not self.user.is_authenticated:
-      return False
-    if self.user.is_superuser:
-      return True
+    user = self.user
 
+    if not user.is_authenticated:
+      return False
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT:
+      if policy.supporting_policy.filter(initiator=True) or \
+        user.is_superuser:
+          return True
     return False
 
-  # ---------------------------- stage policy -----------------------------------
+  # ---------------------------- delete policy ---------------------------------
   def policy_delete(self, policy=None):
     policy = policy or self.request.policy
-    if policy.state == settings.PLATFORM_POLICY_DELETE_STATE_LIST and \
-      policy.supporting_policy.filter(initiator=True):
-      return True
-    if not self.user.is_authenticated:
-      return False
-    if self.user.is_superuser:
-      return True
+    user = self.user
 
+    if not user.is_authenticated:
+      return False
+    if policy.state in settings.PLATFORM_POLICY_DELETE_STATE_LIST:
+      if policy.supporting_policy.filter(initiator=True) or \
+        user.has_perm("initproc.policy_can_delete") or \
+        user.is_superuser:
+          return True
+    return False
+
+  # --------------------------- undelete policy --------------------------------
+  def policy_undelete(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if policy.state in settings.PLATFORM_POLICY_STATE_DICT.DELETED and \
+      (user.has_perm("initproc.policy_can_delete") or user.is_superuser):
+      return True
+    return False
+
+  # --------------------------- unhide policy --------------------------------
+  def policy_unhide(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if policy.state in settings.PLATFORM_POLICY_STATE_DICT.HIDDEN and \
+      (user.has_perm("initproc.policy_can_unhide") or user.is_superuser):
+      return True
     return False
 
 # ----------------------------- Publish Guard ----------------------------------

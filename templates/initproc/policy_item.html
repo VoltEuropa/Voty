@@ -19,9 +19,14 @@
   <div class="container-fluid">
     <div class="container">
       <div class="row">
-        <div class="col">
-          <a href="/" class="go-to-index"><i class="material-icons chevron-left">chevron_left</i>{% trans "Return to Overview" %}</a>
+        <div class="col-6">
+          <a href="/" class="go-to-index"><i class="material-icons chevron-left">chevron_left</i><span>{% trans "Return to Overview" %}</span></a>
         </div>
+        {% if request.guard.policy_edit %}
+        <div class="col-6 align-right">
+          <a class="go-to-index" href="{% url 'policy_edit' policy_id=policy.id %}"><span>{% trans "Edit Policy" %}</span><i class="material-icons chevron-right">chevron_right</i></a>
+        </div>
+        {% endif %}
       </div>
       <div class="row initiative-title">
         <div class="col-12">
@@ -41,6 +46,31 @@
           <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
         </div>
         <div class="col-8">
+
+          {% if request.guard.policy_undelete %}
+          <div class="align-right">
+            <form class="action-form" action="{% url 'policy_undelete' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Undelete Policy into hidden status' %}" class="btn btn-success" type="submit">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Undelete Policy (will be hidden)" %}</span>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+
+          {% if request.guard.policy_unhide %}
+          <div class="align-right">
+            <form class="action-form" action="{% url 'policy_unhide' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Unhide Policy into draft status' %}" class="btn btn-success" type="submit">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Unhide Policy (set to Draft)" %}</span>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+
           {% if request.guard.policy_stage %}
           <div class="align-right">
             <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
@@ -58,7 +88,7 @@
             </form>
           </div>
           {% endif %}
-         
+
           {% if request.guard.policy_invite %}
           <div class="align-right" id="invite-initiators">
             {% with 'initiators' as initiators %}
@@ -97,7 +127,16 @@
               {% if policy.state in state_list %}
                 <div class="approval">
                   {% if supporter.ack %}
-                    <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
+                    {% if supporter.user == user %}
+                      <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline" method="POST">
+                        {% csrf_token %}
+                        <button title="{% trans 'Remove Support' %}" class="btn btn-warning" type="submit">
+                          <i class="material-icons">not_interested</i>
+                        </button>
+                      </form>
+                    {% else %}
+                      <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
+                    {% endif %}
                   {% else %}
                     {% if supporter.user == user %}
                       <div class="action-box">
@@ -140,4 +179,8 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
+
+
+
 

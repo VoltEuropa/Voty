@@ -1778,4 +1778,21 @@ a.btn span, a.btn i {
 .align-right {
   text-align: right;
 }
-
+/* ------------------------- subtitle styling ------------------------------- */
+.initiative-subtitle {
+  text-align: center;
+  font-style: italic;
+  margin: -.5rem auto 2rem;
+}
+.initiative-subtitle p {
+  margin: 0;
+}
+/* ----------------------- save button/cancel link -------------------------- */
+.cancel-wrap button,
+.cancel-wrap a {
+  display: inline-block;
+  vertical-align: middle;
+}
+.cancel-wrap a {
+  margin-left: 1rem;
+}
