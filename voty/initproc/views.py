@@ -13,8 +13,6 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils.decorators import available_attrs
 from django.utils.safestring import mark_safe
-from django.utils.encoding import force_text
-from django.utils.http import urlsafe_base64_decode
 from django.contrib.postgres.search import SearchVector
 from django.contrib.auth import get_user_model
 from django.contrib import messages
@@ -423,30 +421,22 @@ def show_moderation(request, initiative, target_id, slug=None):
 # ----------------------------- Undo action ------------------------------------
 @login_required
 @policy_state_access()
-def policy_undo(self, request, policy, uidb64, token):
-
-  try:
-    uid = force_text(urlsafe_base64_decode(uidb64))
-    user = User.objects.get(pk=uid)
-  except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-    user = None
-    tokeniser = UndoUrlTokenGenerator()
-    action = tokeniser.validate_token(user, token)
-
-  # undo is not a regular workflow action, can only be triggered by user that
-  # made the last transition within 30 sec of this transition
-  if user is not None and action is not None:
-    with reversion.create_revision():
-      policy.state = token
-      policy.save()
-
-      reversion.set_user(request.user)
-      messages.success(_("Reverted to previous state."))
-      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
-    
-  else:
-    messages.warning(request, _("Undo not possible. Please contact the Policy team in case you require assistance."))
+def policy_undo(request, policy, slug, uidb64, token):
+  tokeniser = UndoUrlTokenGenerator()
+  undo_state, undo_error = tokeniser.validate_token(request.user, "/".join([uidb64, token])) 
+  
+  if undo_state is None:
+    messages.warning(request, "".join([_("Undo not possible. Please contact the Policy team in case you require assistance. Error:"), undo_error]))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  with reversion.create_revision():
+    policy.state = undo_state
+    policy.save()
+
+    reversion.set_user(request.user)
+    messages.success(request, _("Reverted to previous state."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
 
 # ---------------------------- Policy Invite -----------------------------------
 @ajax

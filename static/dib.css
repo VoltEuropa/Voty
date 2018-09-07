@@ -1797,6 +1797,30 @@ a.btn span, a.btn i {
   margin-left: 1rem;
 }
 /* ----------------------- hidden/deleted overlay --------------------------- */
+.container-fluid-deleted {
+  background-color: #f4eaea;
+  opacity: .8;
+}
+.container-fluid-hidden {
+  background-color: #F5FAF3;
+  opacity: .8;
+}
+/* ----------------------- hidden/deleted overlay --------------------------- */
+.message-auto-fade {
+  animation: fade .5s steps(90) forwards;
+ -webkit-animation: fade .5s steps(90) forwards;
+  -moz-animation: fade .5s steps(90) forwards;
+  animation-delay: 2.5s;
+  -webkit-animation-delay: 2.5s;
+  -moz-animation-delay: 2.5s;
+}
 
+@keyframes fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.0;
+  }
 }
 

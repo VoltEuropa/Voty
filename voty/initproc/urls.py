@@ -19,10 +19,14 @@ urlpatterns = [
   url(r"^about/$", views.about, name="about"),
   url(r"^account/language/$", views.account_language, name="account_language"),
 
-  # autocomplete for mass invitations  
+  # autocomplete for invite supporters
   url(r"^user_autocomplete$", views.UserAutocomplete.as_view(), name="user_autocomplete"),
 
   # policies
+
+  # undo, must go first, else policy_item will mtch
+  url(r'^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undo/(?P<uidb64>[0-9A-Za-z_\\-\\=]+)/(?P<token>[0-9A-Za-z]{1,20})/$', views.policy_undo, name="policy_undo"),
+
   url(r"^policy/new$", views.policy_new, name="policy_new"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/$", views.policy_item, name="policy_item"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/edit$", views.policy_edit, name="policy_edit"),
@@ -34,11 +38,7 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undelete$", views.policy_undelete, name="policy_undelete"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/unhide$", views.policy_unhide, name="policy_unhide"),
 
-  # undo
-  url(r'^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undo/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', views.policy_undo, name="policy_undo"),
-
   # notification forward to initiative, careful, this autotranslates unfortunately
-  #url(r"^initiative/(?P<init_id>\d+)/?$", views.item, name=_("initiative")),
   url(r"^initiative/(?P<init_id>\d+)/$", views.item, name=_("initiative")),
 
   url(r"^initiative/new$", views.new, name="initiative_new"),
@@ -61,3 +61,4 @@ urlpatterns = [
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.like, name="like"),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.unlike, name="unlike")
 ]
+
