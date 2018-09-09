@@ -30,6 +30,7 @@ from django.db import models
 import reversion
 import pytz
 
+# =============================== HELPERS ======================================
 # ------------------------ Build Class field dict .-----------------------------
 def _create_class_field_dict(field_dict):
   response = {}
@@ -54,8 +55,9 @@ def _create_class_field_dict(field_dict):
     response[field_key] = getattr(models, field_type)(**dict(config_list))
 
   return response
+
 # ------------------------ Dynamic Class Generator -----------------------------
-# allows to create dynamic abstracct classes from settings/ini file, more info,
+# allows to create dynamic abstract classes from settings/ini file, more info,
 # see https://code.djangoproject.com/wiki/DynamicModels
 # XXX not sure this is the right place?
 def _create_model(name, fields=None, app_label="", module="", options=None, admin_options=None):
@@ -241,21 +243,21 @@ class Policy(PolicyBase):
     # all fields required => len>0 = True [True, True, False] = 1*1*0 = 0
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
-      settings.PLATFORM_POLICY_STATE_DICT.FINALIZED,
+      settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
       settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
       settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
       settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
     ]:
       return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT and
+        self.supporting_policy.filter(initiator=True, ack=True).count() >= settings.PLATFORM_POLICY_INITIATORS_COUNT and
         reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()])
       )
 
     if self.state in [settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED]:
-      return self.supporting_policy.filter(initiator=True, ack=True).count() == settings.PLATFORM_POLICY_INITIATORS_COUNT
+      return self.supporting_policy.filter(initiator=True, ack=True).count() >= settings.PLATFORM_POLICY_INITIATORS_COUNT
 
-    # note, the Quorum will be specific to each policy
+    # note, the Quorum (enough supporters) will be specific to each policy
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
       return self.supporting_policy.filter().count() >= self.quorum
 
@@ -279,10 +281,10 @@ class Policy(PolicyBase):
       return self.was_closed_at + timedelta(days=settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS)
 
     if self.was_validated_at:
-      if self.state == Initiative.STATES.SEEKING_SUPPORT:
+      if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
         if self.variant_of:
           if self.variant_of.went_in_discussion_at:
-            return self.variant_of.went_in_discussion_at +(2 * week)
+            return self.variant_of.went_in_discussion_at + (2 * week)
 
         # once support is won, there is an additional waiting phase
         if self.ready_for_next_stage:
@@ -398,10 +400,10 @@ class Policy(PolicyBase):
   def initiators(self):
     return self.supporting_policy.filter(initiator=True).order_by("created_at")
 
-  # XXX not used?
-  #@cached_property
-  #def custom_cls(self):
-  #  return 'item-{} state-{} area-{}'.format(slugify(self.title), slugify(self.state), slugify(self.scope))
+  # used by simpleFormVerifier
+  @cached_property
+  def custom_cls(self):
+    return 'item-{} state-{} area-{}'.format(slugify(self.title), slugify(self.state), slugify(self.scope))
 
   @cached_property
   def allows_abstention(self):
@@ -409,30 +411,39 @@ class Policy(PolicyBase):
 
   @property
   def current_moderations(self):
-    return self.moderations.filter(stale=False)
+    return self.policy_moderations.filter(stale=False)
 
   @property
   def stale_moderations(self):
-    return self.moderations.filter(stale=True)
+    return self.policy_moderations.filter(stale=True)
 
   @cached_property
   def eligible_voter_count(self):
 
-    # set when initiative is closed
-    # XXX but when is it closed?
+    # XXX set when policy is closed - but when is it closed?
     if self.eligible_voters:
       return self.eligible_voters
 
-    # while open, number of voters == number of users
-    # XXX, not so fast...
+    # XXX while open, number of voters == number of users -> not so fast...
     else:
       return get_user_model().objects.filter(is_active=True).count()
 
   def __str__(self):
     return self.title;
 
+  # XXX we wrap pinax:notify onto policy:notify. And we don't like this so much...
+  # XXX if using only cached properties, then why not, but else redundant
+  def policy_notify(self, recipients, notice_type, extra_context=None, subject=None, **kwargs):
+    context = extra_context or dict()
+    if subject:
+      kwargs['sender'] = subject
+      context['target'] = self
+    else:
+      kwargs['sender'] = self
+    notify(recipients, notice_type, context, **kwargs)
+
   def notify_moderators(self, *args, **kwargs):
-    return self.policy_notify([m.user for m in self.moderations.all()], *args, **kwargs)
+    return self.policy_notify([m.user for m in self.policy_moderations.all()], *args, **kwargs)
 
   def notify_followers(self, *args, **kwargs):
 
@@ -445,15 +456,6 @@ class Policy(PolicyBase):
     query = [s.user for s in self.initiators]
     return self.policy_notify(query, *args, **kwargs)
 
-  # we wrap pinax:notify onto policy:notify
-  def policy_notify(self, recipients, notice_type, extra_context=None, subject=None, **kwargs):
-    context = extra_context or dict()
-    if subject:
-      kwargs['sender'] = subject
-      context['target'] = self
-    else:
-      kwargs['sender'] = self
-    notify(recipients, notice_type, context, **kwargs)
 
 # ------------------------------ Initiative ------------------------------------
 @reversion.register()
@@ -866,7 +868,7 @@ class Response(Likeable, Commentable):
   @property
   def unique_id(self):
     #return "{}-{}-{}-{}".format(self.type, self.id, self.target_type, self.target_id)
-    return "{}-{}-{}".format(self.type, self.id)
+    return "{}-{}".format(self.type, self.id)
 
 # ------------------------------- Argument -------------------------------------
 class Argument(Response):
@@ -910,6 +912,5 @@ class Moderation(Response):
 
   type = "moderation"
   stale = models.BooleanField(default=False)
-  vote = models.CharField(max_length=1, choices=settings.MODERATED_CHOICES)
+  vote = models.CharField(max_length=1, choices=settings.PLATFORM_MODERATION_CHOICE_LIST)
   text = models.CharField(max_length=500, blank=True)
-

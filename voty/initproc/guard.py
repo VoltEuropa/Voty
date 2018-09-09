@@ -20,23 +20,6 @@ from django.conf import settings
 from django.utils import six
 from django.utils.translation import ugettext as _
 
-def _get_initiative_minium_moderator_votes():
-  group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
-  if isinstance(group, six.string_types):
-    groups = (group, )
-  else:
-    groups = group
-
-  total_moderators = User.objects.filter(groups__name__in=groups).distinct()
-  minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.MODERATIONS.MINIMUM_MODERATOR_PERCENTAGE)/100)
-  minimum_moderators_by_count = int(settings.MODERATIONS.MINIMUM_MODERATOR_VOTES)
-
-  if minimum_moderators_by_percent >= minimum_moderators_by_count:
-    return minimum_moderators_by_percent
-  return minimum_moderators_by_count
-
-class ContinueChecking(Exception): pass
-
 def _compound_action(func):
     @wraps(func)
     def wrapped(self, obj=None, *args, **kwargs):
@@ -48,43 +31,66 @@ def _compound_action(func):
             return func(self, obj)
     return wrapped
 
-# ---------------- Instance of the guard for the given user --------------------
+# ================================= CLASSES ====================================   
+# ---------------------------- continue checking -------------------------------
+class ContinueChecking(Exception):
+  pass
+
+# ---------------- Instance of the Guard for the given user --------------------
 class Guard:
 
   def __init__(self, user, request=None):
     self.user = user
     self.request = request
 
-    # XXX? REASON IS NOT THREAD SAFE, but works good enough for us for now.
+    # XXX REASON IS NOT THREAD SAFE, but works good enough for us for now.
     self.reason = None
 
-  # ------------------- how many moderators' inputs are missing --------------
-  def _mods_missing_for_i(self, init):
+  # --------------------- missing moderation reviews to continue -----------------
+  def _get_policy_minium_moderator_votes(self):
+  
+    # get everyone who is a moderator by group
+    # XXX get by permission, add scope
+    group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
+    if isinstance(group, six.string_types):
+      groups = (group, )
+    else:
+      groups = group
+  
+    total_moderators = User.objects.filter(groups__name__in=groups).distinct()
+    minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.MODERATIONS.MINIMUM_MODERATOR_PERCENTAGE)/100)
+    minimum_moderators_by_count = int(settings.MODERATIONS.MINIMUM_MODERATOR_VOTES)
+  
+    if minimum_moderators_by_percent >= minimum_moderators_by_count:
+      return minimum_moderators_by_percent
+    return minimum_moderators_by_count
+  
+  # --------------------- missing moderation reviews to continue -----------------
+  def _missing_moderation_reviews(self, policy):
   
     # total moderators required are based on percentage/minimum person
-    total = _get_initiative_minium_moderator_votes() 
+    total = self._get_policy_minium_moderator_votes() 
   
-    # overall moderations on this initiative
-    # XXX what if not enough moderators because all are initiators?
-    moderations = init.moderations.filter(stale=False)
+    # overall moderations on this policy
+    # XXX what if only policy team proposes and not enough moderators?
+    moderations = policy.policy_moderations.filter(stale=False)
     total -= moderations.count()
   
-    # diversity is a choice
-    if int(settings.USE_DIVERSE_MODERATION_TEAM) != 0:
+    # moderator diversity are optional
+    if bool(int(settings.USE_DIVERSE_MODERATION_TEAM)):
       female  = int(settings.MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES)
       diverse = int(settings.MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES)
   
-      # exclude moderator if initiator
-      for config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
-        if config.is_female_mod:
+      # exclude moderator from required quotas if he/she is initiator
+      for user_config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
+        if user_config.is_female_mod:
           female -= 1
-        if config.is_diverse_mod:
+        if user_config.is_diverse_mod:
           diverse -= 1
       return (female, diverse, total)
-
+  
     # by default only check for total
     return (0, 0, total)
-
 
   def make_intiatives_query(self, filters):
       if not self.user.is_authenticated:
@@ -182,7 +188,7 @@ class Guard:
           # has already voted, thanks, bye
           return False
 
-      (female,diverse,total) = self._mods_missing_for_i(init)
+      (female,diverse,total) = self._missing_moderation_reviews(init)
       try:
           if female > 0:
               if self.user.config.is_female_mod:
@@ -244,7 +250,7 @@ class Guard:
       if init.moderations.filter(stale=False, vote='n'): # We have NAYs
           return False
 
-      (female,diverse,total) = self._mods_missing_for_i(init)
+      (female,diverse,total) = self._missing_moderation_reviews(init)
 
       return (female <= 0) & (diverse <= 0) & (total <= 0)
 
@@ -274,6 +280,8 @@ class Guard:
           raise ContinueChecking()
       return False
 
+  # XXX permissions contain a lot of duplicate code, improve later once all set
+
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):
     policy = policy or self.request.policy
@@ -295,18 +303,14 @@ class Guard:
     policy = policy or self.request.policy
     user = self.user
 
+    if policy.state in settings.PLATFORM_POLICY_ADMIN_STATE_LIST and \
+      user.has_perm("initproc.can_validate_policy"):
+        if not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=user.id):
+          return True
+        return False
+
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
       not policy.supporting_policy.filter(first=True, user_id=user.id):
-      return False
-
-    if policy.state not in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
-      return True
-
-    # XXX should be public, no?
-    if not user.is_authenticated:
-      return False
-    if not user.has_perm('initproc.can_moderate_policy') and \
-      not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=user.id):
       return False
 
     return True
@@ -375,6 +379,120 @@ class Guard:
     if policy.state in settings.PLATFORM_POLICY_STATE_DICT.HIDDEN and \
       (user.has_perm("initproc.policy_can_unhide") or user.is_superuser):
       return True
+    return False
+
+  # ---------------------------- submit policy ---------------------------------
+  def policy_submit(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+    initiators = policy.supporting_policy.filter(initiator=True, ack=True)
+
+    if not user.is_authenticated:
+      return False
+    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
+      return False
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+      if initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
+        if policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id) or user.is_superuser:
+          return True
+    return False
+
+  # -------------------------- validate policy ---------------------------------
+  # checks if user technically CAN validate
+  def policy_validate(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
+      if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+        # leaving this means, moderator/initiators never see feedback
+        # moved to should moderate
+        #if policy.supporting_policy.filter(user=user, initiator=True):
+        #  self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+        #  return False
+        return True
+    return False
+
+  # ---------------------- should validate policy ------------------------------
+  # checks if user SHOULD validate - this method should test against all "soft"
+  # criteria, like female/diverse etc moderators
+  def policy_validate_eligible(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not self.policy_validate(policy):
+      return False
+
+    if policy.supporting_policy.filter(user=user, initiator=True):
+      self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+      return False
+
+    moderations = policy.policy_moderations.filter(stale=False)
+
+    # already moderated, done
+    if moderations.filter(user=self.user):
+      return False
+    
+    # custom criteria
+    (female, diverse, total) = self._missing_moderation_reviews(policy)
+    try:
+      if female > 0:
+        if self.user.config.is_female_mod:
+          return True
+      if diverse > 0:
+        if self.user.config.is_diverse_mod:
+          return True
+    except User.config.RelatedObjectDoesNotExist:
+      pass
+
+    # XXX "user cannot contribute to fulfilling quota -- should moderate unless 
+    # we already know it'll be wasted" => why?
+    return (total > female) & (total > diverse)
+
+  # ---------------------- comment X (anything...) -----------------------------
+  def target_comment(self, target_object=None):
+    
+    if (isinstance (target_object, Moderation)):
+      return True
+
+    self.reason = None
+    last_comment = target_object.comments.order_by("-created_at").first()
+
+    if not last_comment and target_object.user == self.user:
+      self.reason = _("You can comment again only after another person has added a comment.")
+      return False
+
+    # XXX what's the difference?
+    elif last_comment and last_comment.user == self.user:
+      self.reason = _("You can comment again only after another person has added a comment.")
+      return False
+
+    return True
+
+  # ------------------------- invalidate policy --------------------------------
+  def policy_invalidate(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
+      if user.has_perm("initproc.policy_can_invalidate") or user.is_superuser:
+        if policy.supporting_policy.filter(user=user, initiator=True):
+          self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+          return False
+        return True
+    return False
+
+  # --------------------------- reject policy ----------------------------------
+  def policy_reject(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
+      if user.has_perm("initproc.policy_can_reject") or user.is_superuser:
+        if policy.supporting_policy.filter(user=user, initiator=True):
+          self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+          return False
+        return True
     return False
 
 # ----------------------------- Publish Guard ----------------------------------

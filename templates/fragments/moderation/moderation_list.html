@@ -1,0 +1,6 @@
+{% load i18n %}
+{% for m in moderations %}
+  {% include "fragments/moderation/moderation_item.html" with full=0 %}
+{% empty %}
+  <i id="no-moderations">{% trans "Not validated by Moderator yet." %}</i>
+{% endfor %}

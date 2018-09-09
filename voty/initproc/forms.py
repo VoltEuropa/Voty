@@ -18,7 +18,34 @@ from uuid import uuid4
 
 from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative, Policy
 
-# ============================= Classes ========================================
+# =============================== HELPERS ======================================
+# ------------------------ Build Class field dict .-----------------------------
+# XXX duplicate to models.py, only switched forms for models. Create mixin!
+def _create_class_field_dict(field_dict):
+  response = {}
+
+  # XXX refactor...
+  for field_key, field_value in field_dict.items():
+    field_type, field_param_list = field_value.split("|")
+    config_list = []
+
+    for config_entry in field_param_list.split(","):
+      key, value = config_entry.split("=")
+      value_type, value_value = value.split(":")
+      if value_type == "int":
+        value_value = int(value_value)
+      elif value_type == "bool":
+        if value_value == "True":
+          value_value = True
+        else:
+          value_value = False
+      
+      config_list.append([key, value_value])
+    response[field_key] = getattr(forms, field_type)(**dict(config_list))
+
+  return response
+
+# -------------------------- Simple Form Verifier ------------------------------
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send")):
   def wrap(fn):
@@ -48,6 +75,7 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
     return view
   return wrap
 
+
 # ============================= Classes ========================================
 # ----------------------------- PolicyForm -------------------------------------
 class PolicyForm(forms.ModelForm):
@@ -68,6 +96,7 @@ class PolicyForm(forms.ModelForm):
   topic = forms.ChoiceField(
     choices = sorted(settings.CATEGORIES.TOPIC_CHOICES, key=lambda x: x[1]),
   )
+
 # --------------------------- InviteUsersForm ----------------------------------
 class InviteUsersForm(forms.Form):
 
@@ -81,40 +110,93 @@ class InviteUsersForm(forms.Form):
     )
   )
 
+# -------------------------- NewModerationForm ---------------------------------
+class NewModerationForm(forms.ModelForm):
+
+  class Meta:
+    model = Moderation
+    fields = ["text", "vote"]
+
+  # custom properties for fragments/simple_form.html
+  title = _("Evaluate Policy Proposal")
+  description = _("Please flag the policy if it:")
+
+  text = forms.CharField(
+    widget=forms.Textarea,
+    required=False,
+    label=_("Comment/Hints/Remarks"),
+  )
+  vote = forms.ChoiceField(
+    widget=forms.RadioSelect(),
+    required=True,
+    label=_("Final Assessment:"),
+    choices=sorted(settings.PLATFORM_MODERATION_CHOICE_LIST, key=lambda x: x[1]),
+  )
+
+  def clean(self):
+    cleaned_data = super().clean()
+
+    # cannot give positive validation with a flag checked
+    if cleaned_data['vote'] == 'y':
+      for key in settings.PLATFORM_MODERATION_FIELD_LABELS:
+        if cleaned_data[key]:
+          self.add_error("vote", _("You cannot flag a Policy and approve it at the same time."))
+          break
+
+    # non-confirmations need to have a justification
+    else:    
+      if not cleaned_data['text']:
+        self.add_error("text", _("Please briefly justify your validation to the initiator."))
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+
+    # Note: we're adding a lot of checks dynamically here which need to be 
+    # unchecked for the actual moderation (which doesn't store them) to be saved
+    field_dict = _create_class_field_dict(settings.PLATFORM_MODERATION_BASE_CONFIG)
+    field_order = []
+    for key in field_dict:
+      field_dict[key].label = settings.PLATFORM_MODERATION_FIELD_LABELS[key]
+      self.fields[key] = field_dict[key]
+      field_order.append(key)
+    self.order_fields(field_order)
+
 # ----------------------------- InitiativeForm ---------------------------------
 class InitiativeForm(forms.ModelForm):
 
     class Meta:
-        model = Initiative
-        fields = ['title', 'subtitle', 'summary', 'problem', 'forderung',
-                  'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument',
-                  'einordnung', 'ebene', 'bereich']
+      model = Initiative
+      fields = ['title', 'subtitle', 'summary', 'problem', 'forderung',
+                'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument',
+                'einordnung', 'ebene', 'bereich']
 
-        labels = {
-            "title" : _("Headline"),
-            "subtitle": _("Teaser"),
-            "summary" : _("Summary"),
-            "problem": _("Problem Assessment"),
-            "forderung" : _("Proposal"),
-            "kosten": _("Cost Estimation"),
-            "fin_vorschlag": _("Finance Proposition"),
-            "arbeitsweise": _("Methodology"),
-            "init_argument": _("Initiators' Argument"),
-            "einordnung": _("Context"),
-            "ebene": _("Scope"),
-            "bereich": _("Topic"),
-        }
-        help_texts = {
-            "title" : _("The headline should state the proposal in a short and precise way."),
-            "subtitle": _("Briefly describe the problem or situation, the Initiative should adress. Try limiting yourself to 1-2 sentences."),
-            "summary" : _("Summarize the Initiative in 3-4 sentences."),
-            "problem": _("State and assess the situation or problem, the Initiative should solve in 3-4 sentences."),
-            "forderung": _("What are the concreted demands or proposals?"),
-            "kosten": _("Will the Initiative cause costs? Try to give an estimation of the cost associated with the Initiative."),
-            "fin_vorschlag": _("Briefly describe your ideas of how costs associated with the Initiative could be covered. It would be sufficient to write that the Initiative will be financed via tax income."),
-            "arbeitsweise": _("Have you consulted experts? What information is your assessment based on? Is it possible to sources of information?"),
-            "init_argument": _("Please state why this Initiative is important for you and why you are submitting it."),
-        }
+      labels = {
+          "title" : _("Headline"),
+          "subtitle": _("Teaser"),
+          "summary" : _("Summary"),
+          "problem": _("Problem Assessment"),
+          "forderung" : _("Proposal"),
+          "kosten": _("Cost Estimation"),
+          "fin_vorschlag": _("Finance Proposition"),
+          "arbeitsweise": _("Methodology"),
+          "init_argument": _("Initiators' Argument"),
+          "einordnung": _("Context"),
+          "ebene": _("Scope"),
+          "bereich": _("Topic"),
+      }
+      help_texts = {
+          "title" : _("The headline should state the proposal in a short and precise way."),
+          "subtitle": _("Briefly describe the problem or situation, the Initiative should adress. Try limiting yourself to 1-2 sentences."),
+          "summary" : _("Summarize the Initiative in 3-4 sentences."),
+          "problem": _("State and assess the situation or problem, the Initiative should solve in 3-4 sentences."),
+          "forderung": _("What are the concreted demands or proposals?"),
+          "kosten": _("Will the Initiative cause costs? Try to give an estimation of the cost associated with the Initiative."),
+          "fin_vorschlag": _("Briefly describe your ideas of how costs associated with the Initiative could be covered. It would be sufficient to write that the Initiative will be financed via tax income."),
+          "arbeitsweise": _("Have you consulted experts? What information is your assessment based on? Is it possible to sources of information?"),
+          "init_argument": _("Please state why this Initiative is important for you and why you are submitting it."),
+      }
+
+
 
 
 # --------------------------- NewArgumentForm ----------------------------------
@@ -152,42 +234,3 @@ class NewCommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['text']
-
-# -------------------------- NewModerationForm ---------------------------------
-QESTIONS_COUNT = 11
-class NewModerationForm(forms.ModelForm):
-
-
-    TITLE = _("Moderation")
-    TEXT = _("The Initiative ... (please remove non-fitting characteristics")
-
-    q0 = forms.BooleanField(required=False, initial=True, label=_("Contradicts in some point with human rights or human dignity"))
-    q1 = forms.BooleanField(required=False, initial=True, label=_("Contains pejorative terms against certain groups (eg Immigrants"))
-    q2 = forms.BooleanField(required=False, initial=True, label=_("Is excluding/rasict/homophobe/discriminatory/transphobe/sexist"))
-    q3 = forms.BooleanField(required=False, initial=True, label=_("Is nationalistic"))
-    q4 = forms.BooleanField(required=False, initial=True, label=_("Is un-democratic?"))
-    q5 = forms.BooleanField(required=False, initial=True, label=_("Leads to less transparency"))
-    q6 = forms.BooleanField(required=False, initial=True, label=_("Leads to more patronizing or exclusion of persons in participating"))
-    q7 = forms.BooleanField(required=False, initial=True, label=_("Is putting a burden on future generations"))
-    q8 = forms.BooleanField(required=False, initial=True, label=_("Endangers the climate and our planet"))
-    q9 = forms.BooleanField(required=False, initial=True, label=_("Leads to a widening of the prospertiy divide (rich get richer, poor get poorer"))
-    q10 = forms.BooleanField(required=False, initial=True, label=_("Puts groups of disadvantaged persons at even more disadvantages."))
-    text = forms.CharField(required=False, label=_("Comment/Hint/Remark"), widget=forms.Textarea)
-    vote = forms.ChoiceField(required=True, label=_("Your Assessment"),
-            choices=[('y', 'yay'),('n', 'nope')],
-            widget=forms.RadioSelect())
-
-    def clean(self):
-        cleanded_data = super().clean()
-        if cleanded_data['vote'] == 'y':
-            for i in range(QESTIONS_COUNT):
-                if cleanded_data['q{}'.format(i) ]:
-                    self.add_error("vote", _("You voted postively, although you marked at least one of the above issues."))
-                    break
-        else:
-            if not cleanded_data['text']:
-                self.add_error("text", _("Can you justifiy your decision?"))
-
-    class Meta:
-        model = Moderation
-        fields = ['q{}'.format(i) for i in range(QESTIONS_COUNT)] + ['text', 'vote']

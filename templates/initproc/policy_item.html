@@ -42,9 +42,22 @@
       <hr/>
       {% include "initproc/blocks/meta.html" %}
       <hr/>
+
+      {% if request.guard.policy_validate %}
+      <div class="row initiative-moderation">
+        <div class="col-12">
+        {% include "fragments/moderation/moderation_index.html" %}      
+        </div>
+      </div>
+      {% endif %}
+
+      {% if request.guard.reason %}
+        <div class="alert alert-warning">{{ request.guard.reason }}</div>
+      {% endif %}
+
       <div class="row skip-meta">
         <div class="col-4">
-          <a href="#initiative-text" class="skip-meta"><i class="material-icons expand-more">expand_more</i>{% trans "Browse Policy" %}</a>
+          <a href="#initiative-text" class="skip-meta"><i class="material-icons chevron_right">chevron_right</i>{% trans "Browse Policy" %}</a>
         </div>
         <div class="col-8">
 
@@ -90,6 +103,24 @@
           </div>
           {% endif %}
 
+          {% if request.guard.policy_submit %}
+          <div class="align-right">
+            <form class="action-form" action="{% url 'policy_submit' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Submit Policy for validation' %}" class="btn btn-success" type="submit">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Submit Policy (for)" %}</span>
+              </button>
+            </form>
+            <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                <i class="material-icons delete_outline">delete_outline</i>
+              </button>
+            </form>
+          </div>          
+          {% endif %}
+
           {% if request.guard.policy_invite %}
           <div class="align-right" id="invite-initiators">
             {% with 'initiators' as initiators %}
@@ -106,6 +137,7 @@
             </form>
           </div>
           {% endif %}
+
         </div>
       </div>
     </div>
@@ -114,13 +146,11 @@
 
 {% block content %}
 
-  {# vote #}
-
   <div class="container-fluid initiators container-fluid-{{ policy.state }}">
     <div class="container">
       <div class="row">
         <div class="col-12">
-          <h6 class="text-muted classification">{% trans "Initiators (note: edits require to reconfirm support)" %}</h6>
+          <h6 class="text-muted classification"><span>{% trans "Initiators (edits require reconfirming support)" %}</span></h6>
         </div>
       </div>
       <div class="row no-gutters avatar">
@@ -188,7 +218,4 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-
-
-
 

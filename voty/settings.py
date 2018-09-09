@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from six.moves import configparser
 from django.utils.translation import ugettext_lazy as _
 
-# ------------------------------ helpers ---------------------------------------
+# ================================= HELPERS ====================================
 def _getCharDict():
   char_dict = {}
   for x in ("#","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"):
@@ -308,7 +308,6 @@ BACKCOMPAT_SPEED_PHASE_END = datetime.strptime(" ".join(config.get("settings", "
 # kept for initiative and policy
 VOTED = SimpleNamespace(**config._sections["policy_vote_state_list"])
 VOTED_CHOICES = [(code_tuple[1], _strip(config._sections["policy_vote_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_vote_state_list")]
-MODERATED_CHOICES =  [(code_tuple[1], _strip(config._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_moderation_state_list")]
 
 # --------------------------- Application Options ------------------------------
 USE_UNIQUE_EMAILS = config.get("settings", "USER_USE_UNIQUE_EMAILS")
@@ -325,6 +324,7 @@ PLATFORM_POLICY_STATE_DEFAULT = config.get("platform_policy_settings", "PLATFORM
 PLATFORM_POLICY_ADMIN_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_ADMIN_STATE_LIST").split(",")
 PLATFORM_POLICY_EDIT_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_EDIT_STATE_LIST").split(",")
 PLATFORM_POLICY_DELETE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_DELETE_STATE_LIST").split(",")
+PLATFORM_POLICY_MODERATION_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_MODERATION_STATE_LIST").split(",")
 PLATFORM_POLICY_INITIATORS_COUNT = config.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
 PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
 
@@ -332,8 +332,12 @@ PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_d
 PLATFORM_POLICY_FIELD_HELPER = _getTranslatedDict("platform_policy_field_description_dict")
 
 # ---------------------------- Moderation Settings -----------------------------
+PLATFORM_MODERATION_BASE_CONFIG = dict(config.items("platform_moderation_base_config"))
+PLATFORM_MODERATION_FIELD_LABELS = _getTranslatedDict("platform_moderation_field_title_dict")
+
 # minimum moderator votes, etc
 MODERATIONS = SimpleNamespace(**config._sections["moderation_setting_list"])
+PLATFORM_MODERATION_CHOICE_LIST =  [(code_tuple[1], _strip(config._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_moderation_state_list")]
 
 # ---------------------------- User (groups & permissions) ---------------------
 PLATFORM_GROUP_LIST = config.items("platform_group_list")

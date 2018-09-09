@@ -1,0 +1,22 @@
+{% load i18n %}
+<div id="moderation" class="moderation alert alert-warning">
+  <strong>{% trans "Validation Review" %}</strong>
+  <div id="moderation-list">
+    {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
+  </div>
+
+  {% if request.guard.policy_validate_eligible %}
+    <br/>
+    <div id="moderation-new">
+      <a data-ajax="true" href="{% url 'policy_validate' policy_id=policy.id %}?fragment=%23moderation-new" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>
+    </div>
+  {% endif %}
+
+  {% if policy.stale_moderations.count %}
+    <br />
+    <hr />
+    <br />
+    <strong>{% trans "Validation of previous Versions" %}</strong>
+    {% include 'fragments/moderation/moderation_list.html' with moderations=policy.stale_moderations %}
+  {% endif %}
+</div>

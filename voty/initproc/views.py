@@ -82,7 +82,7 @@ def get_voting_fragments(vote, initiative, request):
                                     context=context)
         }}
 
-
+# ============================= HELPERS ========================================
 # --------------------- State Permission decorator -----------------------------
 # moved here from guard.py
 def policy_state_access(states=None):
@@ -170,7 +170,7 @@ def policy_edit(request, policy, *args, **kwargs):
       supporters.update(ack=False)
       notify(
         [supporter.user for _, supporter in enumerate(supporters)],
-        settings.NOTIFICATIONS.PUBLIC.EDITED, {
+        settings.NOTIFICATIONS.PUBLIC.POLICY_EDITED, {
         "description": "".join([_("Policy edited:"), " ", policy.title, ". ", _("Please reconfirm your support.")])
         }, sender=user
       )
@@ -182,6 +182,7 @@ def policy_edit(request, policy, *args, **kwargs):
   return render(request, "initproc/policy_edit.html", context=dict(form=form, policy=policy))
 
 # ----------------------------- Policy New -------------------------------------
+# careful, not going through the state filter, so params are different
 @login_required
 def policy_new(request, *args, **kwargs):
 
@@ -204,6 +205,42 @@ def policy_new(request, *args, **kwargs):
       messages.warning(request, _("Please fill out all required fields."))
 
   return render(request, 'initproc/policy_edit.html', context=dict(form=form))
+
+# ------------------------- Policy Validation Show -----------------------------
+@ajax
+@login_required
+@policy_state_access()
+def policy_feedback(request, policy, *args, **kwargs):
+
+  moderation = get_object_or_404(Moderation, pk=kwargs["target_id"])
+
+  # XXX what is this for? wrong target_id passed?
+  assert moderation.policy == policy, "Policy on Validation does not match viewed Policy."
+
+  fake_context = dict(
+    m=moderation,
+    has_commented=False,
+    has_liked=False,
+    is_editable=True,
+    full=1,
+    comments=moderation.comments.order_by('created_at').all()
+  )
+
+  if request.user:
+    fake_context["has_liked"] = moderation.likes.filter(user=request.user).exists()
+    if moderation.user == request.user:
+      fake_context["has_commented"] = True
+
+  return {
+    "fragments": {
+      "#{moderation.type}-{moderation.id}".format(moderation=moderation): render_to_string(
+        "fragments/moderation/moderation_item.html",
+        context=fake_context,
+        request=request
+      )
+    }
+  }
+
 
 
 def about(request):
@@ -479,7 +516,7 @@ def policy_invite(request, form, policy, invite_type, *args, **kwargs):
         continue
 
     supporting_supporter.save()
-    notify([user], settings.NOTIFICATIONS.PUBLIC.SUPPORT_INVITE, {
+    notify([user], settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_INVITE, {
       "target": policy,
       "description": "".join([
         _("Invitation to support Policy:"),
@@ -506,7 +543,7 @@ def policy_acknowledge_support(request, policy, *args, **kwargs):
   if ack_supporter.initiator == True:
     notify(
       [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
-      settings.NOTIFICATIONS.PUBLIC.SUPPORT_ACCEPTED,
+      settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_ACCEPTED,
       {"description": "".join([user.first_name, " ", user.last_name, _(" confirmed to be co-initiator on policy: "), policy.title])},
       sender=user
     )
@@ -526,7 +563,7 @@ def policy_remove_support(request, policy, *args, **kwargs):
   if rm_supporter.initiator == True:
     notify(
       [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
-      settings.NOTIFICATIONS.PUBLIC.SUPPORT_REJECTED,
+      settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_REJECTED,
       {"description": "".join([user.first_name, " ", user.last_name, _(" resigned as co-initiator of policy: "), policy.title])},
       sender=user
     )
@@ -573,7 +610,7 @@ def policy_delete(request, policy, *args, **kwargs):
     user = request.user
     tokeniser = UndoUrlTokenGenerator()
     revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
-    revert_message = "Policy deleted. <a href='%s'>%s</a>." % (revert_url, _("Click here to undo"))
+    revert_message = "Policy deleted. <a href='%s'>%s</a>." % (revert_url, _("Click here to UNDO."))
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.DELETED
     policy.save()
 
@@ -615,7 +652,178 @@ def policy_unhide(request, policy, *args, **kwargs):
     messages.success(request, _("Policy moved to draft status. It can now be edited again by users."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+# ------------------------------- Policy Submit --------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.STAGED)
+def policy_submit(request, policy, *args, **kwargs):
 
+  if not request.guard.policy_submit(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  with reversion.create_revision():
+    user = request.user
+    tokeniser = UndoUrlTokenGenerator()
+    revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
+    revert_message = "Policy submitted. Policy submitted for moderation. You will receive a message once feedback on the Policy is availble. <a href='%s'>%s</a>." % (revert_url, _("Click here to UNDO."))
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED
+    policy.save()
+
+    # make sure moderation starts from the top
+    policy.policy_moderations.update(stale=True)
+
+    # XXX how to handle UNDO? sleep?
+    # notifiy initiators
+    supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, {
+        "description": "".join([_("Policy submitted:"), " ", policy.title, ". ", _("Awaiting moderation.")])
+      }, sender=user
+    )
+
+    # notify policy team with moderation permission
+
+    reversion.set_user(request.user)
+    messages.success(request, mark_safe(revert_message))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ----------------------------- Policy Validate --------------------------------
+# used to be for incoming and moderation (submit and release)
+@ajax
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED)
+@simple_form_verifier(NewModerationForm, submit_title=_("Add validation review."))
+def policy_validate(request, form, policy, *args, **kwargs):
+
+  user = request.user
+  moderation = form.save(commit=False)
+  moderation.policy = policy
+  moderation.user = user
+  moderation.save()
+
+  raise Exception(moderation.vote)
+  if request.guard.policy_validate(policy):
+    policy.supporting_policy.filter(ack=False).delete()
+    policy.was_validated_at = datetime.now()
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+    policy.save()
+
+    messages.success(request, _("Policy validated."))
+
+    # we can inform all supporters, because there is only initiators
+    supporters = policy.supporting_policy.all().exclude(user_id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+        "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+        }
+      )
+    
+    notify(
+      [moderation.user for moderation in policy.policy_moderations.all()],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+        "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+        }, sender=user
+      )
+    return redirect('/policy/{}'.format(policy.id))
+
+  
+  # XXX used to be here, move to release
+  #if request.guard.policy_release(policy):
+  #  policy_to_release = [policy]
+  #
+  #  # check the variants, too
+  #  if policy.all_variants:
+  #    for variant in policy.all_variants:
+  #      if variant.state != STATES.MODERATION or not request.guard.can_publish(ini):
+  #        policy_to_release = None
+  #          break
+  #      policy_to_release.append(variant)
+  #
+  #      if policy_to_release:
+  #        for releaseable_policy in policy_to_release:
+  #          releasable_policy.went_to_voting_at = datetime.now()
+  #          releasable_policy.state = STATES.VOTING
+  #          releasable_policy.save()
+  #          releasable_policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
+  #          releasable_policy.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
+  #
+  #        messages.success(request, _("Initiative activated for Voting."))
+  #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
+
+
+  return {
+    "fragments": {"#no-moderations": ""},
+    "inner-fragments": {"#moderation-new": "".join(["<strong>", _("Entry registered"), "</strong>"])},
+    "append-fragments": {
+      "#moderation-list": render_to_string(
+        "fragments/moderation/item.html",
+        context=dict(m=moderation, policy=policy, full=0),
+        request=request
+      )
+    }
+  }
+
+# ----------------------------- Target Comment ---------------------------------
+# this is a catch-all comment for different types
+@non_ajax_redir('/')
+@ajax
+@login_required
+@simple_form_verifier(NewCommentForm)
+def target_comment(request, form, target_type, target_id, *args, **kwargs):
+
+  # XXX hm
+  model_class = apps.get_model("initproc", target_type)
+  model = get_object_or_404(model_class, pk=target_id)
+
+  if not request.guard.target_comment(model):
+    raise PermissionDenied()
+
+  data = form.cleaned_data
+  new_comment = Comment(target=model, user=request.user, **data)
+  new_comment.save()
+
+  return {
+    "inner-fragments": {
+      "#{}-new-comment".format(model.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
+
+      # This user has now commented, so fill in the chat icon
+      "#{}-chat-icon".format(model.unique_id): "chat_bubble",
+      "#{}-comment-count".format(model.unique_id): model.comments.count()
+    },
+    "append-fragments": {
+      "#{}-comment-list".format(model.unique_id): render_to_string(
+        "fragments/comment/item.html",
+        context=dict(comment=new_comment),
+        request=request
+      )
+    }
+  }
+
+
+@login_required
+#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
+def submit_to_committee(request, initiative):
+    if initiative.ready_for_next_stage:
+        initiative.state = STATES.INCOMING if initiative.state == STATES.PREPARE else STATES.MODERATION
+        initiative.save()
+
+        # make sure moderation starts from the top
+        initiative.moderations.update(stale=True)
+
+        messages.success(request, _("The Initiative was received and is being validated."))
+        initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, subject=request.user)
+        # To notify the review team, we notify all members of groups with moderation permission,
+        # which doesn't include superusers, though they individually have moderation permission.
+        moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
+        initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(),
+                          settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, subject=request.user)
+        return redirect('/initiative/{}'.format(initiative.id))
+    else:
+        messages.warning(request, _("The requirements for submission have not been met."))
+
+    return redirect('/initiative/{}'.format(initiative.id))
 
 @login_required
 #@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
@@ -634,36 +842,12 @@ def edit(request, initiative):
             initiative.supporting_initiative.filter(initiator=True).update(ack=False)
 
             messages.success(request, _("Initiative saved."))
-            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.EDITED, subject=request.user)
+            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.POLICY_EDITED, subject=request.user)
             return redirect('/initiative/{}'.format(initiative.id))
         else:
             messages.warning(request, _("Please correct the following problems:"))
 
     return render(request, 'initproc/new.html', context=dict(form=form, initiative=initiative))
-
-
-@login_required
-#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
-def submit_to_committee(request, initiative):
-    if initiative.ready_for_next_stage:
-        initiative.state = STATES.INCOMING if initiative.state == STATES.PREPARE else STATES.MODERATION
-        initiative.save()
-
-        # make sure moderation starts from the top
-        initiative.moderations.update(stale=True)
-
-        messages.success(request, _("The Initiative was received and is being validated."))
-        initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.SUBMITTED, subject=request.user)
-        # To notify the review team, we notify all members of groups with moderation permission,
-        # which doesn't include superusers, though they individually have moderation permission.
-        moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
-        initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(),
-                          settings.NOTIFICATIONS.PUBLIC.SUBMITTED, subject=request.user)
-        return redirect('/initiative/{}'.format(initiative.id))
-    else:
-        messages.warning(request, _("The requirements for submission have not been met."))
-
-    return redirect('/initiative/{}'.format(initiative.id))
 
 
 
@@ -700,7 +884,7 @@ def invite(request, form, initiative, invite_type):
         
         supporting_supporter.save()
 
-        notify([user], settings.NOTIFICATIONS.PUBLIC.SUPPORT_INVITE, {"target": initiative}, sender=request.user)
+        notify([user], settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_INVITE, {"target": initiative}, sender=request.user)
 
     messages.success(request, _("Initiators invited.") if invite_type == 'initiators' else _("Supporters invited."))
     return redirect("/initiative/{}-{}".format(initiative.id, initiative.slug))
@@ -725,7 +909,7 @@ def ack_support(request, initiative):
     sup.save()
 
     messages.success(request, _("Thank you for the confirmation"))
-    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.SUPPORT_ACCEPTED, subject=request.user)
+    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_ACCEPTED, subject=request.user)
 
     return redirect('/initiative/{}'.format(initiative.id))
 
@@ -738,7 +922,7 @@ def rm_support(request, initiative):
     sup.delete()
 
     messages.success(request, _("Your support has been retracted"))
-    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.SUPPORT_REJECTED, subject=request.user)
+    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_REJECTED, subject=request.user)
 
     if initiative.state == 's':
         return redirect('/initiative/{}'.format(initiative.id))
@@ -820,8 +1004,8 @@ def moderate(request, form, initiative):
             initiative.save()
 
             messages.success(request, _("Initiative published"))
-            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.PUBLISHED)
-            initiative.notify_moderators(settings.NOTIFICATIONS.PUBLIC.PUBLISHED, subject=request.user)
+            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.POLICY_PUBLISHED)
+            initiative.notify_moderators(settings.NOTIFICATIONS.PUBLIC.POLICY_PUBLISHED, subject=request.user)
             return redirect('/initiative/{}'.format(initiative.id))
 
         elif initiative.state == STATES.MODERATION:
@@ -1010,3 +1194,4 @@ def compare(request, initiative, version_id):
 def reset_vote(request, init):
     Vote.objects.filter(initiative=init, user_id=request.user).delete()
     return get_voting_fragments(None, init, request)
+
