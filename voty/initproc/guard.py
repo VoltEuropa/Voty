@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.utils.functional import cached_property
 
 from functools import wraps
 from voty.initadmin.models import UserConfig
@@ -58,8 +59,8 @@ class Guard:
       groups = group
   
     total_moderators = User.objects.filter(groups__name__in=groups).distinct()
-    minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.MODERATIONS.MINIMUM_MODERATOR_PERCENTAGE)/100)
-    minimum_moderators_by_count = int(settings.MODERATIONS.MINIMUM_MODERATOR_VOTES)
+    minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_PERCENTAGE)/100)
+    minimum_moderators_by_count = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_VOTES)
   
     if minimum_moderators_by_percent >= minimum_moderators_by_count:
       return minimum_moderators_by_percent
@@ -78,8 +79,8 @@ class Guard:
   
     # moderator diversity are optional
     if bool(int(settings.USE_DIVERSE_MODERATION_TEAM)):
-      female  = int(settings.MODERATIONS.MINIMUM_FEMALE_MODERATOR_VOTES)
-      diverse = int(settings.MODERATIONS.MINIMUM_DIVERSE_MODERATOR_VOTES)
+      female  = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_FEMALE_MODERATOR_VOTES)
+      diverse = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_DIVERSE_MODERATOR_VOTES)
   
       # exclude moderator from required quotas if he/she is initiator
       for user_config in UserConfig.objects.filter(user_id__in=moderations.values("user_id")):
@@ -281,6 +282,11 @@ class Guard:
       return False
 
   # XXX permissions contain a lot of duplicate code, improve later once all set
+
+  # XXX this should be calculated elsewhere?
+  @cached_property
+  def minimum_moderation_reviews(self):
+    return self._get_policy_minium_moderator_votes()
 
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):

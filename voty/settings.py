@@ -336,7 +336,7 @@ PLATFORM_MODERATION_BASE_CONFIG = dict(config.items("platform_moderation_base_co
 PLATFORM_MODERATION_FIELD_LABELS = _getTranslatedDict("platform_moderation_field_title_dict")
 
 # minimum moderator votes, etc
-MODERATIONS = SimpleNamespace(**config._sections["moderation_setting_list"])
+PLATFORM_MODERATION_SETTING_LIST = SimpleNamespace(**config._sections["moderation_setting_list"])
 PLATFORM_MODERATION_CHOICE_LIST =  [(code_tuple[1], _strip(config._sections["policy_moderation_state_value_list"][code_tuple[0]])) for code_tuple in config.items("policy_moderation_state_list")]
 
 # ---------------------------- User (groups & permissions) ---------------------

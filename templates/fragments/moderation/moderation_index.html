@@ -1,6 +1,6 @@
 {% load i18n %}
 <div id="moderation" class="moderation alert alert-warning">
-  <strong>{% trans "Validation Review" %}</strong>
+  <h6><span class="moderation-title">{% trans "Validation" %}</span><span>({% trans "Reviews required: " %}{{ request.guard.minimum_moderation_reviews }})</span></h6>
   <div id="moderation-list">
     {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
   </div>

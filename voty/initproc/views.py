@@ -207,6 +207,7 @@ def policy_new(request, *args, **kwargs):
   return render(request, 'initproc/policy_edit.html', context=dict(form=form))
 
 # ------------------------- Policy Validation Show -----------------------------
+# toggle review feedback
 @ajax
 @login_required
 @policy_state_access()
@@ -217,12 +218,14 @@ def policy_feedback(request, policy, *args, **kwargs):
   # XXX what is this for? wrong target_id passed?
   assert moderation.policy == policy, "Policy on Validation does not match viewed Policy."
 
+  # toggle the comment thread
   fake_context = dict(
     m=moderation,
+    policy=policy,
     has_commented=False,
     has_liked=False,
     is_editable=True,
-    full=1,
+    full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
   )
 
@@ -236,7 +239,7 @@ def policy_feedback(request, policy, *args, **kwargs):
       "#{moderation.type}-{moderation.id}".format(moderation=moderation): render_to_string(
         "fragments/moderation/moderation_item.html",
         context=fake_context,
-        request=request
+        request=request,
       )
     }
   }
@@ -696,39 +699,40 @@ def policy_submit(request, policy, *args, **kwargs):
 @simple_form_verifier(NewModerationForm, submit_title=_("Add validation review."))
 def policy_validate(request, form, policy, *args, **kwargs):
 
-  user = request.user
-  moderation = form.save(commit=False)
-  moderation.policy = policy
-  moderation.user = user
-  moderation.save()
-
-  raise Exception(moderation.vote)
   if request.guard.policy_validate(policy):
-    policy.supporting_policy.filter(ack=False).delete()
-    policy.was_validated_at = datetime.now()
-    policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
-    policy.save()
+    user = request.user
+    moderation = form.save(commit=False)
+    moderation.policy = policy
+    moderation.user = user
+    moderation.save()
 
-    messages.success(request, _("Policy validated."))
-
-    # we can inform all supporters, because there is only initiators
-    supporters = policy.supporting_policy.all().exclude(user_id=user.id)
-    notify(
-      [supporter.user for _, supporter in enumerate(supporters)],
-      settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
-        "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
-        }
-      )
-    
-    notify(
-      [moderation.user for moderation in policy.policy_moderations.all()],
-      settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
-        "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
-        }, sender=user
-      )
+    if policy.ready_for_next_stage(policy):
+      policy.supporting_policy.filter(ack=False).delete()
+      policy.was_validated_at = datetime.now()
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+      policy.save()
+  
+      messages.success(request, _("Policy validated."))
+  
+      # we can inform all supporters, because there is only initiators
+      supporters = policy.supporting_policy.all().exclude(user_id=user.id)
+      notify(
+        [supporter.user for _, supporter in enumerate(supporters)],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+          }
+        )
+      
+      notify(
+        [moderation.user for moderation in policy.policy_moderations.all()],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+    else:
+      message.success(request, _("Validation review recorded."))
     return redirect('/policy/{}'.format(policy.id))
 
-  
   # XXX used to be here, move to release
   #if request.guard.policy_release(policy):
   #  policy_to_release = [policy]
@@ -754,8 +758,8 @@ def policy_validate(request, form, policy, *args, **kwargs):
 
 
   return {
-    "fragments": {"#no-moderations": ""},
-    "inner-fragments": {"#moderation-new": "".join(["<strong>", _("Entry registered"), "</strong>"])},
+    
+    "inner-fragments": {"#moderation-new": "".join(["<strong>", _("Validation review registered"), "</strong>"])},
     "append-fragments": {
       "#moderation-list": render_to_string(
         "fragments/moderation/item.html",

@@ -1850,8 +1850,39 @@ a.btn span, a.btn i {
   width: 3em;
 }
 .moderation .badge .material-icons {
-    font-size: 1.5em;
-    line-height: 2em;
-    padding-left: 3px;
+  font-size: 1.5em;
+  line-height: 1.8em;
+  padding-left: 3px;
 }
-
+.moderation-item-author,
+.moderation .author-name {
+ text-transform: capitalize;
+}
+.moderation .comment-reaction {
+  padding: .5em 0 1em 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-top: -.75em;
+}
+.moderation .col-auto {
+  margin-left: 1em;
+  line-height: 50px;
+  margin-bottom: .25em;
+}
+.moderation .comment-likes .material-icons {
+  line-height: 50px;
+}
+.moderation .moderation-title {
+  text-transform: uppercase;
+  margin-right: 1em;
+}
+.moderation .moderation-item {
+  margin-bottom: 1em;
+}
+.moderation-new-comment {
+  text-align: right;
+  margin-top: -1em;
+}
+.moderation-item > p:last-of-type {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5em;
+}

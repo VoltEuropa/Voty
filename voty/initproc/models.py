@@ -245,9 +245,9 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
-      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
+      #settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+      #settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
     ]:
       return (
         self.supporting_policy.filter(initiator=True, ack=True).count() >= settings.PLATFORM_POLICY_INITIATORS_COUNT and
@@ -264,9 +264,9 @@ class Policy(PolicyBase):
     # nothing to do
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
-      settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+      #settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
     ]:
       return True
 
