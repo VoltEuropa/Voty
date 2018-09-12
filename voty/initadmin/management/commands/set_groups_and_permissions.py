@@ -97,6 +97,7 @@ def backcompat_reverse_teams_and_permissions():
 
 def create_custom_groups_and_permissions():
   group_list = []
+  perm_list = []
   group_permission_dict = dict([(x, y.split(",")) for x, y in settings.PLATFORM_GROUP_USER_PERMISSION_MAPPING])
 
   for (group_key, group_title) in settings.PLATFORM_GROUP_LIST:
@@ -108,11 +109,13 @@ def create_custom_groups_and_permissions():
   for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
     perm_code, perm_app_model = perm_code_model.split(",")
     perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
+    perm_query_set = Permission.objects.filter(name=perm_name)
 
-    if Permission.objects.filter(name=perm_name).exists() == False:
+    # add permissions which don't exist yet
+    if perm_query_set.exists() == False:
 
       # permission is added to a group, permission pertains to a content-type
-      # in this case a user (2) or an initiative (37)
+      # in this case a user (2) or an initiative (37) or policy (38)
       perm_app, perm_model = perm_app_model.split(".")
       perm = Permission(
         name=perm_name,
@@ -121,15 +124,24 @@ def create_custom_groups_and_permissions():
       )
       perm.save()
 
-      # XXX a lot of saving groups, find better way
-      for group in group_list:
-        for group_key, group_permission_list in group_permission_dict.items():
-          if group[0] == group_key:
-            for group_permission_key in group_permission_list:
-              if perm_key == group_permission_key.upper():
-                group[1].permissions.add(perm)
+    # add all relevant permissions to perm_list
+    perm_list.append((perm_key, perm_query_set[0]))
 
+  # add permissions to groups
   for group in group_list:
+
+    # eg TEAM, ['user_can_localise', 'user_can_activate', 'user_can_reset...]
+    for group_key, group_permission_list in group_permission_dict.items():
+
+      # looping over TEAM
+      if group[0] == group_key:
+
+        # go through the list of keys
+        for permission in perm_list:
+          if permission[0].lower() in group_permission_list:
+            #print("Adding permission %s to %s" % (permission[0], group_key))
+            group[1].permissions.add(permission[1])
+
     group[1].save()
 
 # ---------------------------------- Command -----------------------------------
@@ -142,10 +154,11 @@ class Command(BaseCommand):
     # backcompat - move existing staff to custom group and custom group to staff
     backcompat_init_teams_and_permissions()
     backcompat_reverse_teams_and_permissions()
-    
+
     # define custom groups as per init.ini
+    # NOTE permissions will be added on group, not on user!
     create_custom_groups_and_permissions()
-    
+
     # create notice types for PINAX
     create_notice_types()
 
@@ -153,3 +166,4 @@ class Command(BaseCommand):
     #create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
+

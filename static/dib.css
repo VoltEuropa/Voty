@@ -1810,9 +1810,9 @@ a.btn span, a.btn i {
   animation: fade .5s steps(90) forwards;
  -webkit-animation: fade .5s steps(90) forwards;
   -moz-animation: fade .5s steps(90) forwards;
-  animation-delay: 2.5s;
-  -webkit-animation-delay: 2.5s;
-  -moz-animation-delay: 2.5s;
+  animation-delay: 3s;
+  -webkit-animation-delay: 3s;
+  -moz-animation-delay: 3s;
 }
 
 @keyframes fade {
@@ -1824,7 +1824,7 @@ a.btn span, a.btn i {
   }
 }
 /* ------------------------ time left counter ------------------------------- */
-.material-icons.chevron-right {
+.skip-meta .material-icons.chevron-right {
     margin-right: 0.625rem;
     margin-top: .1875rem;
     border: 1px solid;
@@ -1857,6 +1857,10 @@ a.btn span, a.btn i {
 .moderation-item-author,
 .moderation .author-name {
  text-transform: capitalize;
+ display: inline-block;
+}
+.moderation-item-author {
+  margin-left: 1em;
 }
 .moderation .comment-reaction {
   padding: .5em 0 1em 0;
@@ -1877,6 +1881,9 @@ a.btn span, a.btn i {
 }
 .moderation .moderation-item {
   margin-bottom: 1em;
+}
+.moderation-item .material-icons {
+  vertical-align: middle;
 }
 .moderation-new-comment {
   text-align: right;

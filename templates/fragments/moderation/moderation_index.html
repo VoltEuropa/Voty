@@ -1,11 +1,11 @@
 {% load i18n %}
 <div id="moderation" class="moderation alert alert-warning">
-  <h6><span class="moderation-title">{% trans "Validation" %}</span><span>({% trans "Reviews required: " %}{{ request.guard.minimum_moderation_reviews }})</span></h6>
+  <h6><span class="moderation-title">{% trans "Validation" %}</span><span>({% trans "Reviews required: " %}{{ policy.required_moderations }})</span></h6>
   <div id="moderation-list">
     {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
   </div>
 
-  {% if request.guard.policy_validate_eligible %}
+  {% if request.guard.policy_review_eligible %}
     <br/>
     <div id="moderation-new">
       <a data-ajax="true" href="{% url 'policy_validate' policy_id=policy.id %}?fragment=%23moderation-new" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>

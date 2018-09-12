@@ -14,7 +14,9 @@ from django.utils.translation import ugettext as _
 from django.db.models import Q
 from django.utils.text import slugify
 from django.conf import settings
+from django.utils import six
 from reversion.models import Version
+from functools import reduce
 
 
 # initiative
@@ -31,6 +33,7 @@ import reversion
 import pytz
 
 # =============================== HELPERS ======================================
+
 # ------------------------ Build Class field dict .-----------------------------
 def _create_class_field_dict(field_dict):
   response = {}
@@ -236,26 +239,32 @@ class Policy(PolicyBase):
     else:
       return datetime.now(timezone) - self.staged_at
 
-  @cached_property
+  @property
   def ready_for_next_stage(self):
 
     # policy needs minimum initiators and all fields filled
     # all fields required => len>0 = True [True, True, False] = 1*1*0 = 0
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
-      settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
-      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
       #settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
       #settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
       #settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
     ]:
       return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() >= settings.PLATFORM_POLICY_INITIATORS_COUNT and
+        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
         reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()])
       )
 
-    if self.state in [settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED]:
-      return self.supporting_policy.filter(initiator=True, ack=True).count() >= settings.PLATFORM_POLICY_INITIATORS_COUNT
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+    ]:
+      return (
+        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
+        reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()]) and
+        self.current_moderations.count() >= self.required_moderations
+      )
 
     # note, the Quorum (enough supporters) will be specific to each policy
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
@@ -408,6 +417,26 @@ class Policy(PolicyBase):
   @cached_property
   def allows_abstention(self):
     return True
+
+  @property
+  def required_moderations(self):
+    group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
+    if isinstance(group, six.string_types):
+      groups = (group, )
+    else:
+      groups = group
+
+    total_moderators = User.objects.filter(groups__name__in=groups).distinct()
+    minimum_moderators_by_percent = round(int(int(total_moderators.count()) * int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_PERCENTAGE)/100))
+    minimum_moderators_by_count = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_VOTES)
+
+    if minimum_moderators_by_percent >= minimum_moderators_by_count:
+      return minimum_moderators_by_percent
+
+    # in case of a patt
+    if minimum_moderators_by_count % 2 == 0:
+      return minimum_moderators_by_count + 1
+    return minimum_moderators_by_count
 
   @property
   def current_moderations(self):
@@ -710,7 +739,7 @@ class Initiative(models.Model):
 
   @property
   def current_moderations(self):
-      return self.moderations.filter(stale=False)
+    return self.moderations.filter(stale=False)
 
   @property
   def stale_moderations(self):
@@ -867,9 +896,9 @@ class Response(Likeable, Commentable):
 
   @property
   def unique_id(self):
+    return "{}-{}-{}".format("policy" if self.policy else "initiative", self.type, self.id)
+    #return "{}-{}".format(self.type, self.id)
     #return "{}-{}-{}-{}".format(self.type, self.id, self.target_type, self.target_id)
-    return "{}-{}".format(self.type, self.id)
-
 # ------------------------------- Argument -------------------------------------
 class Argument(Response):
 

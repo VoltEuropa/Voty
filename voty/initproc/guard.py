@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.apps import apps
 from django.utils.functional import cached_property
 
 from functools import wraps
@@ -48,30 +49,11 @@ class Guard:
     self.reason = None
 
   # --------------------- missing moderation reviews to continue -----------------
-  def _get_policy_minium_moderator_votes(self):
-  
-    # get everyone who is a moderator by group
-    # XXX get by permission, add scope
-    group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
-    if isinstance(group, six.string_types):
-      groups = (group, )
-    else:
-      groups = group
-  
-    total_moderators = User.objects.filter(groups__name__in=groups).distinct()
-    minimum_moderators_by_percent = int(int(total_moderators.count()) * int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_PERCENTAGE)/100)
-    minimum_moderators_by_count = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_VOTES)
-  
-    if minimum_moderators_by_percent >= minimum_moderators_by_count:
-      return minimum_moderators_by_percent
-    return minimum_moderators_by_count
-  
-  # --------------------- missing moderation reviews to continue -----------------
   def _missing_moderation_reviews(self, policy):
   
     # total moderators required are based on percentage/minimum person
-    total = self._get_policy_minium_moderator_votes() 
-  
+    total = policy.required_moderations 
+    raise Exception(total)
     # overall moderations on this policy
     # XXX what if only policy team proposes and not enough moderators?
     moderations = policy.policy_moderations.filter(stale=False)
@@ -284,9 +266,9 @@ class Guard:
   # XXX permissions contain a lot of duplicate code, improve later once all set
 
   # XXX this should be calculated elsewhere?
-  @cached_property
-  def minimum_moderation_reviews(self):
-    return self._get_policy_minium_moderator_votes()
+  # @cached_property
+  # def minimum_moderation_reviews(self):
+  #  return self._get_policy_minium_moderator_votes()
 
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):
@@ -308,12 +290,13 @@ class Guard:
   def policy_view(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
-
-    if policy.state in settings.PLATFORM_POLICY_ADMIN_STATE_LIST and \
-      user.has_perm("initproc.can_validate_policy"):
-        if not policy.supporting_policy.filter(Q(first=True) | Q(initiator=True), user_id=user.id):
-          return True
-        return False
+    
+    if policy.state in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
+      if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+        return True
+      if policy.supporting_policy.filter(initiator=True, user=user.id):
+        return True
+      return False
 
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT and \
       not policy.supporting_policy.filter(first=True, user_id=user.id):
@@ -397,20 +380,26 @@ class Guard:
       return False
     if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED or \
+      policy.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
       if initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
         if policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id) or user.is_superuser:
           return True
     return False
 
-  # -------------------------- validate policy ---------------------------------
-  # checks if user technically CAN validate
+  # -------------------------- review policy ---------------------------------
+  # checks if user technically CAN review/validate
   def policy_validate(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
+    #if policy.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
+    #  if policy.supporting_policy.filter(initiator=True) or user.is_superuser:
+    #    return True
+
     if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
       if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+
         # leaving this means, moderator/initiators never see feedback
         # moved to should moderate
         #if policy.supporting_policy.filter(user=user, initiator=True):
@@ -422,7 +411,7 @@ class Guard:
   # ---------------------- should validate policy ------------------------------
   # checks if user SHOULD validate - this method should test against all "soft"
   # criteria, like female/diverse etc moderators
-  def policy_validate_eligible(self, policy=None):
+  def policy_review_eligible(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
@@ -430,7 +419,7 @@ class Guard:
       return False
 
     if policy.supporting_policy.filter(user=user, initiator=True):
-      self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+      self.reason = _("Moderation not possible: Initiators can not moderate own Policy")
       return False
 
     moderations = policy.policy_moderations.filter(stale=False)
@@ -457,20 +446,21 @@ class Guard:
 
   # ---------------------- comment X (anything...) -----------------------------
   def target_comment(self, target_object=None):
-    
-    if (isinstance (target_object, Moderation)):
-      return True
+
+    # XXX why should moderations have no restrictions toward multiple comments?
+    #if (isinstance (target_object, Moderation)):
+    #  return True
 
     self.reason = None
     last_comment = target_object.comments.order_by("-created_at").first()
 
     if not last_comment and target_object.user == self.user:
-      self.reason = _("You can comment again only after another person has added a comment.")
+      self.reason = _("Comment not possible: Please wait for another user to comment.")
       return False
 
     # XXX what's the difference?
     elif last_comment and last_comment.user == self.user:
-      self.reason = _("You can comment again only after another person has added a comment.")
+      self.reason = _("Comment not possible: Please wait for another user to comment.")
       return False
 
     return True
@@ -483,7 +473,7 @@ class Guard:
     if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
       if user.has_perm("initproc.policy_can_invalidate") or user.is_superuser:
         if policy.supporting_policy.filter(user=user, initiator=True):
-          self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+          self.reason = _("Moderation not possible: Initiators can not moderate own Policy")
           return False
         return True
     return False
@@ -496,7 +486,7 @@ class Guard:
     if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
       if user.has_perm("initproc.policy_can_reject") or user.is_superuser:
         if policy.supporting_policy.filter(user=user, initiator=True):
-          self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
+          self.reason = _("Moderation not possible: Initiators can not moderate own Policy")
           return False
         return True
     return False

@@ -42,14 +42,15 @@
       <hr/>
       {% include "initproc/blocks/meta.html" %}
       <hr/>
-
-      {% if request.guard.policy_validate %}
-      <div class="row initiative-moderation">
-        <div class="col-12">
-        {% include "fragments/moderation/moderation_index.html" %}      
+      {% with "PLATFORM_POLICY_STATE_DICT.INVALIDATED"|get_setting as invalidated %}
+        {% if request.guard.policy_validate or policy.state == invalidated %}
+        <div class="row initiative-moderation">
+          <div class="col-12">
+          {% include "fragments/moderation/moderation_index.html" %}      
+          </div>
         </div>
-      </div>
-      {% endif %}
+        {% endif %}
+      {% endwith %}
 
       {% if request.guard.reason %}
         <div class="alert alert-warning">{{ request.guard.reason }}</div>
@@ -57,7 +58,7 @@
 
       <div class="row skip-meta">
         <div class="col-4">
-          <a href="#initiative-text" class="skip-meta"><i class="material-icons chevron-right">chevron_right</i>{% trans "Browse Policy" %}</a>
+          <a href="#initiative-text" class="skip-meta"><i class="material-icons chevron_right">chevron_right</i>{% trans "Browse Policy" %}</a>
         </div>
         <div class="col-8">
 
@@ -109,7 +110,7 @@
               {% csrf_token %}
               <button title="{% trans 'Submit Policy for validation' %}" class="btn btn-success" type="submit">
                 <i class="material-icons forward">forward</i>
-                <span>{% trans "Submit Policy (for)" %}</span>
+                <span>{% trans "Submit Policy (for validation)" %}</span>
               </button>
             </form>
             <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
@@ -119,6 +120,18 @@
               </button>
             </form>
           </div>          
+          {% endif %}
+
+          {% if policy.ready_for_next_stage %}
+            <div class="align-right">
+              <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
+                {% csrf_token %}
+                <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
+                  <i class="material-icons forward">forward</i>
+                  <span>{% trans "Validate Policy (to seek support)" %}</span>
+                </button>
+              </form>
+            </div>
           {% endif %}
 
           {% if request.guard.policy_invite %}
@@ -218,4 +231,3 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-

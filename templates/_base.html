@@ -220,7 +220,7 @@
       [].slice.call(document.querySelectorAll(".alert-dismissible")).forEach(function (element) {
         window.setTimeout(function() {
           element.parentNode.removeChild(element);
-        }, 3000);
+        }, 4000);
       });
   </script>
   {% register_notify_callbacks callbacks='update_notifications,fill_notification_badge' %}

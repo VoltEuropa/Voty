@@ -215,28 +215,32 @@ def policy_feedback(request, policy, *args, **kwargs):
 
   moderation = get_object_or_404(Moderation, pk=kwargs["target_id"])
 
-  # XXX what is this for? wrong target_id passed?
-  assert moderation.policy == policy, "Policy on Validation does not match viewed Policy."
-
   # toggle the comment thread
   fake_context = dict(
     m=moderation,
     policy=policy,
     has_commented=False,
-    has_liked=False,
+    #has_liked=False,
     is_editable=True,
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
   )
 
   if request.user:
-    fake_context["has_liked"] = moderation.likes.filter(user=request.user).exists()
-    if moderation.user == request.user:
+
+    # XXX what if >1 comments? this should be called on comments instead
+    # fake_context["has_liked"] = moderation.likes.filter(user=request.user).exists()
+    for comment in fake_context["comments"]:
+      if request.user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=request.user).exists()
+
+    # not twice in a row
+    if not request.guard.target_comment(moderation):
       fake_context["has_commented"] = True
 
   return {
     "fragments": {
-      "#{moderation.type}-{moderation.id}".format(moderation=moderation): render_to_string(
+      "#policy-{moderation.type}-{moderation.id}".format(moderation=moderation): render_to_string(
         "fragments/moderation/moderation_item.html",
         context=fake_context,
         request=request,
@@ -693,11 +697,13 @@ def policy_submit(request, policy, *args, **kwargs):
 
 # ----------------------------- Policy Validate --------------------------------
 # used to be for incoming and moderation (submit and release)
+# every validation is a review, once the required number of reviews are in,
+# any moderator can manually validate a proposal into seeksupport/discussion
 @ajax
 @login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED)
+@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
 @simple_form_verifier(NewModerationForm, submit_title=_("Add validation review."))
-def policy_validate(request, form, policy, *args, **kwargs):
+def policy_review(request, form, policy, *args, **kwargs):
 
   if request.guard.policy_validate(policy):
     user = request.user
@@ -706,7 +712,12 @@ def policy_validate(request, form, policy, *args, **kwargs):
     moderation.user = user
     moderation.save()
 
-    if policy.ready_for_next_stage(policy):
+    # XXX r like reject is a bad choice to request (more info)
+    if moderation.vote == "r":
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+      policy.save()
+
+    if policy.ready_for_next_stage:
       policy.supporting_policy.filter(ack=False).delete()
       policy.was_validated_at = datetime.now()
       policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
@@ -730,7 +741,7 @@ def policy_validate(request, form, policy, *args, **kwargs):
           }, sender=user
         )
     else:
-      message.success(request, _("Validation review recorded."))
+      messages.success(request, _("Validation review recorded."))
     return redirect('/policy/{}'.format(policy.id))
 
   # XXX used to be here, move to release
@@ -758,7 +769,6 @@ def policy_validate(request, form, policy, *args, **kwargs):
 
 
   return {
-    
     "inner-fragments": {"#moderation-new": "".join(["<strong>", _("Validation review registered"), "</strong>"])},
     "append-fragments": {
       "#moderation-list": render_to_string(
@@ -779,25 +789,27 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
 
   # XXX hm
   model_class = apps.get_model("initproc", target_type)
-  model = get_object_or_404(model_class, pk=target_id)
+  model_object = get_object_or_404(model_class, pk=target_id)
 
-  if not request.guard.target_comment(model):
-    raise PermissionDenied()
+  # call from template before making the Ajax request, here the user writes his
+  # comment and then gets permission denied. We should not let him comment.
+  #if not request.guard.target_comment(model_object):
+  #  raise PermissionDenied()
 
   data = form.cleaned_data
-  new_comment = Comment(target=model, user=request.user, **data)
+  new_comment = Comment(target=model_object, user=request.user, **data)
   new_comment.save()
 
   return {
     "inner-fragments": {
-      "#{}-new-comment".format(model.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
+      "#{}-new-comment".format(model_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
 
       # This user has now commented, so fill in the chat icon
-      "#{}-chat-icon".format(model.unique_id): "chat_bubble",
-      "#{}-comment-count".format(model.unique_id): model.comments.count()
+      "#{}-chat-icon".format(model_object.unique_id): "chat_bubble",
+      "#{}-comment-count".format(model_object.unique_id): model_object.comments.count()
     },
     "append-fragments": {
-      "#{}-comment-list".format(model.unique_id): render_to_string(
+      "#{}-comment-list".format(model_object.unique_id): render_to_string(
         "fragments/comment/item.html",
         context=dict(comment=new_comment),
         request=request

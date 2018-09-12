@@ -38,7 +38,7 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undelete$", views.policy_undelete, name="policy_undelete"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/unhide$", views.policy_unhide, name="policy_unhide"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/submit$", views.policy_submit, name="policy_submit"),
-  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/validate$", views.policy_validate, name="policy_validate"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/review$", views.policy_review, name="policy_review"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/feedback/(?P<target_id>\d+)$", views.policy_feedback, name="policy_feedback"),
   url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_comment, name="target_comment"),
 
@@ -65,4 +65,3 @@ urlpatterns = [
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.like, name="like"),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.unlike, name="unlike")
 ]
-
