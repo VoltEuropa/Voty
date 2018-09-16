@@ -1,0 +1,2 @@
+{% load i18n %}
+<a data-ajax="true" href="{% url 'target_comment' target_type=m.type target_id=m.id %}?fragment=%23{{m.unique_id}}-new-comment" class="btn btn-small btn-outline-primary">{% trans "Add Comment" %}</a>

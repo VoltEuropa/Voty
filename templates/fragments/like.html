@@ -3,12 +3,12 @@
 <span {% if with_link or show_text %} class="{{target.unique_id}}-like" {% endif %}>
   {% guard can_like target %}
   {% if can_like %}
-    {% if is_editable %}
+    {% if is_likeable %}
       {% if with_link %}
         {% if has_liked %}
-          <a data-ajax="true" href="{% url 'unlike' target_type=target.type target_id=target.id %}?show_text={{show_text}}&amp;show_count={{show_count}}" title="{% trans 'Click to revoke' %}">
+          <a data-ajax="true" href="{% url 'target_unlike' target_type=target.type target_id=target.id %}?show_text={{show_text}}&amp;show_count={{show_count}}" title="{% trans 'Click to revoke' %}">
         {% else %}
-          <a data-ajax="true" href="{% url 'like' target_type=target.type target_id=target.id %}?show_text={{show_text}}&amp;show_count={{show_count}}">
+          <a data-ajax="true" href="{% url 'target_like' target_type=target.type target_id=target.id %}?show_text={{show_text}}&amp;show_count={{show_count}}">
         {% endif %}
       {% endif %}
     {% endif %}
@@ -17,7 +17,7 @@
       <i class="material-icons {{target.unique_id}}-like-icon">favorite</i> {% if show_text %}{% trans "You like this" %}{% endif %}
     {% else %}
       {% if show_text %}
-        {% if is_editable %}
+        {% if is_likeable %}
           <i class="material-icons {{target.unique_id}}-like-icon">favorite_border</i> {% trans "I like this" %}
         {% endif %}
       {% else %}
@@ -29,7 +29,7 @@
       <span class="{{target.unique_id}}-like-count">{{target.likes.count}}</span>
     {% endif %}
 
-    {% if is_editable %}
+    {% if is_likeable %}
       {% if with_link %}
         </a>
       {% endif %}

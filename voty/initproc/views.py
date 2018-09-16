@@ -101,9 +101,12 @@ def policy_state_access(states=None):
   return wrap
 
 # --------------------------- personalise arguments ----------------------------
-def personalize_argument(arg, user_id):
+def _personalize_argument(arg, user_id):
   arg.has_liked = arg.likes.filter(user=user_id).exists()
   arg.has_commented = arg.comments.filter(user__id=user_id).exists()
+
+def _set_cancel_url(request=None, *args, **kwargs):
+  return request.get_full_path() + "&cancel=True"
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -133,7 +136,7 @@ def policy_item(request, policy, *args, **kwargs):
 
   payload["policy_arguments"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
   payload["policy_proposals"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
-  payload["is_editable"] = request.guard.is_editable (policy)
+  payload["is_likeable"] = request.guard.is_likeable (policy)
 
   # personalise if authenticated user interacted with policy
   if request.user.is_authenticated:
@@ -143,7 +146,7 @@ def policy_item(request, policy, *args, **kwargs):
     if (policy_votes.exists()):
       payload['policy_vote'] = policy_votes.first()
     for arg in payload['policy_arguments'] + payload['policy_proposals']:
-      personalize_argument(arg, user_id)
+      _personalize_argument(arg, user_id)
 
   return render(request, 'initproc/policy_item.html', context=payload)
 
@@ -221,7 +224,7 @@ def policy_feedback(request, policy, *args, **kwargs):
     policy=policy,
     has_commented=False,
     #has_liked=False,
-    is_editable=True,
+    is_likeable=True,
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
   )
@@ -233,8 +236,10 @@ def policy_feedback(request, policy, *args, **kwargs):
     for comment in fake_context["comments"]:
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()
+      else:
+        comment.can_modify = request.guard.is_editable
 
-    # not twice in a row
+    # don't allow two-in-a-row
     if not request.guard.target_comment(moderation):
       fake_context["has_commented"] = True
 
@@ -379,7 +384,7 @@ def item(request, init, slug=None):
     ctx['arguments'].sort(key=lambda x: (-x.likes.count(), x.created_at))
     ctx['proposals'].sort(key=lambda x: (-x.likes.count(), x.created_at))
 
-    ctx['is_editable'] = request.guard.is_editable (init)
+    ctx['is_likeable'] = request.guard.is_likeable (init)
 
     if request.user.is_authenticated:
         user_id = request.user.id
@@ -391,7 +396,7 @@ def item(request, init, slug=None):
             ctx['vote'] = votes.first()
 
         for arg in ctx['arguments'] + ctx['proposals']:
-            personalize_argument(arg, user_id)
+            _personalize_argument(arg, user_id)
 
     print(ctx)
     return render(request, 'initproc/item.html', context=ctx)
@@ -408,12 +413,12 @@ def show_resp(request, initiative, target_type, target_id, slug=None):
 
     ctx = dict(argument=arg,
                has_commented=False,
-               is_editable=request.guard.is_editable(arg),
+               is_likeable=request.guard.is_likeable(arg),
                full=param_as_bool(request.GET.get('full', 0)),
                comments=arg.comments.order_by('created_at').prefetch_related('likes').all())
 
     if request.user.is_authenticated:
-        personalize_argument(arg, request.user.id)
+        _personalize_argument(arg, request.user.id)
         for cmt in ctx['comments']:
             cmt.has_liked = cmt.likes.filter(user=request.user).exists()
 
@@ -436,7 +441,7 @@ def show_moderation(request, initiative, target_id, slug=None):
     ctx = dict(m=arg,
                has_commented=False,
                has_liked=False,
-               is_editable=True,
+               is_likeable=True,
                full=1,
                comments=arg.comments.order_by('created_at').all())
 
@@ -779,43 +784,244 @@ def policy_review(request, form, policy, *args, **kwargs):
     }
   }
 
-# ----------------------------- Target Comment ---------------------------------
-# this is a catch-all comment for different types
+# ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')
 @ajax
 @login_required
-@simple_form_verifier(NewCommentForm)
+@simple_form_verifier(NewCommentForm, submit_cancel_url=_set_cancel_url)
 def target_comment(request, form, target_type, target_id, *args, **kwargs):
 
-  # XXX hm
-  model_class = apps.get_model("initproc", target_type)
-  model_object = get_object_or_404(model_class, pk=target_id)
+  raise Exception(request)
+  if request.GET.get("cancel", None) is not None:
+    raise Excption("YAY")
 
-  # call from template before making the Ajax request, here the user writes his
-  # comment and then gets permission denied. We should not let him comment.
-  #if not request.guard.target_comment(model_object):
+  model_class = apps.get_model('initproc', target_type)
+  target_object = get_object_or_404(model_class, pk=target_id)
+
+  # do this in the template BEFORE making the Ajax request, else user writes his
+  # comment and then gets permission denied.
+  #if not request.guard.target_comment(target_object):
   #  raise PermissionDenied()
 
   data = form.cleaned_data
-  new_comment = Comment(target=model_object, user=request.user, **data)
+  new_comment = Comment(target=target_object, user=request.user, **data)
   new_comment.save()
 
   return {
     "inner-fragments": {
-      "#{}-new-comment".format(model_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
+      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
 
       # This user has now commented, so fill in the chat icon
-      "#{}-chat-icon".format(model_object.unique_id): "chat_bubble",
-      "#{}-comment-count".format(model_object.unique_id): model_object.comments.count()
+      "#{}-chat-icon".format(target_object.unique_id): "chat_bubble",
+      "#{}-comment-count".format(target_object.unique_id): target_object.comments.count()
     },
     "append-fragments": {
-      "#{}-comment-list".format(model_object.unique_id): render_to_string(
+      "#{}-comment-list".format(target_object.unique_id): render_to_string(
         "fragments/comment/item.html",
         context=dict(comment=new_comment),
         request=request
       )
     }
   }
+
+
+# ------------------------------ Target Like -----------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+def target_like(request, target_type, target_id):
+
+  model_class = apps.get_model('initproc', target_type)
+  target_object = get_object_or_404(model_class, pk=target_id)
+
+  if not request.guard.can_like(target_object):
+    raise PermissionDenied()
+
+  if not request.guard.is_likeable(target_object):
+    raise PermissionDenied()
+
+  fake_context = {
+    "target": target_object,
+    "with_link": True,
+    "show_text": False,
+    "show_count": True,
+    "has_liked": True,
+    "is_likeable": True
+  }
+
+  for key in ['show_text', 'show_count']:
+    if key in request.GET:
+      fake_context[key] = param_as_bool(request.GET[key])
+
+  Like(target=target_object, user=request.user).save()
+
+  return {
+    "fragments": {
+      ".{}-like".format(target_object.unique_id): render_to_string(
+        "fragments/like.html",
+        context=fake_context,
+        request=request
+      )
+    },
+    "inner-fragments": {
+      ".{}-like-icon".format(target_object.unique_id): "favorite",
+      ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
+    }
+  }
+
+# ----------------------------- Target Unlike ----------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+def target_unlike(request, target_type, target_id):
+
+  model_class = apps.get_model('initproc', target_type)
+  target_object = get_object_or_404(model_class, pk=target_id)
+
+  if not request.guard.is_likeable(target_object):
+    raise PermissionDenied()
+
+  target_object.likes.filter(user_id=request.user.id).delete()
+
+  fake_context = {
+    "target": target_object,
+    "with_link": True,
+    "show_text": False,
+    "show_count": True,
+    "has_liked": False,
+    "is_likeable": True
+  }
+
+  for key in ['show_text', 'show_count']:
+    if key in request.GET:
+        fake_context[key] = param_as_bool(request.GET[key])
+
+  return {
+    "fragments": {
+      ".{}-like".format(target_object.unique_id): render_to_string(
+        "fragments/like.html",
+        context=fake_context,
+        request=request
+      )
+    },
+    "inner-fragments": {
+      ".{}-like-icon".format(target_object.unique_id): "favorite_border",
+      ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
+    }
+  }
+
+# ----------------------------- Target Edit ----------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+def target_edit(request, target_type, target_id):
+
+  model_class = apps.get_model('initproc', target_type)
+  target_object = get_object_or_404(model_class, pk=target_id)
+
+  if not request.guard.is_likeable(target_object):
+    raise PermissionDenied()
+
+  if not request.guard.is_modifyable(target_object):
+    raise PermissionDenied()
+
+  data = form.cleaned_data
+  new_comment = Comment(target=target_object, user=request.user, **data)
+  new_comment.save()
+
+  fake_context = {
+    "target": target_object,
+    "with_link": True,
+    "show_text": False,
+    "show_count": True,
+    "has_liked": False,
+    "is_likeable": True
+  }
+
+  for key in ['show_text', 'show_count']:
+    if key in request.GET:
+        fake_context[key] = param_as_bool(request.GET[key])
+
+  return {
+    "fragments": {
+      ".{}-like".format(target_object.unique_id): render_to_string(
+        "fragments/like.html",
+        context=fake_context,
+        request=request
+      )
+    },
+    "inner-fragments": {
+      ".{}-like-icon".format(target_object.unique_id): "favorite_border",
+      ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
+    }
+  }
+
+# ----------------------------- Target Delete ----------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+def target_delete(request, target_type, target_id):
+
+  model_class = apps.get_model('initproc', target_type)
+  target_object = get_object_or_404(model_class, pk=target_id)
+
+  if not request.guard.is_likeable(target_object):
+    raise PermissionDenied()
+
+  if not request.guard.is_modifyable(target_object):
+    raise PermissionDenied()
+
+  target_object.delete()
+  messages.success(request, _("Comment deleted."))
+  
+  return {
+    "inner-fragments": {
+      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
+
+      # This user has now commented, so fill in the chat icon
+      "#{}-chat-icon".format(target_object.unique_id): "chat_bubble",
+      "#{}-comment-count".format(target_object.unique_id): target_object.comments.count()
+    },
+    "append-fragments": {
+      "#{}-comment-list".format(target_object.unique_id): render_to_string(
+        "fragments/comment/item.html",
+        context=dict(comment=new_comment),
+        request=request
+      )
+    }
+  }
+  #target_object.likes.filter(user_id=request.user.id).delete()
+  #
+  #fake_context = {
+  #  "target": target_object,
+  #  "with_link": True,
+  #  "show_text": False,
+  #  "show_count": True,
+  #  "has_liked": False,
+  #  "is_likeable": True
+  #}
+  #
+  #for key in ['show_text', 'show_count']:
+  #  if key in request.GET:
+  #      fake_context[key] = param_as_bool(request.GET[key])
+  #
+  #return {
+  #  "fragments": {
+  #    ".{}-like".format(target_object.unique_id): render_to_string(
+  #      "fragments/like.html",
+  #      context=fake_context,
+  #      request=request
+  #    )
+  #  },
+  #  "inner-fragments": {
+  #    ".{}-like-icon".format(target_object.unique_id): "favorite_border",
+  #    ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
+  #  }
+  #}
+
+
+
+
 
 
 @login_required
@@ -1092,63 +1298,6 @@ def comment(request, form, target_type, target_id):
 @non_ajax_redir('/')
 @ajax
 @login_required
-def like(request, target_type, target_id):
-    model_cls = apps.get_model('initproc', target_type)
-    model = get_object_or_404(model_cls, pk=target_id)
-
-    if not request.guard.can_like(model):
-        raise PermissionDenied()
-
-    if not request.guard.is_editable(model):
-        raise PermissionDenied()
-
-    ctx = {"target": model, "with_link": True, "show_text": False, "show_count": True, "has_liked": True, "is_editable": True}
-    for key in ['show_text', 'show_count']:
-        if key in request.GET:
-            ctx[key] = param_as_bool(request.GET[key])
-
-    Like(target=model, user=request.user).save()
-    return {'fragments': {
-        '.{}-like'.format(model.unique_id): render_to_string("fragments/like.html",
-                                                             context=ctx,
-                                                             request=request)
-    }, 'inner-fragments': {
-        '.{}-like-icon'.format(model.unique_id): 'favorite',
-        '.{}-like-count'.format(model.unique_id): model.likes.count(),
-    }}
-
-
-@non_ajax_redir('/')
-@ajax
-@login_required
-def unlike(request, target_type, target_id):
-    model_cls = apps.get_model('initproc', target_type)
-    model = get_object_or_404(model_cls, pk=target_id)
-
-    if not request.guard.is_editable(model):
-        raise PermissionDenied()
-
-    model.likes.filter(user_id=request.user.id).delete()
-
-    ctx = {"target": model, "with_link": True, "show_text": False, "show_count": True, "has_liked": False, "is_editable": True}
-    for key in ['show_text', 'show_count']:
-        if key in request.GET:
-            ctx[key] = param_as_bool(request.GET[key])
-
-    return {'fragments': {
-        '.{}-like'.format(model.unique_id): render_to_string("fragments/like.html",
-                                                             context=ctx,
-                                                             request=request)
-    }, 'inner-fragments': {
-        '.{}-like-icon'.format(model.unique_id): 'favorite_border',
-        '.{}-like-count'.format(model.unique_id): model.likes.count(),
-    }}
-
-
-
-@non_ajax_redir('/')
-@ajax
-@login_required
 @require_POST
 #@can_access_initiative(STATES.VOTING) # must be in voting
 def vote(request, init):
@@ -1210,4 +1359,3 @@ def compare(request, initiative, version_id):
 def reset_vote(request, init):
     Vote.objects.filter(initiative=init, user_id=request.user).delete()
     return get_voting_fragments(None, init, request)
-

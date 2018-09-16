@@ -17,5 +17,18 @@
   </div>
   <div class="row no-gutters comment-reaction">
     {% include 'fragments/like.html' with author=comment.user has_liked=comment.has_liked target=comment show_text=1 show_count=0 with_link=1 %}
+    {% if comment.can_modify %}
+      <span class="{{target.unique_id}}-edit">
+        <a data-ajax="true" href="" title="{% trans 'Click to edit' %}">
+          <i class="material-icons">edit</i> {% trans "Edit" %}
+        </a>
+      </span>
+      <span class="{{target.unique_id}}-delete">
+        <a data-ajax="true" href="" title="{% trans 'Click to delete' %}">
+          <i class="material-icons">delete_outline</i> {% trans "Delete" %}
+        </a>
+      </span>
+    {% endif %}
   </div>
 </div>
+

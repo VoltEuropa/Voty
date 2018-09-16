@@ -321,12 +321,14 @@ PLATFORM_POLICY_STATE_VALUE_LIST = config._sections["platform_policy_state_value
 PLATFORM_POLICY_STATE_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_STATE_VALUE_LIST[code_tuple[0]])) for code_tuple in config.items("platform_policy_state_list")]
 PLATFORM_POLICY_STATE_DICT = SimpleNamespace(**config._sections["platform_policy_state_list"])
 PLATFORM_POLICY_STATE_DEFAULT = config.get("platform_policy_settings", "PLATFORM_POLICY_STATE_DEFAULT")
+PLATFORM_POLICY_STALE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_STALE_STATE_LIST").split(",")
 PLATFORM_POLICY_ADMIN_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_ADMIN_STATE_LIST").split(",")
 PLATFORM_POLICY_EDIT_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_EDIT_STATE_LIST").split(",")
 PLATFORM_POLICY_DELETE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_DELETE_STATE_LIST").split(",")
 PLATFORM_POLICY_MODERATION_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_MODERATION_STATE_LIST").split(",")
 PLATFORM_POLICY_INITIATORS_COUNT = config.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")
 PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS")
+PLATFORM_POLICY_COMMENT_EDIT_SECONDS = config.get("platform_policy_settings", "PLATFORM_POLICY_COMMENT_EDIT_SECONDS")
 
 PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_dict")
 PLATFORM_POLICY_FIELD_HELPER = _getTranslatedDict("platform_policy_field_description_dict")

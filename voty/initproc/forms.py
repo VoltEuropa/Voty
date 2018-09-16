@@ -47,9 +47,11 @@ def _create_class_field_dict(field_dict):
 
 # -------------------------- Simple Form Verifier ------------------------------
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
-                         submit_klasses="btn-outline-primary", submit_title=_("Send")):
+                         submit_klasses="btn-outline-primary", submit_title=_("Send"),
+                         submit_cancel_url=None):
   def wrap(fn):
     def view(request, *args, **kwargs):
+      template_override = None
       if request.method == "POST":
         form = form_cls(request.POST)
         if form.is_valid():
@@ -57,13 +59,23 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
       else:
         form = form_cls(initial=request.GET)
 
+      if request.GET.get("cancel", None) is not None:
+        template_override="fragments/comment/comment_add.html"
+
+
+      if submit_cancel_url:
+        cancel_url = submit_cancel_url(request=request)
+      else:
+        cancel_url = None
+
       fragment = request.GET.get("fragment")
       rendered = render_to_string(
-        template,
+        template_override or template,
         context=dict(
           fragment=fragment,
           form=form,
           ajax=via_ajax,
+          cancel_url=cancel_url,
           submit_klasses=submit_klasses,
           submit_title=submit_title
         ),
@@ -161,6 +173,21 @@ class NewModerationForm(forms.ModelForm):
       field_order.append(key)
     self.order_fields(field_order)
 
+# --------------------------- NewCommentForm -----------------------------------
+class NewCommentForm(forms.ModelForm):
+
+  class Meta:
+    model = Comment
+    fields = ['text']
+    
+  text = forms.CharField(
+    required=True,
+    label=_("Your comment"),
+    help_text=_("Paragraphs and urls will be formatted"),
+    max_length=500,
+    widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("Please refer to the above Argument in your comment.")})
+  )
+
 # ----------------------------- InitiativeForm ---------------------------------
 class InitiativeForm(forms.ModelForm):
 
@@ -225,12 +252,3 @@ class NewProposalForm(forms.Form):
                            widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("If a similar Proposal already exits, please add a comment to this Proposal.")}))
 
 
-# --------------------------- NewCommentForm -----------------------------------
-class NewCommentForm(forms.ModelForm):
-    text = forms.CharField(required=True, label=_("Your comment"),
-                           help_text=_("Paragraphs and urls will be formatted"),
-                           max_length=500, widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("Please refer to the above Argument in your comment.")}))
-
-    class Meta:
-        model = Comment
-        fields = ['text']

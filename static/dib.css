@@ -1893,3 +1893,7 @@ a.btn span, a.btn i {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   margin-bottom: 1.5em;
 }
+.moderation-new-comment .comment-cancel {
+  padding-right: 1em;
+}
+

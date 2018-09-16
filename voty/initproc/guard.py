@@ -17,10 +17,11 @@ from functools import wraps
 from voty.initadmin.models import UserConfig
 from voty.initproc.models import Moderation
 from .globals import STATES, PUBLIC_STATES, TEAM_ONLY_STATES, INITIATORS_COUNT
-from .models import Initiative, Supporter
+from .models import Initiative, Supporter, Comment
 from django.conf import settings
 from django.utils import six
 from django.utils.translation import ugettext as _
+from datetime import datetime, timedelta
 
 def _compound_action(func):
     @wraps(func)
@@ -32,6 +33,14 @@ def _compound_action(func):
         except (AttributeError, ContinueChecking):
             return func(self, obj)
     return wrapped
+
+# ================================= HELPERS ====================================
+# --------------------------- find parent policy -------------------------------
+# find initiative in object tree
+def _find_parent_policy(self, obj=None):
+  while not hasattr(obj, "policy") and hasattr(obj, "target"):
+    obj = obj.target
+  return obj.policy if hasattr(obj, "policy") else obj
 
 # ================================= CLASSES ====================================   
 # ---------------------------- continue checking -------------------------------
@@ -88,40 +97,7 @@ class Guard:
       return Initiative.objects.filter(state__in=filters)
 
   @_compound_action
-  def can_comment(self, obj=None):
-      if (isinstance (obj,Moderation)):
-          return True
-
-      self.reason = None
-      latest_comment = obj.comments.order_by("-created_at").first()
-
-      if not latest_comment and obj.user == self.user:
-          self.reason = _("You can comment on your Argument only after another person has added a comment.")
-          return False
-      elif latest_comment and latest_comment.user == self.user:
-          self.reason = _("To foster the discussion you can comment on your Argument only after another person has added a comment.")
-          return False
-
-      return True
-
-  def can_like(self, obj=None):
-      if obj.user == self.user: # should apply for both arguments and comments
-          return False
-
-      return True
-
-  def is_editable(self, obj=None): #likes
-      initiative = self.find_parent_initiative(obj)
-      if initiative and initiative.state in [STATES.ACCEPTED, STATES.REJECTED]: # no liking of closed inis
-          return False
-      return True
-
-  def find_parent_initiative(self, obj=None):
-      # find initiative in object tree
-      while not hasattr(obj, "initiative") and hasattr(obj, "target"):
-          obj = obj.target
-      return obj.initiative if hasattr(obj, "initiative") else obj
-
+  
   def is_initiator(self, init):
       return init.supporting_initiative.filter(initiator=True, user_id=self.user.id)
 
@@ -155,6 +131,22 @@ class Guard:
   def can_moderate(self, obj=None):
       # fallback if compound doesn't match
       return False
+
+  def can_comment(self, obj=None):
+    if (isinstance (obj, Moderation)):
+        return True
+
+    self.reason = None
+    latest_comment = obj.comments.order_by("-created_at").first()
+
+    if not latest_comment and obj.user == self.user:
+      self.reason = _("You can comment on your Argument only after another person has added a comment.")
+      return False
+    elif latest_comment and latest_comment.user == self.user:
+      self.reason = _("To foster the discussion you can comment on your Argument only after another person has added a comment.")
+      return False
+
+    return True
 
   # 
   #    INITIATIVES
@@ -269,6 +261,28 @@ class Guard:
   # @cached_property
   # def minimum_moderation_reviews(self):
   #  return self._get_policy_minium_moderator_votes()
+
+  # ------------------------------ can like ------------------------------------
+  # XXX used throughout templates, rename later
+  def can_like(self, obj=None):
+    if obj.user == self.user:
+      return False
+    return True
+
+  # -----------------------comment is likeable ---------------------------------
+  def is_likeable(self, obj=None):
+    policy = _find_parent_policy(obj)
+    if policy and policy.state in settings.PLATFORM_POLICY_STALE_STATE_LIST:
+      return False
+    return True
+
+  # ---------------------- comment is_editable ---------------------------------
+  def is_editable(self, obj=None):
+    if not isinstance (obj, Comment):
+      return False
+    if datetime.now() - obj.changed_at > timedelta(seconds=settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS):
+      return False
+    return True
 
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):

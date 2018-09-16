@@ -1,5 +1,5 @@
 {% load bootstrap %}
-
+{% load i18n %}
 <form id="{{csrf_token}}" method="POST" {%if ajax%}data-ajax-submit="true"{%endif%} action="{{request.path}}{% if fragment %}?fragment={{fragment|urlencode}}{% endif %}" onsubmit="submitForm.disabled=true; return true;">
   {% if form.title %}
     <h2>{{form.title }}</h2>
@@ -9,6 +9,9 @@
   {% endif %}
     {% csrf_token %}
     {{form|bootstrap}}
+  {% if cancel_url %}
+    <a data-ajax="true" href="{{ cancel_url }}" class="comment-cancel">{% trans "Cancel" %}</a>
+  {% endif %}
   {% if submit_title %}
     <button type="submit" class="btn {{submit_klasses}}" name="submitForm">{{submit_title}}</button>
   {% endif %}

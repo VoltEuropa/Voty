@@ -21,12 +21,12 @@
     </p>
     <div id="{{m.unique_id}}-comment-list">
       {% for comment in comments %}
-        {% include 'fragments/comment/item.html' %}
+        {% include 'fragments/comment/comment_item.html' %}
       {% endfor %}
     </div>
     {% if not has_commented %}
       <div id="{{m.unique_id}}-new-comment" class="moderation-new-comment">
-        <a data-ajax="true" href="{% url 'comment' target_type=m.type target_id=m.id %}?fragment=%23{{m.unique_id}}-new-comment" class="btn btn-small btn-outline-primary">{% trans "Add Comment" %}</a>
+        {% include 'fragments/comment/comment_add.html' %}
       </div>
     {% elif request.guard.reason %}
       <div class="alert alert-warning">{{ request.guard.reason }}</div>
