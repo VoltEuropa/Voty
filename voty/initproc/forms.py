@@ -45,49 +45,6 @@ def _create_class_field_dict(field_dict):
 
   return response
 
-# -------------------------- Simple Form Verifier ------------------------------
-def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
-                         submit_klasses="btn-outline-primary", submit_title=_("Send"),
-                         submit_cancel_url=None):
-  def wrap(fn):
-    def view(request, *args, **kwargs):
-      template_override = None
-      if request.method == "POST":
-        form = form_cls(request.POST)
-        if form.is_valid():
-          return fn(request, form, *args, **kwargs)
-      else:
-        form = form_cls(initial=request.GET)
-
-      if request.GET.get("cancel", None) is not None:
-        template_override="fragments/comment/comment_add.html"
-
-
-      if submit_cancel_url:
-        cancel_url = submit_cancel_url(request=request)
-      else:
-        cancel_url = None
-
-      fragment = request.GET.get("fragment")
-      rendered = render_to_string(
-        template_override or template,
-        context=dict(
-          fragment=fragment,
-          form=form,
-          ajax=via_ajax,
-          cancel_url=cancel_url,
-          submit_klasses=submit_klasses,
-          submit_title=submit_title
-        ),
-        request=request
-      )
-      if fragment:
-        return {"inner-fragments": {fragment: rendered}}
-      return rendered
-    return view
-  return wrap
-
-
 # ============================= Classes ========================================
 # ----------------------------- PolicyForm -------------------------------------
 class PolicyForm(forms.ModelForm):

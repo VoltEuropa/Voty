@@ -39,7 +39,7 @@ import json
 
 from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
 from .models import (Policy, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
-from .forms import (simple_form_verifier, PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
+from .forms import (PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
 from .undo import UndoUrlTokenGenerator
 from .serializers import SimpleInitiativeSerializer
@@ -83,6 +83,63 @@ def get_voting_fragments(vote, initiative, request):
         }}
 
 # ============================= HELPERS ========================================
+# -------------------------- Simple Form Verifier ------------------------------
+def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
+                         submit_klasses="btn-outline-primary", submit_title=_("Send"),
+                         cancel=None, cancel_template=None):
+  def wrap(fn):
+    def view(request, *args, **kwargs):
+      template_override = None
+
+      if request.method == "POST":
+        form = form_cls(request.POST)
+        if form.is_valid():
+          return fn(request, form, *args, **kwargs)
+      else:
+        form = form_cls(initial=request.GET)
+
+      # calling the method in views.py to build the url
+      if cancel:
+        cancel_url = request.get_full_path() + "&cancel=True"
+      else:
+        cancel_url = None
+
+      fragment = request.GET.get("fragment")
+
+      # to cancel we need the parent object... actually the whole things is a
+      # few and not a form...
+      if request.GET.get("cancel", None) is not None:
+      
+        model_class = apps.get_model('initproc', kwargs["target_type"])
+        target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+
+        rendered = render_to_string(
+          cancel_template,
+          context=dict(
+            fragment=fragment,
+            m=target_object
+          ),
+          request=request
+        )
+      else:
+        rendered = render_to_string(
+          template_override or template,
+          context=dict(
+            fragment=fragment,
+            form=form,
+            ajax=via_ajax,
+            cancel_url=cancel_url,
+            submit_klasses=submit_klasses,
+            submit_title=submit_title
+          ),
+          request=request
+        )
+      if fragment:
+        return {"inner-fragments": {fragment: rendered}}
+      return rendered
+    return view
+  return wrap
+
 # --------------------- State Permission decorator -----------------------------
 # moved here from guard.py
 def policy_state_access(states=None):
@@ -105,8 +162,8 @@ def _personalize_argument(arg, user_id):
   arg.has_liked = arg.likes.filter(user=user_id).exists()
   arg.has_commented = arg.comments.filter(user__id=user_id).exists()
 
-def _set_cancel_url(request=None, *args, **kwargs):
-  return request.get_full_path() + "&cancel=True"
+#def _set_cancel_url(request=None, *args, **kwargs):
+#  return request.get_full_path() + "&cancel=True"
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -223,7 +280,6 @@ def policy_feedback(request, policy, *args, **kwargs):
     m=moderation,
     policy=policy,
     has_commented=False,
-    #has_liked=False,
     is_likeable=True,
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
@@ -788,12 +844,8 @@ def policy_review(request, form, policy, *args, **kwargs):
 @non_ajax_redir('/')
 @ajax
 @login_required
-@simple_form_verifier(NewCommentForm, submit_cancel_url=_set_cancel_url)
+@simple_form_verifier(NewCommentForm, cancel=True, cancel_template="fragments/comment/comment_add.html")
 def target_comment(request, form, target_type, target_id, *args, **kwargs):
-
-  raise Exception(request)
-  if request.GET.get("cancel", None) is not None:
-    raise Excption("YAY")
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
@@ -824,6 +876,13 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
     }
   }
 
+# ----------------------------- Target Cancel  ---------------------------------
+# XXX do this in regex once figuring out how to match with &cancel=True...
+#@non_ajax_redir('/')
+#@ajax
+#@login_required
+#def target_cancel(request, target_type, target_id, *args, **kwargs):
+#  return target_comment(request, target_type, target_id, *args, **kwargs)
 
 # ------------------------------ Target Like -----------------------------------
 @non_ajax_redir('/')

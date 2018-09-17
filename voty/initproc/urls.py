@@ -40,7 +40,23 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/submit$", views.policy_submit, name="policy_submit"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/review$", views.policy_review, name="policy_review"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/feedback/(?P<target_id>\d+)$", views.policy_feedback, name="policy_feedback"),
-  url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_comment, name="target_comment"),
+  
+  #url(r"^cancel/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_cancel, name="target_cancel"),
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_comment, name="target_comment"),
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>.*?\d+)?.$", views.target_comment, name="target_comment"),
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>.*?\d+)(?:.*)$", views.target_comment, name="target_comment"),
+  
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_comment, name="target_comment"),
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+).*$", views.target_comment, name="target_comment"),
+  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>.*?\d+).*$", views.target_comment, name="target_comment"),
+  #comment/[^/]+/[^/?#]+
+  #comment/[^/?#]+/[^/?#]+
+  
+  #comment/(?P<target_type>[^/]+)/(?P<target_id>[^/?#]+)
+
+  url(r"^comment/(?P<target_type>[^/]+)/(?P<target_id>[^/?#]+)", views.target_comment, name="target_comment"),
+
+
   url(r"^like/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_like, name="target_like"),
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_unlike, name="target_unlike"),
   url(r"^delete/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_delete, name="target_delete"),
@@ -65,5 +81,5 @@ urlpatterns = [
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/moderation/(?P<target_id>\d+)$", views.show_moderation, name="show_moderation"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/(?P<target_type>.*)/(?P<target_id>\d+)$", views.show_resp, name="show_resp"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?$", views.item, name="initiative_item"),
-  #url(r"^comment/(?P<target_type>.*)/(?P<target_id>\d+)$", views.comment, name="comment"),
 ]
+
