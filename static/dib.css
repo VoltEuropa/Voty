@@ -1203,10 +1203,6 @@ Argument base design
   overflow: hidden; /* prevent comment content from overflowing */
 }
 
-.argument .comment .comment-head {
-  margin: 0 0 1rem 0;
-}
-
 .argument button:disabled.new-comment {
   border: none;
   background: transparent;
@@ -1504,14 +1500,12 @@ orange: #D2892B;
     margin-top: .125rem;
   }
 }
-
 @media (max-width: 767px) {
   .typefilter .container-fluid {
     padding-left: 0;
     padding-right: 0;
   }
 }
-
 @media (min-width: 576px) {
   .container {
     width: auto;
@@ -1520,14 +1514,12 @@ orange: #D2892B;
     padding-left: 1rem;
   }
 }
-
 @media (min-width: 992px) {
   .container {
     width: 45.75rem;
     max-width: 100%;
   }
 }
-
 @media (min-width: 1200px) {
   .container {
     width: 45.75rem;
@@ -1549,6 +1541,13 @@ textarea#id_title:-moz-placeholder, textarea#id_text:-moz-placeholder { /* Firef
 }
 
 /* =========================== CUSTOMIZATIONS =============================== */
+/* stretch containers, don't waste space, don't overflow */
+.comment.container {
+  padding: 0;
+  max-width: none;
+  width: inherit;
+}
+
 /* Fixes - prevent navbar icons leaking into page width */
 .navbar .navbar-nav li a i {
   overflow-x: hidden;
@@ -1840,8 +1839,8 @@ a.btn span, a.btn i {
 }
 .moderation .badge {
   position: absolute;
-  top: 25px;
-  left: 25px;
+  top: 20px;
+  left: -12px;
   display: inline-block;
   border-radius: 50%;
   padding: 0;
@@ -1859,21 +1858,21 @@ a.btn span, a.btn i {
  text-transform: capitalize;
  display: inline-block;
 }
-.moderation-item-author {
-  margin-left: 1em;
+/* careful */
+.moderation-author {
+  display: inline-block;
+  margin-right: 12px;
 }
-.moderation .comment-reaction {
-  padding: .5em 0 1em 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  margin-top: -.75em;
+.moderation-header {
+  display: inline;
+  flex: 1;
+}
+.moderation-header .moderation-interaction {
+  float: right;
+  line-height: 40px;
 }
 .moderation .col-auto {
-  margin-left: 1em;
-  line-height: 50px;
-  margin-bottom: .25em;
-}
-.moderation .comment-likes .material-icons {
-  line-height: 50px;
+  line-height: 40px;
 }
 .moderation .moderation-title {
   text-transform: uppercase;
@@ -1896,4 +1895,22 @@ a.btn span, a.btn i {
 .moderation-new-comment .comment-cancel {
   padding-right: 1em;
 }
-
+/* comment formatting */
+.comment-head {
+  flex: 1;
+  display: block;
+  margin-left: 16px;
+}
+.comment-head .comment-interaction {
+  float: right;
+}
+.comment-text,
+.moderation-text {
+  margin-left: 60px; /* 44 avatar + 16 margin avatar */
+}
+.comment-likes a {
+  text-decoration: none;
+}
+.moderation-text {
+  margin-top: -1em;
+}

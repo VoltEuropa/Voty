@@ -1,25 +1,35 @@
 {% load i18n %}
 <div id="{{m.unique_id}}" class="moderation-item">
-  {% include "fragments/avatar.html" with size=50 user=m.user %}
-
-  {% if m.vote == 'y' %}
-    <span class="badge badge-success"><i class="material-icons">thumb_up</i></span>
-  {% elif m.vote == 'n' %}
-    <span class="badge badge-danger"><i class="material-icons">thumb_down</i></span>
-  {% else %}
-    <span class="badge badge-default"><i class="material-icons">thumbs_up_down</i></span>
-  {% endif %}
-  <span class="moderation-item-author">{{m.user.get_full_name|default:m.user.username}}</span>,
-  <span>{% blocktrans with time=m.created_at|timesince %}posted {{ time }} ago.{% endblocktrans %}</span>
-  {% if full %}
-    {% if m.text %}
-      <a data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;toggle=True"><i class="material-icons">comment</i></a>
+  <div class="moderation-author">
+    {% include "fragments/avatar.html" with size=44 user=m.user %}
+    {% if m.vote == 'y' %}
+      <span class="badge badge-success"><i class="material-icons">thumb_up</i></span>
+    {% elif m.vote == 'n' %}
+      <span class="badge badge-danger"><i class="material-icons">thumb_down</i></span>
+    {% else %}
+      <span class="badge badge-default"><i class="material-icons">thumbs_up_down</i></span>
     {% endif %}
-    <p>
-    {% load markdown %}
-    {{m.text|markdown}}
-    </p>
-    <div id="{{m.unique_id}}-comment-list">
+  </div>
+  <div class="moderation-header">
+
+    <span class="moderation-item-author">{{m.user.get_full_name|default:m.user.username}}</span>,
+    <span>{% blocktrans with time=m.created_at|date:'M-d, H:i' %}posted on {{ time }}.{% endblocktrans %}</span>
+    {% if m.text %}
+    <span class="moderation-interaction">
+      <a data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}"><i class="material-icons">comment</i></a>
+    </span>
+    {% endif %}
+    {% if full %}
+    <div class="moderation-text">
+      <p>
+      {% load markdown %}
+      {{m.text|markdown}}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+  {% if full %}
+    <div id="{{m.unique_id}}-comment-list" class="moderation-comment-list">
       {% for comment in comments %}
         {% include 'fragments/comment/comment_item.html' %}
       {% endfor %}
@@ -30,10 +40,6 @@
       </div>
     {% elif request.guard.reason %}
       <div class="alert alert-warning">{{ request.guard.reason }}</div>
-    {% endif %}
-  {% else %}
-    {% if m.text %}
-      <a data-ajax="true" href="{% url 'policy_feedback' policy_id=policy.id slug=policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}"><i class="material-icons">comment</i></a>
     {% endif %}
   {% endif %}
 </div>

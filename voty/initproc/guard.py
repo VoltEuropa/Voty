@@ -21,7 +21,7 @@ from .models import Initiative, Supporter, Comment
 from django.conf import settings
 from django.utils import six
 from django.utils.translation import ugettext as _
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def _compound_action(func):
     @wraps(func)
@@ -62,7 +62,7 @@ class Guard:
   
     # total moderators required are based on percentage/minimum person
     total = policy.required_moderations 
-    raise Exception(total)
+
     # overall moderations on this policy
     # XXX what if only policy team proposes and not enough moderators?
     moderations = policy.policy_moderations.filter(stale=False)
@@ -280,8 +280,10 @@ class Guard:
   def is_editable(self, obj=None):
     if not isinstance (obj, Comment):
       return False
-    if datetime.now() - obj.changed_at > timedelta(seconds=settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS):
+    if obj.user.id != self.user.id:
       return False
+    #if datetime.now(timezone.utc) - obj.changed_at > timedelta(seconds=int(settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS)):
+    #  return False
     return True
 
   # ----------------- invite co-initiators/supporters to policy ----------------
@@ -518,4 +520,6 @@ def add_guard(get_response):
     return response
 
   return middleware
+
+
 

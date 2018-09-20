@@ -106,8 +106,7 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
 
       fragment = request.GET.get("fragment")
 
-      # to cancel we need the parent object... actually the whole things is a
-      # few and not a form...
+      # to cancel we need the parent object...z
       if request.GET.get("cancel", None) is not None:
       
         model_class = apps.get_model('initproc', kwargs["target_type"])
@@ -161,9 +160,6 @@ def policy_state_access(states=None):
 def _personalize_argument(arg, user_id):
   arg.has_liked = arg.likes.filter(user=user_id).exists()
   arg.has_commented = arg.comments.filter(user__id=user_id).exists()
-
-#def _set_cancel_url(request=None, *args, **kwargs):
-#  return request.get_full_path() + "&cancel=True"
 
 #
 # ____    ____  __   ___________    __    ____   _______.
@@ -293,7 +289,7 @@ def policy_feedback(request, policy, *args, **kwargs):
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()
       else:
-        comment.can_modify = request.guard.is_editable
+        comment.can_modify = request.guard.is_editable(comment)
 
     # don't allow two-in-a-row
     if not request.guard.target_comment(moderation):
@@ -661,7 +657,34 @@ def policy_stage(request, policy, *args, **kwargs):
     messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-# --------------------------------- Policy Delete ------------------------------
+# ---------------------------- Policy Validate ---------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
+def policy_validate(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_validate(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
+  
+  with reversion.create_revision():
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+    policy.staged_at = datetime.now()
+    policy.save()
+
+    reversion.set_user(request.user)
+
+    notify(
+      [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
+      settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_VALIDATED,
+      {"description": _("Policy has been validated. It can now be discussed and seek supporters.")},
+      sender=user
+    )
+
+    messages.success(request, _("Policy moved to validated status. It can now seek supporters and be discussed."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+
+# ----------------------------- Policy Delete ----------------------------------
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_DELETE_STATE_LIST)
 def policy_delete(request, policy, *args, **kwargs):
@@ -858,18 +881,17 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
   data = form.cleaned_data
   new_comment = Comment(target=target_object, user=request.user, **data)
   new_comment.save()
+  new_comment.can_modify = True
 
   return {
     "inner-fragments": {
-      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
-
-      # This user has now commented, so fill in the chat icon
+      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong><br/>", _("It is editable during the next 5 minutes")]),
       "#{}-chat-icon".format(target_object.unique_id): "chat_bubble",
       "#{}-comment-count".format(target_object.unique_id): target_object.comments.count()
     },
     "append-fragments": {
       "#{}-comment-list".format(target_object.unique_id): render_to_string(
-        "fragments/comment/item.html",
+        "fragments/comment/comment_item.html",
         context=dict(comment=new_comment),
         request=request
       )
@@ -973,17 +995,16 @@ def target_unlike(request, target_type, target_id):
 @non_ajax_redir('/')
 @ajax
 @login_required
+#@simple_form_verifier(NewCommentForm, cancel=True, cancel_template="fragments/comment/comment_add.html")
 def target_edit(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
 
-  if not request.guard.is_likeable(target_object):
+  if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
-  if not request.guard.is_modifyable(target_object):
-    raise PermissionDenied()
-
+  raise Exception(target_object)
   data = form.cleaned_data
   new_comment = Comment(target=target_object, user=request.user, **data)
   new_comment.save()
@@ -1021,63 +1042,47 @@ def target_edit(request, target_type, target_id):
 @login_required
 def target_delete(request, target_type, target_id):
 
-  model_class = apps.get_model('initproc', target_type)
+  model_class = apps.get_model("initproc", target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
 
-  if not request.guard.is_likeable(target_object):
+  if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
-  if not request.guard.is_modifyable(target_object):
-    raise PermissionDenied()
+  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
   target_object.delete()
-  messages.success(request, _("Comment deleted."))
-  
-  return {
-    "inner-fragments": {
-      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
 
-      # This user has now commented, so fill in the chat icon
-      "#{}-chat-icon".format(target_object.unique_id): "chat_bubble",
-      "#{}-comment-count".format(target_object.unique_id): target_object.comments.count()
-    },
-    "append-fragments": {
-      "#{}-comment-list".format(target_object.unique_id): render_to_string(
-        "fragments/comment/item.html",
-        context=dict(comment=new_comment),
-        request=request
+  # keep the comment thread open
+  fake_context = dict(
+    m=target_parent,
+    policy=target_parent.policy,
+    has_commented=False,
+    is_likeable=True,
+    full=1,
+    comments=target_parent.comments.order_by('created_at').all()
+  )
+
+  if request.user:
+    for comment in fake_context["comments"]:
+      if request.user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=request.user).exists()
+      else:
+        comment.can_modify = request.guard.is_editable(comment)
+
+    # don't allow two-in-a-row
+    if not request.guard.target_comment(target_parent):
+      fake_context["has_commented"] = True
+
+  return {
+    "fragments": {
+      "#policy-{moderation.type}-{moderation.id}".format(moderation=target_parent): render_to_string(
+        "fragments/moderation/moderation_item.html",
+        context=fake_context,
+        request=request,
       )
     }
   }
-  #target_object.likes.filter(user_id=request.user.id).delete()
-  #
-  #fake_context = {
-  #  "target": target_object,
-  #  "with_link": True,
-  #  "show_text": False,
-  #  "show_count": True,
-  #  "has_liked": False,
-  #  "is_likeable": True
-  #}
-  #
-  #for key in ['show_text', 'show_count']:
-  #  if key in request.GET:
-  #      fake_context[key] = param_as_bool(request.GET[key])
-  #
-  #return {
-  #  "fragments": {
-  #    ".{}-like".format(target_object.unique_id): render_to_string(
-  #      "fragments/like.html",
-  #      context=fake_context,
-  #      request=request
-  #    )
-  #  },
-  #  "inner-fragments": {
-  #    ".{}-like-icon".format(target_object.unique_id): "favorite_border",
-  #    ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
-  #  }
-  #}
-
 
 
 

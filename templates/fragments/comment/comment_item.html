@@ -1,34 +1,29 @@
 {% load i18n %}
 <div id="comment-{{comment.id}}" class="comment container">
-  <div class="row no-gutters comment-head">
+  <div class="row no-gutters">
     <div class="col-auto author">
-      {% include "fragments/avatar.html" with user=comment.user size=50 %}
+      {% include "fragments/avatar.html" with user=comment.user size=44 %}
     </div>
-    <div class="col-auto">
+    <div class="col-auto comment-head">
       <span class="author-name">{{comment.user.get_full_name|default:comment.user.username}}</span>,
-      <span class="arg-meta">{% blocktrans with time=comment.created_at|timesince %}posted {{ time }} ago.{% endblocktrans %}</span>
-    </div>
-    <div class="col-auto ml-auto comment-likes">
-      {% include 'fragments/like.html' with author=comment.user has_liked=comment.has_liked target=comment show_text=0 show_count=1 with_link=0 %}
+      <span class="arg-meta">{% blocktrans with time=comment.created_at|date:'M-d, H:i' %}posted {{ time }}{% endblocktrans %}</span>
+      
+      <span class="comment-interaction">
+        {% if comment.can_modify %}
+        <span class="comment-{{ comment.unique_id}}-edit">
+          <a data-ajax="true" href="{% url 'target_edit' target_type=comment.type target_id=comment.id %}?fragment=%23comment-{{comment.id}}" title="{% trans 'Click to edit' %}"><i class="material-icons">edit</i></a>
+        </span>
+        <span class="comment-{{ comment.unique_id}}-delete">
+          <a data-ajax="true" href="{% url 'target_delete' target_type=comment.type target_id=comment.id %}?fragment=%23{{m.unique_id}}" title="{% trans 'Click to delete' %}"><i class="material-icons">delete_outline</i></a>
+        </span>
+        {% endif %}
+        <span class="comment-likes">
+          {% include 'fragments/like.html' with author=comment.user has_liked=comment.has_liked target=comment show_text=0 show_count=1 with_link=1 %}  
+        </span>
+      </span>
     </div>
   </div>
   <div class="row no-gutters comment-text">
     {{comment.text|urlize|linebreaks}}
   </div>
-  <div class="row no-gutters comment-reaction">
-    {% include 'fragments/like.html' with author=comment.user has_liked=comment.has_liked target=comment show_text=1 show_count=0 with_link=1 %}
-    {% if comment.can_modify %}
-      <span class="{{target.unique_id}}-edit">
-        <a data-ajax="true" href="" title="{% trans 'Click to edit' %}">
-          <i class="material-icons">edit</i> {% trans "Edit" %}
-        </a>
-      </span>
-      <span class="{{target.unique_id}}-delete">
-        <a data-ajax="true" href="" title="{% trans 'Click to delete' %}">
-          <i class="material-icons">delete_outline</i> {% trans "Delete" %}
-        </a>
-      </span>
-    {% endif %}
-  </div>
 </div>
-

@@ -122,17 +122,21 @@
           </div>          
           {% endif %}
 
-          {% if policy.ready_for_next_stage %}
-            <div class="align-right">
-              <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Validate Policy (to seek support)" %}</span>
-                </button>
-              </form>
-            </div>
-          {% endif %}
+          {% with "PLATFORM_POLICY_MODERATION_STATE_LIST"|get_setting as state_list %}
+            {% if policy.state in state_list %}
+              {% if policy.ready_for_next_stage %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Validate Policy (to seek support)" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endwith %}
 
           {% if request.guard.policy_invite %}
           <div class="align-right" id="invite-initiators">
