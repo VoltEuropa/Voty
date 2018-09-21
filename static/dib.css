@@ -1914,3 +1914,6 @@ a.btn span, a.btn i {
 .moderation-text {
   margin-top: -1em;
 }
+.comment.container form {
+  text-align: right;
+}

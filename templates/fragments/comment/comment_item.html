@@ -11,7 +11,7 @@
       <span class="comment-interaction">
         {% if comment.can_modify %}
         <span class="comment-{{ comment.unique_id}}-edit">
-          <a data-ajax="true" href="{% url 'target_edit' target_type=comment.type target_id=comment.id %}?fragment=%23comment-{{comment.id}}" title="{% trans 'Click to edit' %}"><i class="material-icons">edit</i></a>
+          <a data-ajax="true" href="{% url 'target_edit' target_type=comment.type target_id=comment.id %}?fragment=%23comment-{{comment.id}}&amp;edit=True" title="{% trans 'Click to edit' %}"><i class="material-icons">edit</i></a>
         </span>
         <span class="comment-{{ comment.unique_id}}-delete">
           <a data-ajax="true" href="{% url 'target_delete' target_type=comment.type target_id=comment.id %}?fragment=%23{{m.unique_id}}" title="{% trans 'Click to delete' %}"><i class="material-icons">delete_outline</i></a>

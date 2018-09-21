@@ -280,10 +280,10 @@ class Guard:
   def is_editable(self, obj=None):
     if not isinstance (obj, Comment):
       return False
-    if obj.user.id != self.user.id:
+    if obj.user.id != self.user.id and not user.is_superuser:
       return False
-    #if datetime.now(timezone.utc) - obj.changed_at > timedelta(seconds=int(settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS)):
-    #  return False
+    if datetime.now(timezone.utc) - obj.changed_at > timedelta(seconds=int(settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS)):
+      return False
     return True
 
   # ----------------- invite co-initiators/supporters to policy ----------------
@@ -520,6 +520,4 @@ def add_guard(get_response):
     return response
 
   return middleware
-
-
 

@@ -83,34 +83,41 @@ def get_voting_fragments(vote, initiative, request):
         }}
 
 # ============================= HELPERS ========================================
+def _fetch_object_from_class(target_type, target_id):
+  return get_object_or_404(apps.get_model('initproc', target_type), pk=target_id)
+        
 # -------------------------- Simple Form Verifier ------------------------------
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send"),
                          cancel=None, cancel_template=None):
   def wrap(fn):
     def view(request, *args, **kwargs):
-      template_override = None
-
+      target_object = None
       if request.method == "POST":
         form = form_cls(request.POST)
         if form.is_valid():
           return fn(request, form, *args, **kwargs)
       else:
-        form = form_cls(initial=request.GET)
-
-      # calling the method in views.py to build the url
-      if cancel:
-        cancel_url = request.get_full_path() + "&cancel=True"
-      else:
-        cancel_url = None
+        if request.GET.get("edit"):
+          target_object = target_object or \
+            _fetch_object_from_class(kwargs["target_type"], kwargs["target_id"])
+          form = form_cls(initial={"text": target_object.text})
+        else:
+          form = form_cls(request.GET)
+        if cancel:
+          cancel_url = request.get_full_path().replace("&edit=True", "") + "&cancel=True"
+        else:
+          cancel_url = None
+        
 
       fragment = request.GET.get("fragment")
 
-      # to cancel we need the parent object...z
+      # when we actually cancel we need the parent object... to rerender
       if request.GET.get("cancel", None) is not None:
-      
-        model_class = apps.get_model('initproc', kwargs["target_type"])
-        target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+        target_object = target_object or \
+          _fetch_object_from_class(kwargs["target_type"], kwargs["target_id"])
+        #model_class = apps.get_model('initproc', kwargs["target_type"])
+        #target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
 
         rendered = render_to_string(
           cancel_template,
@@ -122,7 +129,7 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
         )
       else:
         rendered = render_to_string(
-          template_override or template,
+          template,
           context=dict(
             fragment=fragment,
             form=form,
@@ -995,44 +1002,52 @@ def target_unlike(request, target_type, target_id):
 @non_ajax_redir('/')
 @ajax
 @login_required
-#@simple_form_verifier(NewCommentForm, cancel=True, cancel_template="fragments/comment/comment_add.html")
-def target_edit(request, target_type, target_id):
+@simple_form_verifier(NewCommentForm,
+                    submit_title=_("Save"))
+def target_edit(request, form, *args, **kwargs):
 
-  model_class = apps.get_model('initproc', target_type)
-  target_object = get_object_or_404(model_class, pk=target_id)
+  model_class = apps.get_model('initproc', kwargs["target_type"])
+  target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
 
   if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
-  raise Exception(target_object)
   data = form.cleaned_data
-  new_comment = Comment(target=target_object, user=request.user, **data)
-  new_comment.save()
+  target_object.text = form.cleaned_data["text"]
+  target_object.save()
 
-  fake_context = {
-    "target": target_object,
-    "with_link": True,
-    "show_text": False,
-    "show_count": True,
-    "has_liked": False,
-    "is_likeable": True
-  }
+  # XXX same as delete
+  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
-  for key in ['show_text', 'show_count']:
-    if key in request.GET:
-        fake_context[key] = param_as_bool(request.GET[key])
+  # keep the comment thread open
+  fake_context = dict(
+    m=target_parent,
+    policy=target_parent.policy,
+    has_commented=False,
+    is_likeable=True,
+    full=1,
+    comments=target_parent.comments.order_by('created_at').all()
+  )
+
+  if request.user:
+    for comment in fake_context["comments"]:
+      if request.user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=request.user).exists()
+      else:
+        comment.can_modify = request.guard.is_editable(comment)
+
+    # don't allow two-in-a-row
+    if not request.guard.target_comment(target_parent):
+      fake_context["has_commented"] = True
 
   return {
     "fragments": {
-      ".{}-like".format(target_object.unique_id): render_to_string(
-        "fragments/like.html",
+      "#policy-{moderation.type}-{moderation.id}".format(moderation=target_parent): render_to_string(
+        "fragments/moderation/moderation_item.html",
         context=fake_context,
-        request=request
+        request=request,
       )
-    },
-    "inner-fragments": {
-      ".{}-like-icon".format(target_object.unique_id): "favorite_border",
-      ".{}-like-count".format(target_object.unique_id): target_object.likes.count(),
     }
   }
 
