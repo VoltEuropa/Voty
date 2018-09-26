@@ -139,7 +139,7 @@ def create_custom_groups_and_permissions():
         # go through the list of keys
         for permission in perm_list:
           if permission[0].lower() in group_permission_list:
-            #print("Adding permission %s to %s" % (permission[0], group_key))
+            print("Adding permission %s to %s" % (permission[0], group_key))
             group[1].permissions.add(permission[1])
 
     group[1].save()
@@ -166,4 +166,3 @@ class Command(BaseCommand):
     #create_deleted_user()
 
     print("Groups, Permissions, Noticetypes created.")
-

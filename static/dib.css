@@ -1886,13 +1886,17 @@ a.btn span, a.btn i {
 }
 .moderation-new-comment {
   text-align: right;
-  margin-top: -1em;
+}
+.moderation-update {
+  position: absolute;
+  right: 0;
+  top: -2.25em;
 }
 .moderation-item > p:last-of-type {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   margin-bottom: 1.5em;
 }
-.moderation-new-comment .comment-cancel {
+.moderation-item .comment-cancel {
   padding-right: 1em;
 }
 /* comment formatting */
@@ -1915,5 +1919,8 @@ a.btn span, a.btn i {
   margin-top: -1em;
 }
 .comment.container form {
+  text-align: right;
+}
+.comment.container > a {
   text-align: right;
 }

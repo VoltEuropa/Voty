@@ -113,7 +113,7 @@ class NewModerationForm(forms.ModelForm):
           break
 
     # non-confirmations need to have a justification
-    else:    
+    else: 
       if not cleaned_data['text']:
         self.add_error("text", _("Please briefly justify your validation to the initiator."))
 

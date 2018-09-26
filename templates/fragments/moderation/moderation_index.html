@@ -5,11 +5,13 @@
     {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
   </div>
 
-  {% if request.guard.policy_review_eligible %}
-    <br/>
-    <div id="moderation-new">
-      <a data-ajax="true" href="{% url 'policy_validate' policy_id=policy.id %}?fragment=%23moderation-new" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>
-    </div>
+  {% if request.guard.policy_review %}
+    {% if not has_moderated %}
+      <br/>
+      <div id="moderation-new">
+        <a data-ajax="true" href="{% url 'policy_review' policy_id=policy.id %}?fragment=%23moderation-new" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>
+      </div>
+    {% endif %}
   {% endif %}
 
   {% if policy.stale_moderations.count %}

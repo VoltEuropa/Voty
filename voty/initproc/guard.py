@@ -278,9 +278,14 @@ class Guard:
 
   # ---------------------- comment is_editable ---------------------------------
   def is_editable(self, obj=None):
+    user = self.user
+
+    # this covers edit and delete, template should only display delete!
+    if user.is_superuser or user.has_perm("initproc.policy_can_review"):
+      return True
     if not isinstance (obj, Comment):
       return False
-    if obj.user.id != self.user.id and not user.is_superuser:
+    if obj.user.id != user.id:
       return False
     if datetime.now(timezone.utc) - obj.changed_at > timedelta(seconds=int(settings.PLATFORM_POLICY_COMMENT_EDIT_SECONDS)):
       return False
@@ -308,7 +313,7 @@ class Guard:
     user = self.user
     
     if policy.state in settings.PLATFORM_POLICY_ADMIN_STATE_LIST:
-      if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+      if user.has_perm("initproc.policy_can_review") or user.is_superuser:
         return True
       if policy.supporting_policy.filter(initiator=True, user=user.id):
         return True
@@ -424,26 +429,26 @@ class Guard:
         return True
     return False
 
-  # ---------------------- should validate policy ------------------------------
+  # -------------------- review a policy (previous moderation) -----------------
   # checks if user SHOULD validate - this method should test against all "soft"
-  # criteria, like female/diverse etc moderators
-  def policy_review_eligible(self, policy=None):
+  def policy_review(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
-    if not self.policy_validate(policy):
+    if not user.has_perm("initproc.policy_can_review"):
+      if not user.is_superuser:
+        return False
+
+    if policy.supporting_policy.filter(user=user.id, initiator=True):
+      self.reason = _("Moderation not possible: Initiators can not moderate own Policy.")
       return False
 
-    if policy.supporting_policy.filter(user=user, initiator=True):
-      self.reason = _("Moderation not possible: Initiators can not moderate own Policy")
-      return False
+    moderations = policy.policy_moderations.filter(stale=False).exclude(vote="r")
 
-    moderations = policy.policy_moderations.filter(stale=False)
-
-    # already moderated, done
+    # already moderated with yes/no, done
     if moderations.filter(user=self.user):
       return False
-    
+
     # custom criteria
     (female, diverse, total) = self._missing_moderation_reviews(policy)
     try:

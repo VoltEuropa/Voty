@@ -941,5 +941,6 @@ class Moderation(Response):
 
   type = "moderation"
   stale = models.BooleanField(default=False)
+  flags = models.CharField(max_length=100, blank=True, null=True)
   vote = models.CharField(max_length=1, choices=settings.PLATFORM_MODERATION_CHOICE_LIST)
   text = models.CharField(max_length=500, blank=True)

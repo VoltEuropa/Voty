@@ -92,32 +92,43 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
                          cancel=None, cancel_template=None):
   def wrap(fn):
     def view(request, *args, **kwargs):
-      target_object = None
+      cancel_url = target_object = None
+      try:
+        target_type = kwargs["target_type"]
+        target_id = kwargs["target_id"]
+      except (KeyError, AttributeError):
+        target_type = request.GET.get("target_type")
+        target_id = request.GET.get("target_id")
+
       if request.method == "POST":
         form = form_cls(request.POST)
         if form.is_valid():
           return fn(request, form, *args, **kwargs)
       else:
         if request.GET.get("edit"):
-          target_object = target_object or \
-            _fetch_object_from_class(kwargs["target_type"], kwargs["target_id"])
-          form = form_cls(initial={"text": target_object.text})
+          initial_dict = {}
+          target_object = target_object or _fetch_object_from_class(target_type, target_id)
+          for field in target_object._meta.get_fields():
+
+            # bonuscurl Moderation review tickboxes (weren't stored before)
+            if field.name == "flags":
+              flags = (getattr(target_object, field.name) or "").split(",")
+              for flag in flags:
+                initial_dict[flag] = True
+            else:
+              initial_dict[field.name] = getattr(target_object, field.name)
+          form = form_cls(initial=initial_dict)
         else:
-          form = form_cls(request.GET)
+          form = form_cls(initial=request.GET)
+
         if cancel:
           cancel_url = request.get_full_path().replace("&edit=True", "") + "&cancel=True"
-        else:
-          cancel_url = None
-        
 
       fragment = request.GET.get("fragment")
 
       # when we actually cancel we need the parent object... to rerender
       if request.GET.get("cancel", None) is not None:
-        target_object = target_object or \
-          _fetch_object_from_class(kwargs["target_type"], kwargs["target_id"])
-        #model_class = apps.get_model('initproc', kwargs["target_type"])
-        #target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+        target_object = target_object or _fetch_object_from_class(target_type, target_id)
 
         rendered = render_to_string(
           cancel_template,
@@ -178,6 +189,24 @@ def _personalize_argument(arg, user_id):
 #
 #                                                       
 
+# ------------------------------ About Page ------------------------------------
+# XXX Quorum is not global, should be static, then in urls.py
+def about(request):
+  return render(request, 'static/about.html', context=dict(
+    quorums=Quorum.objects.order_by("-created_at"))
+  )
+
+# ---------------------------- Language Page -----------------------------------
+# XXX do directly in urls.py
+def account_language(request):
+  return render(request, "account/language.html")
+
+# ---------------------------- Crawler -----------------------------------
+# XXX ?
+def crawler(request, filename):
+  return render(request, filename, {}, content_type="text/plain")
+
+
 # ----------------------------- Policy Item ------------------------------------
 @policy_state_access()
 def policy_item(request, policy, *args, **kwargs):
@@ -201,6 +230,7 @@ def policy_item(request, policy, *args, **kwargs):
   # personalise if authenticated user interacted with policy
   if request.user.is_authenticated:
     user_id = request.user.id
+    payload.update({"has_moderated": policy.policy_moderations.filter(user=user_id).count()})
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id).count()})
     policy_votes = policy.policy_votes.filter(user=user_id)
     if (policy_votes.exists()):
@@ -314,15 +344,8 @@ def policy_feedback(request, policy, *args, **kwargs):
 
 
 
-def about(request):
-    return render(request, 'static/about.html', context=dict(
-            quorums=Quorum.objects.order_by("-created_at")))
 
-def account_language(request):
-    return render(request, "account/language.html")
 
-def crawler(request, filename):
-    return render(request, filename, {}, content_type="text/plain")
 
 def index(request):
     filters = [f for f in request.GET.getlist("f")]
@@ -664,32 +687,6 @@ def policy_stage(request, policy, *args, **kwargs):
     messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-# ---------------------------- Policy Validate ---------------------------------
-@login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
-def policy_validate(request, policy, *args, **kwargs):
-
-  if not request.guard.policy_validate(policy):
-    messages.warning(request, _("Permission denied."))
-    return redirect("home")
-  
-  with reversion.create_revision():
-    policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
-    policy.staged_at = datetime.now()
-    policy.save()
-
-    reversion.set_user(request.user)
-
-    notify(
-      [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
-      settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_VALIDATED,
-      {"description": _("Policy has been validated. It can now be discussed and seek supporters.")},
-      sender=user
-    )
-
-    messages.success(request, _("Policy moved to validated status. It can now seek supporters and be discussed."))
-    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
-
 
 # ----------------------------- Policy Delete ----------------------------------
 @login_required
@@ -786,89 +783,110 @@ def policy_submit(request, policy, *args, **kwargs):
     messages.success(request, mark_safe(revert_message))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-# ----------------------------- Policy Validate --------------------------------
-# used to be for incoming and moderation (submit and release)
-# every validation is a review, once the required number of reviews are in,
-# any moderator can manually validate a proposal into seeksupport/discussion
-@ajax
+# ---------------------------- Policy Validate ---------------------------------
+# this is the step of moving a policy to validation status
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
-@simple_form_verifier(NewModerationForm, submit_title=_("Add validation review."))
-def policy_review(request, form, policy, *args, **kwargs):
+def policy_validate(request, policy, *args, **kwargs):
 
-  if request.guard.policy_validate(policy):
-    user = request.user
-    moderation = form.save(commit=False)
-    moderation.policy = policy
-    moderation.user = user
-    moderation.save()
+  if not request.guard.policy_validate(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
 
-    # XXX r like reject is a bad choice to request (more info)
-    if moderation.vote == "r":
-      policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-      policy.save()
-
-    if policy.ready_for_next_stage:
+  if policy.ready_for_next_stage:
+    with reversion.create_revision():
+      user = request.user
       policy.supporting_policy.filter(ack=False).delete()
       policy.was_validated_at = datetime.now()
       policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
       policy.save()
-  
-      messages.success(request, _("Policy validated."))
+
+      reversion.set_user(request.user)
   
       # we can inform all supporters, because there is only initiators
-      supporters = policy.supporting_policy.all().exclude(user_id=user.id)
+      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
       notify(
         [supporter.user for _, supporter in enumerate(supporters)],
         settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
           "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
           }
         )
-      
+    
       notify(
         [moderation.user for moderation in policy.policy_moderations.all()],
         settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
           "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
           }, sender=user
         )
+
+      messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
+      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+    # XXX used to be here, move to release
+    #if request.guard.policy_release(policy):
+    #  policy_to_release = [policy]
+    #
+    #  # check the variants, too
+    #  if policy.all_variants:
+    #    for variant in policy.all_variants:
+    #      if variant.state != STATES.MODERATION or not request.guard.can_publish(ini):
+    #        policy_to_release = None
+    #          break
+    #      policy_to_release.append(variant)
+    #
+    #      if policy_to_release:
+    #        for releaseable_policy in policy_to_release:
+    #          releasable_policy.went_to_voting_at = datetime.now()
+    #          releasable_policy.state = STATES.VOTING
+    #          releasable_policy.save()
+    #          releasable_policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
+    #          releasable_policy.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
+    #
+    #        messages.success(request, _("Initiative activated for Voting."))
+    #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
+
+# ----------------------------- Policy Review ----------------------------------
+# used to be for incoming and moderation (submit and release)
+# every validation is a review, once the required number of reviews are in,
+# any moderator can manually validate a proposal into seeksupport/discussion
+@ajax
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
+@simple_form_verifier(NewModerationForm, submit_title=_("Save"),
+  cancel=True, cancel_template="fragments/moderation/moderation_item.html")
+def policy_review(request, form, policy, *args, **kwargs):
+
+  if not request.guard.policy_review(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  if form.is_valid():
+    user = request.user
+    blockers = [field_id for field_id, _ in form.fields.items() if request.POST.get(field_id, False) and field_id.startswith("q")]
+
+    # a user can only moderate a policy once, so user already moderated this 
+    # policy, it's an edit
+    moderation = policy.policy_moderations.filter(user=user.id, stale=False)
+    if moderation:
+      moderation = moderation[0]
+      moderation.vote = form.cleaned_data["vote"]
+      moderation.text = form.cleaned_data["text"]
+      moderation.flags = ",".join(blockers)
+      moderation.changed_at = datetime.now()
+      moderation.save()
     else:
-      messages.success(request, _("Validation review recorded."))
-    return redirect('/policy/{}'.format(policy.id))
+      moderation = form.save(commit=False)
+      moderation.policy = policy
+      moderation.user = user
+      moderation.save()
 
-  # XXX used to be here, move to release
-  #if request.guard.policy_release(policy):
-  #  policy_to_release = [policy]
-  #
-  #  # check the variants, too
-  #  if policy.all_variants:
-  #    for variant in policy.all_variants:
-  #      if variant.state != STATES.MODERATION or not request.guard.can_publish(ini):
-  #        policy_to_release = None
-  #          break
-  #      policy_to_release.append(variant)
-  #
-  #      if policy_to_release:
-  #        for releaseable_policy in policy_to_release:
-  #          releasable_policy.went_to_voting_at = datetime.now()
-  #          releasable_policy.state = STATES.VOTING
-  #          releasable_policy.save()
-  #          releasable_policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
-  #          releasable_policy.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
-  #
-  #        messages.success(request, _("Initiative activated for Voting."))
-  #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
+  # "r" like reject is a bad choice to request more info
+  if moderation.vote == "r":
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+    policy.save()
 
-
-  return {
-    "inner-fragments": {"#moderation-new": "".join(["<strong>", _("Validation review registered"), "</strong>"])},
-    "append-fragments": {
-      "#moderation-list": render_to_string(
-        "fragments/moderation/item.html",
-        context=dict(m=moderation, policy=policy, full=0),
-        request=request
-      )
-    }
-  }
+  messages.success(request, _("Moderation review recorded."))
+  return redirect('/policy/{}'.format(policy.id))
 
 # ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')
@@ -904,14 +922,6 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
       )
     }
   }
-
-# ----------------------------- Target Cancel  ---------------------------------
-# XXX do this in regex once figuring out how to match with &cancel=True...
-#@non_ajax_redir('/')
-#@ajax
-#@login_required
-#def target_cancel(request, target_type, target_id, *args, **kwargs):
-#  return target_comment(request, target_type, target_id, *args, **kwargs)
 
 # ------------------------------ Target Like -----------------------------------
 @non_ajax_redir('/')
@@ -1016,7 +1026,8 @@ def target_edit(request, form, *args, **kwargs):
   target_object.text = form.cleaned_data["text"]
   target_object.save()
 
-  # XXX same as delete
+  # XXX below is same target_delete
+
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
@@ -1029,6 +1040,10 @@ def target_edit(request, form, *args, **kwargs):
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
+
+  # also add to request, because guard throws when saving edits
+  # XXX fix
+  request.policy = target_parent.policy
 
   if request.user:
     for comment in fake_context["comments"]:
@@ -1063,6 +1078,8 @@ def target_delete(request, target_type, target_id):
   if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
+  # XXX below is same target_edit
+
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
@@ -1078,7 +1095,13 @@ def target_delete(request, target_type, target_id):
     comments=target_parent.comments.order_by('created_at').all()
   )
 
+  # also add to request, because guard throws when saving edits
+  # XXX fix
+  request.policy = target_parent.policy
+
   if request.user:
+    #request.policy = target_parent.policy
+    
     for comment in fake_context["comments"]:
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()
