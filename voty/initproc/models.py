@@ -243,7 +243,7 @@ class Policy(PolicyBase):
   def ready_for_next_stage(self):
 
     # policy needs minimum initiators and all fields filled
-    # all fields required => len>0 = True [True, True, False] = 1*1*0 = 0
+    # all fields required => len = int [17, 2, 1123, 0] = 17*2*1123*0 = 0 = FAIL
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
@@ -253,7 +253,7 @@ class Policy(PolicyBase):
     ]:
       return (
         self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()])
+        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()])
       )
 
     if self.state in [
@@ -262,7 +262,7 @@ class Policy(PolicyBase):
     ]:
       return (
         self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(self[f.name]) > 0 for f in PolicyBase._meta.get_fields()]) and
+        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()]) and
         self.current_moderations.count() >= self.required_moderations
       )
 

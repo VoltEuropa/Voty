@@ -58,14 +58,14 @@ class Guard:
     self.reason = None
 
   # --------------------- missing moderation reviews to continue -----------------
-  def _missing_moderation_reviews(self, policy):
+  def _missing_moderation_reviews(self, policy, moderations):
   
     # total moderators required are based on percentage/minimum person
     total = policy.required_moderations 
 
     # overall moderations on this policy
     # XXX what if only policy team proposes and not enough moderators?
-    moderations = policy.policy_moderations.filter(stale=False)
+    moderations = moderations.exclude(vote="r")
     total -= moderations.count()
   
     # moderator diversity are optional
@@ -83,6 +83,9 @@ class Guard:
   
     # by default only check for total
     return (0, 0, total)
+
+
+
 
   def make_intiatives_query(self, filters):
       if not self.user.is_authenticated:
@@ -262,6 +265,14 @@ class Guard:
   # def minimum_moderation_reviews(self):
   #  return self._get_policy_minium_moderator_votes()
 
+
+  # ------------------------ can revise a review -------------------------------
+  def is_revisable(self, moderation=None):
+    if moderation:
+      if moderation.user == self.user:
+        return True
+    return False
+
   # ------------------------------ can like ------------------------------------
   # XXX used throughout templates, rename later
   def can_like(self, obj=None):
@@ -280,8 +291,11 @@ class Guard:
   def is_editable(self, obj=None):
     user = self.user
 
-    # this covers edit and delete, template should only display delete!
-    if user.is_superuser or user.has_perm("initproc.policy_can_review"):
+    # this covers edit and delete, moderators should have an option to delete
+    # all comments but for now this is not implemented.
+    # XXX do this when flags are done. Then a moderator has to flag a comment
+    # then it should be deleteable
+    if user.is_superuser: #or user.has_perm("initproc.policy_can_review"):
       return True
     if not isinstance (obj, Comment):
       return False
@@ -443,14 +457,14 @@ class Guard:
       self.reason = _("Moderation not possible: Initiators can not moderate own Policy.")
       return False
 
-    moderations = policy.policy_moderations.filter(stale=False).exclude(vote="r")
+    moderations = policy.policy_moderations.filter(stale=False)
 
     # already moderated with yes/no, done
-    if moderations.filter(user=self.user):
+    if moderations.filter(user=self.user).exclude(vote="r"):
       return False
 
     # custom criteria
-    (female, diverse, total) = self._missing_moderation_reviews(policy)
+    (female, diverse, total) = self._missing_moderation_reviews(policy, moderations)
     try:
       if female > 0:
         if self.user.config.is_female_mod:
@@ -525,4 +539,5 @@ def add_guard(get_response):
     return response
 
   return middleware
+
 

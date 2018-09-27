@@ -308,20 +308,28 @@ def policy_feedback(request, policy, *args, **kwargs):
 
   moderation = get_object_or_404(Moderation, pk=kwargs["target_id"])
 
+  # XXX Duplicate
+
   # toggle the comment thread
   fake_context = dict(
     m=moderation,
     policy=policy,
     has_commented=False,
+    has_flags=False,
     is_likeable=True,
+    is_revisable=request.guard.is_revisable(moderation),
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
   )
 
   if request.user:
 
-    # XXX what if >1 comments? this should be called on comments instead
-    # fake_context["has_liked"] = moderation.likes.filter(user=request.user).exists()
+    if moderation.flags is not None:
+      fake_context["has_flags"] = True
+      fake_context["flags"] = []
+      for flag in moderation.flags.split(","):
+        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+
     for comment in fake_context["comments"]:
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()
@@ -749,7 +757,7 @@ def policy_unhide(request, policy, *args, **kwargs):
 
 # ------------------------------- Policy Submit --------------------------------
 @login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.STAGED)
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED, settings.PLATFORM_POLICY_STATE_DICT.STAGED])
 def policy_submit(request, policy, *args, **kwargs):
 
   if not request.guard.policy_submit(policy):
@@ -761,12 +769,14 @@ def policy_submit(request, policy, *args, **kwargs):
     tokeniser = UndoUrlTokenGenerator()
     revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
     revert_message = "Policy submitted. Policy submitted for moderation. You will receive a message once feedback on the Policy is availble. <a href='%s'>%s</a>." % (revert_url, _("Click here to UNDO."))
-    policy.state = settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED
+
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED
     policy.save()
 
-    # make sure moderation starts from the top
-    policy.policy_moderations.update(stale=True)
-
+    # XXX we don't reset moderations here, else every draft needs 3 new reviews
+    # policy.policy_moderations.update(stale=True)
+    
     # XXX how to handle UNDO? sleep?
     # notifiy initiators
     supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
@@ -778,6 +788,7 @@ def policy_submit(request, policy, *args, **kwargs):
     )
 
     # notify policy team with moderation permission
+
 
     reversion.set_user(request.user)
     messages.success(request, mark_safe(revert_message))
@@ -796,7 +807,12 @@ def policy_validate(request, policy, *args, **kwargs):
   if policy.ready_for_next_stage:
     with reversion.create_revision():
       user = request.user
+
+      # delete non-confirmed supporters
       policy.supporting_policy.filter(ack=False).delete()
+
+      # reviews are now stale = OLD
+      policy.policy_moderations.update(stale=True)
       policy.was_validated_at = datetime.now()
       policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
       policy.save()
@@ -1026,7 +1042,7 @@ def target_edit(request, form, *args, **kwargs):
   target_object.text = form.cleaned_data["text"]
   target_object.save()
 
-  # XXX below is same target_delete
+  # XXX Duplicate
 
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
@@ -1036,16 +1052,25 @@ def target_edit(request, form, *args, **kwargs):
     m=target_parent,
     policy=target_parent.policy,
     has_commented=False,
+    has_flags=False,
     is_likeable=True,
+    is_revisable=request.guard.is_revisable(target_parent),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
 
-  # also add to request, because guard throws when saving edits
-  # XXX fix
+  # XXX fix: also add to request, because guard throws over missing policy when 
+  # saving edits
   request.policy = target_parent.policy
 
   if request.user:
+
+    if target_parent.flags is not None:
+      fake_context["has_flags"] = True
+      fake_context["flags"] = []
+      for flag in target_parent.flags.split(","):
+        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+
     for comment in fake_context["comments"]:
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()
@@ -1078,7 +1103,7 @@ def target_delete(request, target_type, target_id):
   if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
-  # XXX below is same target_edit
+  # XXX Duplicate
 
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
@@ -1090,18 +1115,25 @@ def target_delete(request, target_type, target_id):
     m=target_parent,
     policy=target_parent.policy,
     has_commented=False,
+    has_flags=False,
     is_likeable=True,
+    is_revisable=request.guard.is_revisable(target_parent),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
 
-  # also add to request, because guard throws when saving edits
-  # XXX fix
+  # XXX fix: also add to request, because guard throws over missing policy when 
+  # saving edits
   request.policy = target_parent.policy
 
   if request.user:
-    #request.policy = target_parent.policy
-    
+
+    if target_parent.flags is not None:
+      fake_context["has_flags"] = True
+      fake_context["flags"] = []
+      for flag in target_parent.flags.split(","):
+        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+
     for comment in fake_context["comments"]:
       if request.user.id != comment.user.id:
         comment.has_liked = comment.likes.filter(user=request.user).exists()

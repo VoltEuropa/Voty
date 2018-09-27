@@ -16,10 +16,20 @@
     <span>{% blocktrans with time=m.created_at|date:'M-d, H:i' %}posted on {{ time }}.{% endblocktrans %}</span>
     {% if m.text %}
     <span class="moderation-interaction">
-      <a data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}"><i class="material-icons">comment</i></a>
+      {% if request.guard.policy_review %}
+        {% if is_revisable %}
+        <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_review' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
+        {% endif %}
+      {% endif %}
+      <a class="voty-link" title="{% trans 'Show/Hide Comments' %}" data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}"><i class="material-icons">comment</i></a>
     </span>
     {% endif %}
     {% if full %}
+      {% if has_flags %}
+      <ul id="{{m.unique_id}}-flag-list" class="moderation-flag-list">
+      {% for flag in flags %}<li>{{ flag }}</li>{% endfor %}
+      </ul>
+      {% endif %}
     <div class="moderation-text">
       <p>
       {% load markdown %}
@@ -33,6 +43,7 @@
       {% for comment in comments %}
         {% include 'fragments/comment/comment_item.html' %}
       {% endfor %}
+      <br/>
     </div>
     <div id="{{m.unique_id}}-reaction" class="moderation-reaction">
       {% if not has_commented %}
@@ -42,11 +53,7 @@
       {% elif request.guard.reason %}
         <div class="alert alert-warning">{{ request.guard.reason }}</div>
       {% endif %}
-      {% if request.guard.policy_review %}
-      <div id="{{m.unique_id}}-update" class="moderation-update">
-        <a data-ajax="true" href="{% url 'policy_review' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}" class="btn btn-outline-primary">{% trans "Revise Validation Review" %}</a>
-      </div>
-      {% endif %}
     </div>
   {% endif %}
 </div>
+
