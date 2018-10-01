@@ -210,10 +210,7 @@ class Policy(PolicyBase):
   went_in_discussion_at = models.DateField(blank=True, null=True)
   went_in_vote_at = models.DateField(blank=True, null=True)
   was_published_at = models.DateField(blank=True, null=True)
-
-  #responses = GenericRelation(Response, content_type_field='target_type', object_id_field='target_id')
-  #supporters = GenericRelation(Supporter, content_type_field='target_type', object_id_field='target_id', related_query_name="supporting")
-  #votes = GenericRelation(Vote, content_type_field='target_type', object_id_field='target_id')
+  was_rejected_at = models.DateField(blank=True, null=True)
 
   @cached_property
   def slug(self):
@@ -266,7 +263,6 @@ class Policy(PolicyBase):
         self.current_moderations.count() >= self.required_moderations
       )
 
-    # note, the Quorum (enough supporters) will be specific to each policy
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
       return self.supporting_policy.filter().count() >= self.quorum
 
@@ -285,28 +281,44 @@ class Policy(PolicyBase):
   def end_of_this_phase(self):
     week = timedelta(days=7)
 
-    # a closed (rejected) policy can only be re-opened after 
-    if self.was_closed_at:
-      return self.was_closed_at + timedelta(days=settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS)
+    # rejections need to rest 180 days
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.REJECTED:
+      return self.was_rejected_at + \
+        timedelta(days=int(settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS))
 
-    if self.was_validated_at:
-      if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-        if self.variant_of:
-          if self.variant_of.went_in_discussion_at:
-            return self.variant_of.went_in_discussion_at + (2 * week)
+    # seeking support takes between MIN and MAX days with a COOLDOWN once
+    # support is reached
 
-        # once support is won, there is an additional waiting phase
-        if self.ready_for_next_stage:
-          return self.was_validated_at + (2 * week)
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      lower_bound = self.was_validated_at + \
+        timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS))
 
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION:
-        return self.went_in_discussion_at + (3 * week)
+      if self.ready_for_next_stage:
+        return lower_bound + \
+          timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS))
 
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
-        return self.went_in_discussion_at + (5 * week)
+      # XXX both naive, should use datetime.now(self.created_at.tzinfo)
+      if datetime(lower_bound.year, lower_bound.month, lower_bound.day) \
+        > datetime.now():
+        return lower_bound
+      return self.was_validated_at + \
+        timedelta(int(settings.PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS))
 
-      elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
-        return self.went_in_vote_at + (3 * week)
+    # XXX broken - no variants when seeking support
+    #if self.was_validated_at:
+    #  if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+    #    if self.variant_of: # NONE?
+    #      if self.variant_of.went_in_discussion_at:
+    #        return self.variant_of.went_in_discussion_at + (2 * week)
+
+    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION:
+      return self.went_in_discussion_at + (3 * week)
+
+    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
+      return self.went_in_discussion_at + (5 * week)
+
+    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
+      return self.went_in_vote_at + (3 * week)
 
     return None
 
@@ -391,19 +403,20 @@ class Policy(PolicyBase):
   # FIXME: cache this
   @cached_property
   def absolute_supporters(self):
-    return self.supporting_policy.count()
+    return self.supporting_policy.filter(ack=True).count()
 
   @cached_property
   def relative_support(self):
     return self.absolute_supporters / self.quorum * 100
 
-  @cached_property
-  def first_supporters(self):
-    return self.supporting_policy.filter(first=True).order_by("-created_at")
+  # XXX not used?
+  #@cached_property
+  #def first_supporters(self):
+  #  return self.supporting_policy.filter(first=True).order_by("-created_at")
 
   @cached_property
   def public_supporters(self):
-    return self.supporting_policy.filter(public=True, first=False, initiator=False).order_by("-created_at")
+    return self.supporting_policy.filter(public=True, ack=True, first=False, initiator=False).order_by("-created_at")
 
   @cached_property
   def initiators(self):

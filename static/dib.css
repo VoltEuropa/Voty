@@ -58,11 +58,16 @@ body {
   content: attr(data-text-after);
 }
 
+/*
 .container-fluid.dib-nav {
   background: linear-gradient(to right, #21466b 0%,#263d82 30%,#263d82 30%,#eb5c4a 100%);
   padding: 0.375rem 0 0 0;
 }
-
+*/
+.container-fluid.dib-nav {
+  background: #60278e;
+  padding: 0.375rem 0 0 0;
+}
 .navbar .navbar-toggler-icon {
     background-image: url(/static/img/burger.svg);
 }
@@ -386,10 +391,6 @@ img.avatar {
   line-height: 1.875rem;
 }
 
-#invite-supporters {
-  padding-top: 1rem;
-}
-
 #invite-supporters a.btn span {
   font-size: 1.125rem;
   line-height: 1.875rem;
@@ -431,11 +432,6 @@ img.avatar {
 
 .initiative-meta li {
   padding: 1rem 1rem 0.75rem 1rem;
-}
-
-.initiative-meta .meta-content {
-  font-size: 1rem;
-  line-height: 1.5rem;
 }
 
 .initiative-meta .row {
@@ -532,12 +528,6 @@ img.avatar {
   padding-bottom: 1.5rem;
   background-color: rgba(0, 0, 0, 0.03);
 }
-
-.cta .meta-content {
-  padding-bottom: 0.75rem;
-  display: block;
-}
-
 .cta .current-supporters {
   padding-top: 0.5rem;
 }
@@ -548,7 +538,8 @@ img.avatar {
 }
 
 .cta .progress {
-  margin-bottom: 0.25rem;
+  margin-bottom: .5rem;
+  margin-top: .5rem;
 }
 
 .cta label.form-check-label {
@@ -559,7 +550,7 @@ img.avatar {
   margin-bottom: 0;
 }
 
-.cta .meta-content.supported-by {
+.cta .supported-by {
   padding-bottom: 0;
 }
 
@@ -1745,13 +1736,19 @@ button[type="submit"] {
 }
 
 /* ----------------------- initiators/supporters ---------------------------- */
-.initiators .avatar img {
-  width: 40px;
-  height: 40px;
+.voty-initiator-list {
+  margin-top: .5rem;
+}
+.initiators .voty-inline-list {
+  display: inline-block;
+  width: 20%;
+  text-align: center;
 }
 .initiators .name {
-  line-height: 40px;
-  padding: 0 .5em;
+  padding: .5rem .5rem 0;
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .initiators .name + .approval {
   display: flex;
@@ -1760,7 +1757,7 @@ button[type="submit"] {
   text-align: center;
 }
 .initiators .name + .approval .action-box {
-  display: inline-block;
+  margin: 0 auto;
   align-self: flex-end
 }
 .initiators .action-form {
@@ -1930,3 +1927,22 @@ a.btn span, a.btn i {
 .comment.container > a {
   text-align: right;
 }
+.initiative-meta .voty-meta-content {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.cta div.form-check {
+  display: inline-block;
+  padding-left: 1rem;
+  vertical-align: middle;
+}
+
+/* timer */
+.voty-wrapper-timer {
+  padding: 1em 0;
+  display: inline-block;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+

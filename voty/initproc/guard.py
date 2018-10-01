@@ -280,6 +280,14 @@ class Guard:
       return False
     return True
 
+  # -------------------------- policy is voted ---------------------------------
+  def is_voted(self, policy):
+    return policy.policy_votes.filter(user=self.user.id).first()
+
+  # ------------------------ policy is supporting ------------------------------
+  def is_supporting(self, policy):
+    return policy.supporting_policy.filter(user_id=self.user.id)
+
   # -----------------------comment is likeable ---------------------------------
   def is_likeable(self, obj=None):
     policy = _find_parent_policy(obj)
@@ -310,14 +318,19 @@ class Guard:
     policy = policy or self.request.policy
     user = self.user
 
-    if policy.state != settings.PLATFORM_POLICY_STATE_DICT.STAGED:
-      return False
+    # in validated, supporters to reach Quorum
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      if policy.supporting_policy.filter(initiator=True, user=user.id):
+        return True
+    
+    # in staged, invite until minium required initiators is reached
     if not self.policy_edit(policy):
+      return False
+    if policy.state != settings.PLATFORM_POLICY_STATE_DICT.STAGED:
       return False
     if user.is_superuser:
       return False
 
-    # XXX Initiators will change depending on level
     return policy.supporting_policy.filter(initiator=True).count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
 
   # ---------------------------- view policy -----------------------------------
@@ -539,5 +552,4 @@ def add_guard(get_response):
     return response
 
   return middleware
-
 

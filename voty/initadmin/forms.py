@@ -51,7 +51,10 @@ class UserEditForm(forms.ModelForm):
 
   email = forms.CharField(
     widget=forms.TextInput(attrs={"readonly": True}),
-    disabled=True
+    disabled=True,
+
+    # XXX allow empty for the moment, but this needs to be fixed later
+    required=False
   )
   action = forms.CharField(
     max_length=24,

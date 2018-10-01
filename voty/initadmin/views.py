@@ -565,8 +565,11 @@ def profile_edit(request):
         if len(existing_user_list) > 0:
           messages.warning(request, _("This username is already taken. Please choose a different username."))
       else:
-        form_user_profile.save()
-        messages.success(request, _("Data was updated."))
+        if form_user_profile.is_valid():
+          form_user_profile.save()
+          messages.success(request, _("Data was updated."))
+        else:
+          message.warning(request, _("Failed to save user profile. Make sure the email field is not empty."))
 
     # -------------------------- Localisation Edit -----------------------------
     elif request.POST.get("action", None) == "edit_scope":

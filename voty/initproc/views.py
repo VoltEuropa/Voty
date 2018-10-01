@@ -231,7 +231,7 @@ def policy_item(request, policy, *args, **kwargs):
   if request.user.is_authenticated:
     user_id = request.user.id
     payload.update({"has_moderated": policy.policy_moderations.filter(user=user_id).count()})
-    payload.update({"has_supported": policy.supporting_policy.filter(user=user_id).count()})
+    payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
     policy_votes = policy.policy_votes.filter(user=user_id)
     if (policy_votes.exists()):
       payload['policy_vote'] = policy_votes.first()
@@ -580,42 +580,27 @@ def policy_undo(request, policy, slug, uidb64, token):
 # ---------------------------- Policy Invite -----------------------------------
 @ajax
 @login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.STAGED)
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.STAGED, settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
 @simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
 def policy_invite(request, form, policy, invite_type, *args, **kwargs):
 
-  if not request.guard.policy_edit(policy):
-    messages.warning(request, _("Permission denied."))
-    return redirect("home")
-
-  # skip ourselves,nothing to do if sufficient amount of co-initiators reached
+  # skip ourselves, nothing to do if sufficient amount of co-initiators reached
   for user in form.cleaned_data["user"]:
     if user == request.user:
       continue
-    if invite_type == 'initiators' and \
-        policy.supporting_policy.filter(initiator=True).count() >= INITIATORS_COUNT:
-        break
 
-    # XXX maybe supporting_supporter is not such a good choice
     try:
       supporting_supporter = policy.supporting_policy.get(user_id=user.id)
     except Supporter.DoesNotExist:
       supporting_supporter = Supporter(user=user, policy=policy, ack=False)
 
-      if invite_type == "initiators":
-        supporting_supporter.initiator = True
-      elif invite_type == "supporters":
-        supporting_supporter.first = True
-
-    # XXX indent - where does this belong to?
-    # ? only allow promoting of supporters to initiators not downwards
-    else:
-      if invite_type == "initiators" and not supporting_supporter.initiator:
-        supporting_supporter.initiator = True
-        supporting_supporter.first = False
-        supporting_supporter.ack = False
-      else:
-        continue
+    if invite_type == "initiators":
+      supporting_supporter.initiator = True
+      supporting_supporter.first = False
+      supporting_supporter.ack = False
+    elif invite_type == "supporters":
+      supporting_supporter.first = True
+      supporting_supporter.ack = False
 
     supporting_supporter.save()
     notify([user], settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_INVITE, {
@@ -825,7 +810,7 @@ def policy_validate(request, policy, *args, **kwargs):
         [supporter.user for _, supporter in enumerate(supporters)],
         settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
           "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
-          }
+          }, sender=user
         )
     
       notify(
@@ -903,6 +888,21 @@ def policy_review(request, form, policy, *args, **kwargs):
 
   messages.success(request, _("Moderation review recorded."))
   return redirect('/policy/{}'.format(policy.id))
+
+# ----------------------------- Policy Support---------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
+def policy_support(request, policy, *args, **kwargs):
+  Supporter(
+    policy=policy,
+    user_id=request.user.id,
+    public=not not request.GET.get("public", False),
+    ack=True
+  ).save()
+
+  messages.success(request, _("You are supporting this policy."))
+  return redirect('/policy/{}'.format(policy.id))
+
 
 # ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')
