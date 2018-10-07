@@ -1938,11 +1938,19 @@ a.btn span, a.btn i {
 }
 
 /* timer */
-.voty-wrapper-timer {
+.voty-timer-wrapper {
+  padding: 0;
+}
+.voty-timer {
   padding: 1em 0;
   display: inline-block;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+}
+.voty-policy-remove-support-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 1em;
 }
 

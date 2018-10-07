@@ -31,11 +31,13 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/$", views.policy_item, name="policy_item"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/edit$", views.policy_edit, name="policy_edit"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/support$", views.policy_support, name="policy_support"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/refrain$", views.policy_refrain, name="policy_refrain"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/ack_support$", views.policy_acknowledge_support, name="policy_acknowledge_support"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/rm_support$", views.policy_remove_support, name="policy_remove_support"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/invite/(?P<invite_type>.*)$", views.policy_invite, name="policy_invite"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/stage$", views.policy_stage, name="policy_stage"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/validate$", views.policy_validate, name="policy_validate"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/reject$", views.policy_reject, name="policy_reject"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/delete$", views.policy_delete, name="policy_delete"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/undelete$", views.policy_undelete, name="policy_undelete"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/unhide$", views.policy_unhide, name="policy_unhide"),
@@ -69,3 +71,4 @@ urlpatterns = [
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/(?P<target_type>.*)/(?P<target_id>\d+)$", views.show_resp, name="show_resp"),
   url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?$", views.item, name="initiative_item"),
 ]
+

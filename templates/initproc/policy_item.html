@@ -58,10 +58,10 @@
       {% endif %}
 
       <div class="row skip-meta">
-        <div class="col-4">
+        <div class="col-4 voty-timer-wrapper">
           {% with "PLATFORM_POLICY_STATE_DICT.VALIDATED"|get_setting as validated %}
             {% if policy.state == validated %}
-              <span class="skip-meta voty-wrapper-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
+              <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
             {% endif %}
           {% endwith %}
         </div>
@@ -127,16 +127,30 @@
           </div>          
           {% endif %}
 
-          {% if policy.ready_for_next_stage %}
-            <div class="align-right">
-              <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Validate Policy (to seek support)" %}</span>
-                </button>
-              </form>
-            </div>
+          {% if request.guard.policy_validate %}
+            {% if policy.ready_for_next_stage %}
+              {% if policy.ready_to_proceed %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Validate Policy (to seek support)" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% else %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_reject' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Reject Policy' %}" class="btn btn-danger" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Reject Policy" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            {% endif %}
           {% endif %}
 
           {% if request.guard.policy_invite %}
@@ -201,8 +215,8 @@
                       <div class="action-box">
                         <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline" method="POST">
                           {% csrf_token %}
-                          <button title="{% trans 'Remove Support' %}" class="btn btn-warning" type="submit">
-                            <i class="material-icons">not_interested</i>
+                          <button title="{% trans 'Remove Support' %}" class="btn btn-danger" type="submit">
+                            <i class="material-icons">delete_outline</i>
                           </button>
                         </form>
                       </div>
@@ -215,14 +229,14 @@
                         <strong style="display:block">{% trans "Confirm now" %}</strong>
                         <form action="{% url 'policy_acknowledge_support' policy_id=policy.id %}" style="display:inline" method="POST">
                           {% csrf_token %}
-                          <button title="{% trans 'Support' %}" class="btn btn-success" type="submit">
+                          <button title="{% trans 'Support' %}" class="btn btn-warning" type="submit">
                             <i class="material-icons">done</i>
                           </button>
                         </form>
                         <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline"  method="POST">
                           {% csrf_token %}
-                          <button title="{% trans 'No Support' %}" class="btn btn-danger" type="submit">
-                            <i class="material-icons">not_interested</i>
+                          <button title="{% trans 'Remove Support' %}" class="btn btn-danger" type="submit">
+                            <i class="material-icons">delete_outline</i>
                           </button>
                         </form>
                       </div>
@@ -270,6 +284,15 @@
               <span class="voty-meta-content support supported-by">
                 {% trans "You are supporting this Policy!" %}
               </span>
+              {% if not has_initiated %}
+                <div class="voty-policy-remove-support-wrapper">
+                  <form action="{% url 'policy_refrain' policy_id=policy.id %}" method="GET">
+                    <button class="btn bg-support" type="submit">
+                      {% trans "Remove support" %}
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
             {% else %}
               <form action="{% url 'policy_support' policy_id=policy.id %}" method="GET">
                 <button class="btn bg-support" type="submit">

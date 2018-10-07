@@ -103,8 +103,14 @@ def create_custom_groups_and_permissions():
   for (group_key, group_title) in settings.PLATFORM_GROUP_LIST:
     new_group, created = create_group(settings.PLATFORM_GROUP_VALUE_LIST[group_key])
     group_list.append((group_key, new_group))
+
     if created:
       new_group.save()
+
+    # group exists, remove all permissions to not have leftovers
+    # https://cheat.readthedocs.io/en/latest/django/permissions.html
+    else:
+      new_group.permissions.remove(*set(new_group.permissions.all()))
 
   for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
     perm_code, perm_app_model = perm_code_model.split(",")

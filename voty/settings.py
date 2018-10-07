@@ -324,6 +324,7 @@ PLATFORM_POLICY_STATE_DEFAULT = config.get("platform_policy_settings", "PLATFORM
 PLATFORM_POLICY_STALE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_STALE_STATE_LIST").split(",")
 PLATFORM_POLICY_ADMIN_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_ADMIN_STATE_LIST").split(",")
 PLATFORM_POLICY_EDIT_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_EDIT_STATE_LIST").split(",")
+PLATFORM_POLICY_INVITE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_INVITE_STATE_LIST").split(",")
 PLATFORM_POLICY_DELETE_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_DELETE_STATE_LIST").split(",")
 PLATFORM_POLICY_MODERATION_STATE_LIST = config.get("platform_policy_settings", "PLATFORM_POLICY_MODERATION_STATE_LIST").split(",")
 PLATFORM_POLICY_INITIATORS_COUNT = config.get("platform_policy_settings", "PLATFORM_POLICY_INITIATORS_COUNT")

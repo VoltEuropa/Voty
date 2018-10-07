@@ -237,6 +237,16 @@ class Policy(PolicyBase):
       return datetime.now(timezone) - self.staged_at
 
   @property
+  def ready_to_proceed(self):
+
+    # only called within ready_for_next_stage
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+    ]:
+      return self.current_moderations.filter(vote="y") > self.current_moderations.filter(vote="n")
+
+  @property
   def ready_for_next_stage(self):
 
     # policy needs minimum initiators and all fields filled
@@ -260,7 +270,7 @@ class Policy(PolicyBase):
       return (
         self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
         reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()]) and
-        self.current_moderations.count() >= self.required_moderations
+        self.current_moderations.exclude(vote="r").count() >= self.required_moderations
       )
 
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:

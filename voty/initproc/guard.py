@@ -318,20 +318,17 @@ class Guard:
     policy = policy or self.request.policy
     user = self.user
 
-    # in validated, supporters to reach Quorum
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-      if policy.supporting_policy.filter(initiator=True, user=user.id):
-        return True
-    
-    # in staged, invite until minium required initiators is reached
-    if not self.policy_edit(policy):
-      return False
-    if policy.state != settings.PLATFORM_POLICY_STATE_DICT.STAGED:
-      return False
-    if user.is_superuser:
+    if not self.policy_edit(policy) and not user.is_superuser:
       return False
 
-    return policy.supporting_policy.filter(initiator=True).count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
+    initiators = policy.supporting_policy.filter(initiator=True)
+
+    # in staged/invalidated, invite until minium required initiators is reached
+    if initiators.filter(user=user.id):
+      if policy.state in settings.PLATFORM_POLICY_INVITE_STATE_LIST:
+        return initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
+    
+    return False
 
   # ---------------------------- view policy -----------------------------------
   # used to be in can_access_initiative
@@ -365,6 +362,9 @@ class Guard:
       return True
     if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
+    if not policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
+      return False
+
     return True
 
   # ---------------------------- stage policy -----------------------------------
@@ -428,31 +428,26 @@ class Guard:
       return False
     if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
+
+    # submit requires staged/invalidated, minimum initiators, being initiator
+    # and less than the required amount of moderations
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED or \
       policy.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
       if initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
-        if policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id) or user.is_superuser:
-          return True
+        if policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
+          if policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id) or user.is_superuser:
+            return True
     return False
 
-  # -------------------------- review policy ---------------------------------
-  # checks if user technically CAN review/validate
+  # ---------------------- validate/reject policy ------------------------------
+  # checks if user technically CAN validate
   def policy_validate(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
-    #if policy.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
-    #  if policy.supporting_policy.filter(initiator=True) or user.is_superuser:
-    #    return True
-
+    # only policy leads can validate/reject
     if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
       if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
-
-        # leaving this means, moderator/initiators never see feedback
-        # moved to should moderate
-        #if policy.supporting_policy.filter(user=user, initiator=True):
-        #  self.reason = _("Moderation not possible: Initiators cannot moderate own Policy")
-        #  return False
         return True
     return False
 

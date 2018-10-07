@@ -232,6 +232,7 @@ def policy_item(request, policy, *args, **kwargs):
     user_id = request.user.id
     payload.update({"has_moderated": policy.policy_moderations.filter(user=user_id).count()})
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
+    payload.update({"has_initiated": policy.supporting_policy.filter(user=user_id, initiator=True).count()})
     policy_votes = policy.policy_votes.filter(user=user_id)
     if (policy_votes.exists()):
       payload['policy_vote'] = policy_votes.first()
@@ -580,7 +581,7 @@ def policy_undo(request, policy, slug, uidb64, token):
 # ---------------------------- Policy Invite -----------------------------------
 @ajax
 @login_required
-@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.STAGED, settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
+@policy_state_access(states=settings.PLATFORM_POLICY_INVITE_STATE_LIST)
 @simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
 def policy_invite(request, form, policy, invite_type, *args, **kwargs):
 
@@ -774,10 +775,98 @@ def policy_submit(request, policy, *args, **kwargs):
 
     # notify policy team with moderation permission
 
-
     reversion.set_user(request.user)
     messages.success(request, mark_safe(revert_message))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ---------------------------- Policy Validate ---------------------------------
+# this is the step of moving a policy to validation status
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
+def policy_validate(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_validate(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
+
+  if policy.ready_for_next_stage:
+    with reversion.create_revision():
+      user = request.user
+
+      # delete non-confirmed supporters
+      policy.supporting_policy.filter(ack=False).delete()
+
+      # reviews are now stale = OLD
+      policy.policy_moderations.update(stale=True)
+      policy.was_validated_at = datetime.now()
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+      policy.save()
+
+      reversion.set_user(request.user)
+  
+      # we can inform all supporters, because there is only initiators
+      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+      notify(
+        [supporter.user for _, supporter in enumerate(supporters)],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+    
+      notify(
+        [moderation.user for moderation in policy.policy_moderations.all()],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
+          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+
+      messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
+      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ---------------------------- Policy Reject -----------------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
+def policy_reject(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_validate(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("home")
+
+  if policy.ready_for_next_stage:
+    with reversion.create_revision():
+      user = request.user
+
+      # reviews are now stale = OLD
+      policy.policy_moderations.update(stale=True)
+      policy.was_rejected_at = datetime.now()
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.REJECTED
+      policy.save()
+
+      reversion.set_user(request.user)
+  
+      # we can inform all supporters, because there is only initiators
+      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+      notify(
+        [supporter.user for _, supporter in enumerate(supporters)],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
+          "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+    
+      notify(
+        [moderation.user for moderation in policy.policy_moderations.all()],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
+          "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+
+      messages.success(request, "".join([
+        _("Policy rejected. Aside from a challenge by initiators this policy now is frozen for:"),
+        settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS,
+        _("days")
+      ]))
+      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
 
 # ---------------------------- Policy Validate ---------------------------------
 # this is the step of moving a policy to validation status
@@ -879,6 +968,7 @@ def policy_review(request, form, policy, *args, **kwargs):
       moderation = form.save(commit=False)
       moderation.policy = policy
       moderation.user = user
+      moderation.flags = ",".join(blockers)
       moderation.save()
 
   # "r" like reject is a bad choice to request more info
@@ -889,18 +979,32 @@ def policy_review(request, form, policy, *args, **kwargs):
   messages.success(request, _("Moderation review recorded."))
   return redirect('/policy/{}'.format(policy.id))
 
-# ----------------------------- Policy Support---------------------------------
+# ----------------------------- Policy Support ---------------------------------
+# XXX no checks?
 @login_required
 @policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
 def policy_support(request, policy, *args, **kwargs):
+
   Supporter(
     policy=policy,
     user_id=request.user.id,
     public=not not request.GET.get("public", False),
-    ack=True
+    ack=True,
   ).save()
 
   messages.success(request, _("You are supporting this policy."))
+  return redirect('/policy/{}'.format(policy.id))
+
+# ----------------------------- Policy Refrain ---------------------------------
+# XXX no checks?
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
+def policy_refrain(request, policy, *args, **kwargs):
+
+  policy.supporting_policy.filter(user_id=request.user.id).delete()
+  policy.save()
+
+  messages.success(request, _("You are no longer supporting this policy."))
   return redirect('/policy/{}'.format(policy.id))
 
 
