@@ -211,6 +211,7 @@ class Policy(PolicyBase):
   went_in_vote_at = models.DateField(blank=True, null=True)
   was_published_at = models.DateField(blank=True, null=True)
   was_rejected_at = models.DateField(blank=True, null=True)
+  was_challenged_at = models.DateField(blank=True, null=True)
 
   @cached_property
   def slug(self):
@@ -245,6 +246,8 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
     ]:
       return self.current_moderations.filter(vote="y") > self.current_moderations.filter(vote="n")
+
+    return False
 
   @property
   def ready_for_next_stage(self):

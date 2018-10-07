@@ -64,6 +64,11 @@
               <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
             {% endif %}
           {% endwith %}
+          {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+            {% if policy.state == rejected %}
+              <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Reopen:" %} {{policy.end_of_this_phase | timeuntil}}</span>
+            {% endif %}
+          {% endwith %}
         </div>
         <div class="col-8">
 
@@ -89,6 +94,18 @@
               </button>
             </form>
           </div>
+          {% endif %}
+
+          {% if request.guard.policy_apply %}
+            <div class="align-right">
+              <form class="action-form" action="{% url 'policy_apply' policy_id=policy.id %}" style="display:inline" method="POST">
+                {% csrf_token %}
+                <button title="{% trans 'Apply as Co-Initiator' %}" class="btn btn-success" type="submit">
+                  <i class="material-icons forward">forward</i>
+                  <span>{% trans "Apply as Co-Initiator" %}</span>
+                </button>
+              </form>
+            </div>
           {% endif %}
 
           {% if request.guard.policy_stage %}
@@ -125,6 +142,24 @@
               </button>
             </form>
           </div>          
+          {% endif %}
+
+          {% if request.guard.policy_challenge %}
+            <div class="align-right">
+              <form class="action-form" action="{% url 'policy_challenge' policy_id=policy.id %}" style="display:inline" method="POST">
+                {% csrf_token %}
+                <button title="{% trans 'Challenge Rejection' %}" class="btn btn-success" type="submit">
+                  <i class="material-icons forward">forward</i>
+                  <span>{% trans "Challenge Rejection" %}</span>
+                </button>
+              </form>
+              <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+                {% csrf_token %}
+                <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                  <i class="material-icons delete_outline">delete_outline</i>
+                </button>
+              </form>
+            </div>    
           {% endif %}
 
           {% if request.guard.policy_validate %}
@@ -189,6 +224,7 @@
 {% block content %}
 
   <!--- ### START SUPPORT ### -->
+
   <div class="container-fluid initiators container-fluid-{{ policy.state }}">
     <div class="container">
       <div class="row">
@@ -210,10 +246,12 @@
             {% with "PLATFORM_POLICY_EDIT_STATE_LIST"|get_setting as state_list %}
               {% if policy.state in state_list %}
                 <div class="approval">
+
+                  {# once a user acknowledges, he is in charge #}
                   {% if supporter.ack %}
                     {% if supporter.user == user and not supporter.first %}
                       <div class="action-box">
-                        <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline" method="POST">
+                        <form action="{% url 'policy_remove_support' policy_id=policy.id user_id=user.id %}" style="display:inline" method="POST">
                           {% csrf_token %}
                           <button title="{% trans 'Remove Support' %}" class="btn btn-danger" type="submit">
                             <i class="material-icons">delete_outline</i>
@@ -223,25 +261,64 @@
                     {% else %}
                       <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
                     {% endif %}
+
+                  {# once confirmed: #}
                   {% else %}
+                  
+                    {# user himself can reconfirm/remove support #}
                     {% if supporter.user == user %}
-                      <div class="action-box">
-                        <strong style="display:block">{% trans "Confirm now" %}</strong>
-                        <form action="{% url 'policy_acknowledge_support' policy_id=policy.id %}" style="display:inline" method="POST">
-                          {% csrf_token %}
-                          <button title="{% trans 'Support' %}" class="btn btn-warning" type="submit">
-                            <i class="material-icons">done</i>
-                          </button>
-                        </form>
-                        <form action="{% url 'policy_remove_support' policy_id=policy.id %}" style="display:inline"  method="POST">
-                          {% csrf_token %}
-                          <button title="{% trans 'Remove Support' %}" class="btn btn-danger" type="submit">
-                            <i class="material-icons">delete_outline</i>
-                          </button>
-                        </form>
-                      </div>
+                      {% if supporter.public %}
+                        <div class="action-box">
+                          <strong style="display:block">{% trans "Confirm now" %}</strong>
+                          <form action="{% url 'policy_acknowledge_support' policy_id=policy.id user_id=user.id %}" style="display:inline" method="POST">
+                            {% csrf_token %}
+                            <button title="{% trans 'Support' %}" class="btn btn-warning" type="submit">
+                              <i class="material-icons">done</i>
+                            </button>
+                          </form>
+                          <form action="{% url 'policy_remove_support' policy_id=policy.id user_id=user.id %}" style="display:inline"  method="POST">
+                            {% csrf_token %}
+                            <button title="{% trans 'Remove Support' %}" class="btn btn-danger" type="submit">
+                              <i class="material-icons">delete_outline</i>
+                            </button>
+                          </form>
+                        </div>
+                      {% else %}
+                        <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                      {% endif %}
+
+                    {# ... and first initiator can confirm applications or remove incumbent initiators #}
                     {% else %}
-                      <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                      {% if request.guard.invite_edit %}
+                        {% if supporter.public %}
+                          <div class="action-box">
+                            <form action="{% url 'policy_remove_support' policy_id=policy.id user_id=supporter.user.id %}" style="display:inline"  method="POST">
+                              {% csrf_token %}
+                              <button title="{% trans 'Remove incumbent Initiator' %}" class="btn btn-danger" type="submit">
+                                <i class="material-icons">delete_outline</i>
+                              </button>
+                            </form>
+                          </div>
+                        {% else %}
+                          <div class="action-box">
+                            <strong style="display:block">{% trans "Add Initiator" %}</strong>
+                            <form action="{% url 'policy_acknowledge_support' policy_id=policy.id user_id=supporter.user.id %}" style="display:inline" method="POST">
+                              {% csrf_token %}
+                              <button title="{% trans 'Accept Co-Initiator application' %}" class="btn btn-success" type="submit">
+                                <i class="material-icons">done</i>
+                              </button>
+                            </form>
+                            <form action="{% url 'policy_remove_support' policy_id=policy.id user_id=supporter.user.id %}" style="display:inline"  method="POST">
+                              {% csrf_token %}
+                              <button title="{% trans 'Reject Co-Initiator application' %}" class="btn btn-danger" type="submit">
+                                <i class="material-icons">delete_outline</i>
+                              </button>
+                            </form>
+                          </div>
+                        {% endif %}
+                      {% else %}
+                        <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                      {% endif %}
                     {% endif %}
                   {% endif %}
                 </div>
@@ -353,3 +430,4 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+

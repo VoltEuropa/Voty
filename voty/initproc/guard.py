@@ -313,25 +313,14 @@ class Guard:
       return False
     return True
 
-  # ----------------- invite co-initiators/supporters to policy ----------------
-  def policy_invite(self, policy=None):
+  # ---------------------------- edit inivite ----------------------------------
+  def invite_edit(self, policy=None):
     policy = policy or self.request.policy
-    user = self.user
-
-    if not self.policy_edit(policy) and not user.is_superuser:
-      return False
-
-    initiators = policy.supporting_policy.filter(initiator=True)
-
-    # in staged/invalidated, invite until minium required initiators is reached
-    if initiators.filter(user=user.id):
-      if policy.state in settings.PLATFORM_POLICY_INVITE_STATE_LIST:
-        return initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
-    
+    if policy.supporting_policy.filter(first=True,initiator=True,user_id=self.user.id):
+      return True
     return False
 
   # ---------------------------- view policy -----------------------------------
-  # used to be in can_access_initiative
   def policy_view(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
@@ -347,6 +336,35 @@ class Guard:
       not policy.supporting_policy.filter(first=True, user_id=user.id):
       return False
 
+    return True
+
+  # ----------------- invite co-initiators/supporters to policy ----------------
+  def policy_invite(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+    initiators = policy.supporting_policy.filter(initiator=True)
+
+    if not self.policy_edit(policy) and not user.is_superuser:
+      return False
+    if not initiators.filter(user=user.id):
+      return False
+    if not policy.state in settings.PLATFORM_POLICY_INVITE_STATE_LIST:
+      return False
+    return initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
+
+
+  # ------------------------ apply as initiator on policy ----------------------
+  def policy_apply(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+    initiators = policy.supporting_policy.filter(initiator=True)
+
+    if not policy.state in settings.PLATFORM_POLICY_INVITE_STATE_LIST:
+      return False
+    if policy.supporting_policy.filter(initiator=True, user_id=user.id):
+      return False
+    if not initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
+      return False
     return True
 
   # ---------------------------- edit policy -----------------------------------
@@ -418,6 +436,27 @@ class Guard:
       return True
     return False
 
+  # -------------------------- challenge policy --------------------------------
+  def policy_challenge(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+    initiators = policy.supporting_policy.filter(initiator=True, ack=True)
+
+    if not user.is_authenticated:
+      return False
+    if not initiators.filter(user_id=user.id):
+      return False
+    if not initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
+      return False
+    if not policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
+      return False
+    if not policy.state ==settings.PLATFORM_POLICY_STATE_DICT.REJECTED:
+      return False
+    if policy.was_challenged_at:
+      return False
+
+    return True
+
   # ---------------------------- submit policy ---------------------------------
   def policy_submit(self, policy=None):
     policy = policy or self.request.policy
@@ -426,18 +465,18 @@ class Guard:
 
     if not user.is_authenticated:
       return False
-    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
+    if not initiators.filter(user_id=user.id):
       return False
-
-    # submit requires staged/invalidated, minimum initiators, being initiator
-    # and less than the required amount of moderations
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED or \
-      policy.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
-      if initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
-        if policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
-          if policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id) or user.is_superuser:
-            return True
-    return False
+    if not initiators.count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
+      return False
+    if not policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
+      return False
+    if not policy.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+    ]:
+      return False
+    return True
 
   # ---------------------- validate/reject policy ------------------------------
   # checks if user technically CAN validate

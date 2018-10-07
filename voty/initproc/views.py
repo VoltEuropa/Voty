@@ -292,7 +292,15 @@ def policy_new(request, *args, **kwargs):
         # Store some meta-information.
         reversion.set_user(user)
 
-      Supporter(policy=policy_object, user=user, first=True, initiator=True, ack=True, public=True).save()
+      Supporter(
+        policy=policy_object,
+        user=user,
+        first=True,
+        initiator=True,
+        ack=True,
+        public=True
+      ).save()
+
       messages.success(request, _("Created new Policy draft."))
       return redirect('/policy/{}-{}'.format(policy_object.id, policy_object.slug))
     else:
@@ -577,6 +585,28 @@ def policy_undo(request, policy, slug, uidb64, token):
     messages.success(request, _("Reverted to previous state."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+# ---------------------- Policy Apply (as Co-Initiator) ------------------------
+@login_required
+@policy_state_access(states=settings.PLATFORM_POLICY_INVITE_STATE_LIST)
+def policy_apply(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_apply(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  Supporter(
+    policy=policy,
+    user_id=request.user.id,
+    initiator=True,
+    first=False,
+    ack=False,
+
+    # we hijack this field to distinguish between invitiation and application
+    public=False,
+  ).save()
+
+  messages.success(request, _("You have applied as Co-Initiator for this Policy. Please wait for approval."))
+  return redirect('/policy/{}'.format(policy.id))
 
 # ---------------------------- Policy Invite -----------------------------------
 @ajax
@@ -620,15 +650,15 @@ def policy_invite(request, form, policy, invite_type, *args, **kwargs):
 @require_POST
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
-def policy_acknowledge_support(request, policy, *args, **kwargs):
+def policy_acknowledge_support(request, policy, user_id, *args, **kwargs):
   user = request.user
-  user_id = user.id
   ack_supporter = get_object_or_404(Supporter, policy=policy, user_id=user_id)
   ack_supporter.ack = True
+  ack_supporter.public = True
   ack_supporter.save()
 
-  # only inform if co-initiator signed on
-  if ack_supporter.initiator == True:
+  # only inform if co-initiator signed on and founder isn't operating himself
+  if ack_supporter.initiator == True and user_id == request.user.id:
     notify(
       [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
       settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_ACCEPTED,
@@ -643,12 +673,11 @@ def policy_acknowledge_support(request, policy, *args, **kwargs):
 @require_POST
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_EDIT_STATE_LIST)
-def policy_remove_support(request, policy, *args, **kwargs):
+def policy_remove_support(request, policy, user_id, *args, **kwargs):
   user = request.user
-  user_id = user.id
   rm_supporter = get_object_or_404(Supporter, policy=policy, user_id=user_id)
   
-  if rm_supporter.initiator == True:
+  if rm_supporter.initiator == True and user_id == request.user.id:
     notify(
       [supporter.user for _, supporter in enumerate(policy.supporting_policy.filter(initiator=True).exclude(id=user_id))], 
       settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_REJECTED,
@@ -657,10 +686,9 @@ def policy_remove_support(request, policy, *args, **kwargs):
     )
 
   rm_supporter.delete()
-  messages.success(request, _("Your support has been retracted."))
-  if policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-    return redirect("/policy/{}".format(policy.id))
-  return redirect("home")
+  messages.success(request, _("Support has been removed."))
+  return redirect("/policy/{}".format(policy.id))
+
 
 # ---------------------------- Policy Stage ------------------------------------
 @login_required
@@ -823,6 +851,46 @@ def policy_validate(request, policy, *args, **kwargs):
       messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
       return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+# --------------------------- Policy Challenge ---------------------------------
+# rejected policies can be challenged once, adding two more moderations to get
+# in case initiators are not ok with initial rejection.
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.REJECTED])
+def policy_challenge(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_challenge(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  if policy.was_challenged_at:
+    messages.warning(request, _("Permission denied. Policy has already been challenged."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  with reversion.create_revision():
+    user = request.user
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED
+    policy.was_challenged_at =datetime.now()
+    policy.save()
+
+    reversion.set_user(user)
+    supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+
+    notify(
+        [supporter.user for _, supporter in enumerate(supporters)],
+        settings.NOTIFICATIONS.PUBLIC.POLICY_CHALLENGED, {
+          "description": "".join([_("Rejected Policy challenged:"), " ", policy.title, ". "])
+          }, sender=user
+        )
+
+    notify(
+      [moderation.user for moderation in policy.policy_moderations.all()],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_CHALLENGED, {
+        "description": "".join([_("Rejected Policy challenged:"), " ", policy.title, ". "])
+        }, sender=user
+      )
+
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+  
 # ---------------------------- Policy Reject -----------------------------------
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
