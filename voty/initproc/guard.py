@@ -266,6 +266,19 @@ class Guard:
   #  return self._get_policy_minium_moderator_votes()
 
 
+  # --------------------------- has reviews ------------------------------------
+  def is_reviewed(self, policy=None):
+    if policy is None:
+      return False
+    if not policy.policy_moderations.filter(stale=False).count() > 0:
+      return False
+    if not policy.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.REJECTED
+    ]:
+      return False
+    return True
   # ------------------------ can revise a review -------------------------------
   def is_revisable(self, moderation=None):
     if moderation:

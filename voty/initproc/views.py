@@ -38,7 +38,7 @@ from functools import wraps
 import json
 
 from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
-from .models import (Policy, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
+from .models import (Policy, PolicyBase, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
 from .forms import (PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
 from .undo import UndoUrlTokenGenerator
@@ -220,17 +220,26 @@ def policy_item(request, policy, *args, **kwargs):
     user_count=policy.eligible_voter_count,
     policy_proposals=[x for x in policy.policy_proposals.prefetch_related("likes").all()],
     policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
-      [x for x in policy.policy_contras.prefetch_related("likes").all()]
+      [x for x in policy.policy_contras.prefetch_related("likes").all()],
+    policy_fields=[f.name for f in PolicyBase._meta.get_fields() if f.get_internal_type() == "TextField"]
   )
 
   payload["policy_arguments"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
   payload["policy_proposals"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
   payload["is_likeable"] = request.guard.is_likeable (policy)
 
+
   # personalise if authenticated user interacted with policy
+  # XXX this should be handled in guard.py
   if request.user.is_authenticated:
     user_id = request.user.id
-    payload.update({"has_moderated": policy.policy_moderations.filter(user=user_id).count()})
+    moderations = policy.policy_moderations.filter(user=user_id, stale=False)
+
+    payload.update({"policy_labels": dict([(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in payload["policy_fields"]])})
+    payload.update({"has_reviews": request.guard.is_reviewed(policy=policy)})
+    payload.update({"has_moderated": moderations.count()})
+    if payload["has_moderated"]:
+      payload["is_revisable"] = request.guard.is_revisable(moderations[0])
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
     payload.update({"has_initiated": policy.supporting_policy.filter(user=user_id, initiator=True).count()})
     policy_votes = policy.policy_votes.filter(user=user_id)
@@ -314,7 +323,7 @@ def policy_new(request, *args, **kwargs):
 @login_required
 @policy_state_access()
 def policy_feedback(request, policy, *args, **kwargs):
-
+  user = request.user
   moderation = get_object_or_404(Moderation, pk=kwargs["target_id"])
 
   # XXX Duplicate
@@ -331,8 +340,8 @@ def policy_feedback(request, policy, *args, **kwargs):
     comments=moderation.comments.order_by('created_at').all()
   )
 
-  if request.user:
-
+  if user:
+    
     if moderation.flags is not None:
       fake_context["has_flags"] = True
       fake_context["flags"] = []
@@ -340,8 +349,10 @@ def policy_feedback(request, policy, *args, **kwargs):
         fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
 
     for comment in fake_context["comments"]:
-      if request.user.id != comment.user.id:
-        comment.has_liked = comment.likes.filter(user=request.user).exists()
+      if comment.created_at > user.last_login:
+        comment.is_unread = True
+      if user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=user).exists()
       else:
         comment.can_modify = request.guard.is_editable(comment)
 
@@ -687,6 +698,8 @@ def policy_remove_support(request, policy, user_id, *args, **kwargs):
 
   rm_supporter.delete()
   messages.success(request, _("Support has been removed."))
+
+  # redirect to home handled by policy_item if applicable
   return redirect("/policy/{}".format(policy.id))
 
 
@@ -1042,7 +1055,7 @@ def policy_review(request, form, policy, *args, **kwargs):
   # "r" like reject is a bad choice to request more info
   if moderation.vote == "r":
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-    policy.save()
+  policy.save()
 
   messages.success(request, _("Moderation review recorded."))
   return redirect('/policy/{}'.format(policy.id))
@@ -1213,6 +1226,7 @@ def target_edit(request, form, *args, **kwargs):
   data = form.cleaned_data
   target_object.text = form.cleaned_data["text"]
   target_object.save()
+  user = request.user 
 
   # XXX Duplicate
 
@@ -1235,7 +1249,7 @@ def target_edit(request, form, *args, **kwargs):
   # saving edits
   request.policy = target_parent.policy
 
-  if request.user:
+  if user:
 
     if target_parent.flags is not None:
       fake_context["has_flags"] = True
@@ -1244,8 +1258,10 @@ def target_edit(request, form, *args, **kwargs):
         fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
 
     for comment in fake_context["comments"]:
-      if request.user.id != comment.user.id:
-        comment.has_liked = comment.likes.filter(user=request.user).exists()
+      if comment.created_at > user.last_login:
+        comment.is_unread = True
+      if user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=user).exists()
       else:
         comment.can_modify = request.guard.is_editable(comment)
 
@@ -1277,6 +1293,7 @@ def target_delete(request, target_type, target_id):
 
   # XXX Duplicate
 
+  user = request.user
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
@@ -1298,7 +1315,7 @@ def target_delete(request, target_type, target_id):
   # saving edits
   request.policy = target_parent.policy
 
-  if request.user:
+  if user:
 
     if target_parent.flags is not None:
       fake_context["has_flags"] = True
@@ -1307,8 +1324,10 @@ def target_delete(request, target_type, target_id):
         fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
 
     for comment in fake_context["comments"]:
-      if request.user.id != comment.user.id:
-        comment.has_liked = comment.likes.filter(user=request.user).exists()
+      if comment.created_at > user.last_login:
+        comment.is_unread = True
+      if user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=user).exists()
       else:
         comment.can_modify = request.guard.is_editable(comment)
 

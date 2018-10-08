@@ -43,15 +43,15 @@
       {% include "initproc/blocks/meta.html" %}
       <hr/>
 
-      {% with "PLATFORM_POLICY_STATE_DICT.INVALIDATED"|get_setting as invalidated %}
-        {% if request.guard.policy_validate or policy.state == invalidated %}
+      {% include "initproc/blocks/variants.html" %}
+
+      {% if request.guard.policy_validate or has_reviews %}
         <div class="row initiative-moderation">
           <div class="col-12">
           {% include "fragments/moderation/moderation_index.html" %}      
           </div>
         </div>
-        {% endif %}
-      {% endwith %}
+      {% endif %}
 
       {% if request.guard.reason %}
         <div class="alert alert-warning">{{ request.guard.reason }}</div>
@@ -390,6 +390,24 @@
     {% endif %}
   {% endwith %}
 
+  <div id="initiative-text" class="container-fluid initiative-single">
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <h6 class="text-muted classification">{% trans "Text of the Initiative" %}
+            {% if initiative.versions.count > 1 %}
+              <a href="{% url 'compare' init_id=initiative.id slug=initiative.slug version_id=initiative.versions.1.id %}" data-ajax="true" class="change-history">({% trans "View modification history" %}
+                <span class="changes-badge"><span class="material-icons history">history</span> {{initiative.versions.count}}</span>)
+              </a>
+            {% endif %}
+          </h6>
+        </div>
+      </div>
+
+      {% include "initproc/blocks/policy_content.html" %}
+    </div>
+  </div>
+
   {% if policy.show_supporters %}
   <div class="container-fluid show-supporters">
     <div class="container">
@@ -430,4 +448,5 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
 

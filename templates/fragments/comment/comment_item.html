@@ -5,6 +5,7 @@
       {% include "fragments/avatar.html" with user=comment.user size=44 %}
     </div>
     <div class="col-auto comment-head">
+      {% if comment.is_unread %}<span><i>({% trans "New" %})</i></span>{% endif %}
       <span class="author-name">{{comment.user.get_full_name|default:comment.user.username}}</span>,
       <span class="arg-meta">{% blocktrans with time=comment.created_at|date:'M-d, H:i' %}posted {{ time }}{% endblocktrans %}</span>
       

@@ -17,7 +17,7 @@
     {% if m.text %}
     <span class="moderation-interaction">
       {% if request.guard.policy_review %}
-        {% if is_revisable %}
+        {% if is_revisable and m.user_id == request.user.id %}
         <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_review' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
         {% endif %}
       {% endif %}
@@ -56,4 +56,3 @@
     </div>
   {% endif %}
 </div>
-
