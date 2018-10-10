@@ -1533,7 +1533,8 @@ textarea#id_title:-moz-placeholder, textarea#id_text:-moz-placeholder { /* Firef
 
 /* =========================== CUSTOMIZATIONS =============================== */
 /* stretch containers, don't waste space, don't overflow */
-.comment.container {
+.comment.container,
+.voty-modification.container {
   padding: 0;
   max-width: none;
   width: inherit;
@@ -1952,5 +1953,18 @@ a.btn span, a.btn i {
   display: inline-block;
   vertical-align: middle;
   margin-left: 1em;
+}
+
+/* modification */
+.voty-dropdown .voty-modification-dropdown-menu {
+  width: 100%;
+  text-align: left;
+}
+.voty-dropdown .voty-modification-dropdown-item {
+  display: inline-block;
+  width: auto;
+  padding: .25em 1em;
+  min-width: 90%;
+  vertical-align: middle;
 }
 

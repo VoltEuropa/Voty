@@ -293,6 +293,15 @@ class Guard:
       return False
     return True
 
+  # ---------------------- can be undemocratic ---------------------------------
+  # XXX we shouldn't
+  def can_be_undemocratic(self, policy=None):
+    user = self.user
+
+    if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+      return True
+    return False
+
   # -------------------------- policy is voted ---------------------------------
   def is_voted(self, policy):
     return policy.policy_votes.filter(user=self.user.id).first()
@@ -397,6 +406,19 @@ class Guard:
       return False
 
     return True
+
+  # ----------------------- delete policy history ------------------------------
+  def policy_history_delete(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
+      return False
+
+    return True
+
 
   # ---------------------------- stage policy -----------------------------------
   def policy_stage(self, policy=None):
@@ -504,15 +526,13 @@ class Guard:
     return False
 
   # -------------------- review a policy (previous moderation) -----------------
-  # checks if user SHOULD validate - this method should test against all "soft"
+  # checks if user SHOULD validate, test against all "soft" criteria
   def policy_review(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
-    if not user.has_perm("initproc.policy_can_review"):
-      if not user.is_superuser:
-        return False
-
+    if not user.has_perm("initproc.policy_can_review") or not user.is_superuser:
+      return False
     if policy.supporting_policy.filter(user=user.id, initiator=True):
       self.reason = _("Moderation not possible: Initiators can not moderate own Policy.")
       return False

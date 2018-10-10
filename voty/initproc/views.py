@@ -83,6 +83,21 @@ def get_voting_fragments(vote, initiative, request):
         }}
 
 # ============================= HELPERS ========================================
+# for categories, display category translation not database-placeholder
+def _getPolicyFieldValue(key, version, field_meta_dict):
+  for f in field_meta_dict:
+    if key == f.name:
+
+      # XXX how to make this generic??? f.get_internal_type() == "CharField"?
+      if key == "scope":
+        return getattr(settings.CATEGORIES.SCOPE_DICT, version.field_dict.get(key, '').upper().replace("-", "_"))
+      elif key == "topic":
+        return getattr(settings.CATEGORIES.TOPIC_DICT, version.field_dict.get(key, '').upper().replace("-", "_"))
+      elif key == "context":
+        return getattr(settings.CATEGORIES.CONTEXT_DICT, version.field_dict.get(key, '').upper().replace("-", "_"))
+      else:
+        return version.field_dict.get(key, '')
+
 def _fetch_object_from_class(target_type, target_id):
   return get_object_or_404(apps.get_model('initproc', target_type), pk=target_id)
         
@@ -1089,6 +1104,64 @@ def policy_refrain(request, policy, *args, **kwargs):
   return redirect('/policy/{}'.format(policy.id))
 
 
+# ----------------------------- Policy History ---------------------------------
+@non_ajax_redir('/')
+@ajax
+@policy_state_access()
+def policy_history(request, policy, slug, version_id):
+  versions = Version.objects.get_for_object(policy)
+  latest = versions.first()
+  selected = versions.filter(id=version_id).first()
+  policy_field_meta = PolicyBase._meta.get_fields()
+  policy_fields = [f.name for f in policy_field_meta]
+  policy_labels = dict(
+    [(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in policy_fields]
+  )
+
+  compare = {key: mark_safe(
+    html_diff(
+      _getPolicyFieldValue(key, selected, policy_field_meta),
+      _getPolicyFieldValue(key, latest, policy_field_meta)
+    )
+  ) for key in policy_fields}
+
+  compare['was_validated_at'] = policy.was_validated_at
+
+  return {
+    "inner-fragments": {
+      "header": "",
+      ".main": render_to_string(
+        "fragments/policy/policy_compare.html",
+        context=dict(
+          policy=policy,
+          selected=selected,
+          latest=latest,
+          compare=compare,
+          policy_fields=policy_fields,
+          policy_labels=policy_labels
+        ),
+        request=request
+      )
+    }
+  }
+
+# ------------------------- Policy History Delete ------------------------------
+# not sure this is so wise
+@non_ajax_redir('/')
+@ajax
+@policy_state_access()
+def policy_history_delete(request, policy, slug, version_id):
+
+  if not request.guard.policy_history_delete(policy):
+    raise PermissionDenied()
+
+  versions = Version.objects.get_for_object(policy)
+  latest = versions.first()
+  if latest.id != version_id:
+    selected = versions.filter(id=version_id).first().delete()
+
+  return policy_history(request, policy, slug, latest.id)  
+
 # ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')
 @ajax
@@ -1656,9 +1729,7 @@ def compare(request, initiative, version_id):
     versions = Version.objects.get_for_object(initiative)
     latest = versions.first()
     selected = versions.filter(id=version_id).first()
-    compare = {key: mark_safe(html_diff(selected.field_dict.get(key, ''),
-                                        latest.field_dict.get(key, '')))
-            for key in COMPARING_FIELDS}
+    compare = {key: mark_safe(html_diff(selected.field_dict.get(key, ''), latest.field_dict.get(key, ''))) for key in COMPARING_FIELDS}
 
     compare['went_public_at'] = initiative.went_public_at
 

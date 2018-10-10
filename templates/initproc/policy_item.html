@@ -394,10 +394,10 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h6 class="text-muted classification">{% trans "Text of the Initiative" %}
-            {% if initiative.versions.count > 1 %}
-              <a href="{% url 'compare' init_id=initiative.id slug=initiative.slug version_id=initiative.versions.1.id %}" data-ajax="true" class="change-history">({% trans "View modification history" %}
-                <span class="changes-badge"><span class="material-icons history">history</span> {{initiative.versions.count}}</span>)
+          <h6 class="text-muted classification">{% trans "Policy Text" %}
+            {% if policy.versions.count > 1 %}
+              <a href="{% url 'policy_history' policy_id=policy.id slug=policy.slug version_id=policy.versions.1.id %}" data-ajax="true" class="change-history">({% trans "View modification history" %}
+                <span class="changes-badge"><span class="material-icons history">history</span> {{ policy.versions.count }}</span>)
               </a>
             {% endif %}
           </h6>
@@ -448,5 +448,4 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-
 
