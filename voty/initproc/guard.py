@@ -298,7 +298,7 @@ class Guard:
   def can_be_undemocratic(self, policy=None):
     user = self.user
 
-    if user.has_perm("initproc.policy_can_validate") or user.is_superuser:
+    if user.has_perm("initproc.policy_can_override") or user.is_superuser:
       return True
     return False
 
@@ -440,11 +440,11 @@ class Guard:
 
     if not user.is_authenticated:
       return False
-    if policy.state in settings.PLATFORM_POLICY_DELETE_STATE_LIST:
-      if policy.supporting_policy.filter(initiator=True) or \
-        user.has_perm("initproc.policy_can_delete") or \
-        user.is_superuser:
-          return True
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT:
+      return False
+    if user.has_perm("initproc.policy_can_delete") or \
+      user.is_superuser:
+        return True
     return False
 
   # --------------------------- undelete policy --------------------------------
@@ -606,6 +606,38 @@ class Guard:
         return True
     return False
 
+  # ---------------------- move policy to discussion ---------------------------
+  def policy_discuss(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      return False
+    if not policy.supporting_policy.filter().count() >= policy.quorum:
+      if user.has_perm("initproc.policy_can_override"):
+        return True
+      return False
+
+    return True
+
+  # ---------------------------- close policy ----------------------------------
+  def policy_close(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state in [settings.PLATFORM_POLICY_STATE_DICT.VALIDATED]:
+      return False
+    if policy.supporting_policy.filter().count() >= policy.quorum: 
+      return False
+    if not user.has_perm("initproc.policy_can_close"):
+      return False
+
+    return True
+
 # ----------------------------- Publish Guard ----------------------------------
 # Add guard of the request.user and make it accessible directly at request.guard
 # This will be called from middleware, see settings.py
@@ -619,4 +651,5 @@ def add_guard(get_response):
     return response
 
   return middleware
+
 

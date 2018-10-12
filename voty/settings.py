@@ -332,6 +332,7 @@ PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS = config.get("platform_policy_settings"
 PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS")
 PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS")
 PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS")
+PLATFORM_POLICY_DISCUSSION_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_DISCUSSION_DAYS")
 PLATFORM_POLICY_COMMENT_EDIT_SECONDS = config.get("platform_policy_settings", "PLATFORM_POLICY_COMMENT_EDIT_SECONDS")
 
 PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_dict")

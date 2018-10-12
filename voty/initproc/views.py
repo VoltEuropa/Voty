@@ -332,6 +332,33 @@ def policy_new(request, *args, **kwargs):
 
   return render(request, 'initproc/policy_edit.html', context=dict(form=form))
 
+# ------------------------- Policy Moderation Show -----------------------------
+# toggle review feedback
+@ajax
+@login_required
+@policy_state_access()
+def policy_stale_feedback(request, policy, *args, **kwargs):
+  user = request.user
+
+  fake_context = dict(
+    policy=policy,
+    stale=1 if request.GET.get('toggle', None) else 0,
+  )
+
+  if user:
+    user_id = request.user.id
+    fake_context["moderations"] = policy.policy_moderations.filter(stale=True)
+
+  return {
+    "fragments": {
+      "#moderation-old": render_to_string(
+        "fragments/moderation/moderation_list.html",
+        context=fake_context,
+        request=request,
+      )
+    }
+  }
+
 # ------------------------- Policy Validation Show -----------------------------
 # toggle review feedback
 @ajax
@@ -835,50 +862,6 @@ def policy_submit(request, policy, *args, **kwargs):
     messages.success(request, mark_safe(revert_message))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-# ---------------------------- Policy Validate ---------------------------------
-# this is the step of moving a policy to validation status
-@login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
-def policy_validate(request, policy, *args, **kwargs):
-
-  if not request.guard.policy_validate(policy):
-    messages.warning(request, _("Permission denied."))
-    return redirect("home")
-
-  if policy.ready_for_next_stage:
-    with reversion.create_revision():
-      user = request.user
-
-      # delete non-confirmed supporters
-      policy.supporting_policy.filter(ack=False).delete()
-
-      # reviews are now stale = OLD
-      policy.policy_moderations.update(stale=True)
-      policy.was_validated_at = datetime.now()
-      policy.state = settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
-      policy.save()
-
-      reversion.set_user(request.user)
-  
-      # we can inform all supporters, because there is only initiators
-      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
-      notify(
-        [supporter.user for _, supporter in enumerate(supporters)],
-        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
-          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
-          }, sender=user
-        )
-    
-      notify(
-        [moderation.user for moderation in policy.policy_moderations.all()],
-        settings.NOTIFICATIONS.PUBLIC.POLICY_VALIDATED, {
-          "description": "".join([_("Policy validated:"), " ", policy.title, ". "])
-          }, sender=user
-        )
-
-      messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
-      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
-
 # --------------------------- Policy Challenge ---------------------------------
 # rejected policies can be challenged once, adding two more moderations to get
 # in case initiators are not ok with initial rejection.
@@ -962,6 +945,77 @@ def policy_reject(request, policy, *args, **kwargs):
         _("days")
       ]))
       return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ---------------------------- Policy Close ------------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
+def policy_close(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_close(policy):
+    messages.warning(request, _("Permission denied."))
+
+  with reversion.create_revision():
+    user = request.user
+
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.CLOSED
+    policy.save()
+
+    reversion.set_user(request.user)
+
+    # we can inform all supporters, because there is only initiators
+    supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_CLOSED, {
+        "description": "".join([_("Policy was closed:"), " ", policy.title, ". "])
+        }, sender=user
+      )
+  
+    notify(
+      [moderation.user for moderation in policy.policy_moderations.all()],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_CLOSED, {
+        "description": "".join([_("Policy was closed:"), " ", policy.title, ". "])
+        }, sender=user
+      )
+
+    messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ---------------------------- Policy Discuss ----------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VALIDATED])
+def policy_discuss(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_discuss(policy):
+    messages.warning(request, _("Permission denied."))
+
+  with reversion.create_revision():
+    user = request.user
+
+    policy.went_in_discussion_at = datetime.now()
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED
+    policy.save()
+
+    reversion.set_user(request.user)
+  
+    # inform all supporters that they can discuss
+    supporters = policy.supporting_policy.exclude(id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_DISCUSSED, {
+        "description": "".join([_("Policy:"), " ", policy.title, _(" was moved into dicussion.")])
+        }, sender=user
+      )
+
+    notify(
+      [moderation.user for moderation in policy.policy_moderations.all()],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_DISCUSSED, {
+        "description": "".join([_("Policy:"), " ", policy.title, _(" was moved into dicussion.")])
+        }, sender=user
+      )
+
+    messages.success(request, _("Policy moved to discussion. It can now be discussed among all users."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 
 # ---------------------------- Policy Validate ---------------------------------
@@ -1161,6 +1215,106 @@ def policy_history_delete(request, policy, slug, version_id):
     selected = versions.filter(id=version_id).first().delete()
 
   return policy_history(request, policy, slug, latest.id)  
+
+# ------------------------- Policy Proposal New --------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
+@simple_form_verifier(NewProposalForm)
+def policy_proposal_new(request, form, policy):
+  data = form.cleaned_data
+  proposal = Proposal(
+    policy=policy,
+    user_id=request.user.id,
+    title=data['title'],
+    text=data['text'])
+
+  proposal.save()
+
+  # inform all supporters proposal was posted
+  supporters = policy.supporting_policy.exclude(id=user.id)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_PROPOSAL_NEW, {
+      "description": "".join([_("New proposal posted in discussion on Policy:"), " ", policy.title])#,
+      #"argument": arg
+      }, sender=user
+    )
+
+  return {
+    "fragments": {"#no-proposals": ""},
+    "inner-fragments": {
+      "#new-proposal": render_to_string(
+        "fragments/argument/propose.html",
+        context=dict(policy=policy)
+      ),
+      "#proposals-thanks": render_to_string(
+        "fragments/discussion/policy_proposal_thanks.html"
+      ),
+      "#proposals-count": policy.policy_proposals.count()
+    },
+    "append-fragments": {
+      "#proposal-list": render_to_string(
+        "fragments/discussion/policy_argument_item.html",
+        context=dict(
+          argument=proposal,
+          full=0
+        ),
+        request=request
+      )
+    }
+  }
+
+# ------------------------- Policy Argument New --------------------------------
+@non_ajax_redir('/')
+@ajax
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
+@simple_form_verifier(NewArgumentForm, template="fragments/discussion/policy_argument_new.html")
+def policy_argument_new(request, form, policy):
+  data = form.cleaned_data
+  argument_class = Pro if data['type'] == "thumbs_up" else Contra
+
+  arg = argumentClass(
+    policy=policy,
+    user_id=request.user.id,
+    title=data['title'],
+    text=data['text'])
+
+  arg.save()
+
+  # inform all supporters an argument was posted
+  supporters = policy.supporting_policy.exclude(id=user.id)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_ARGUMENT_NEW, {
+      "description": "".join([_("New argument posted in discussion on Policy:"), " ", policy.title])#,
+      #"argument": arg
+      }, sender=user
+    )
+
+  return {
+    "fragments": {"#no-arguments": ""},
+    "inner-fragments": {
+      "#new-argument": render_to_string(
+        "fragments/discussion/policy_thumbs.html",
+        context=dict(policy=policy)
+      ),
+      "#debate-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
+      "#debate-count": policy.pros.count() + policy.contras.count()
+    },
+    "append-fragments": {
+      "#argument-list": render_to_string(
+        "fragments/discussion/policy_arguemnt_item.html",
+        context=dict(
+          argument=arg,
+          full=0
+        ),
+        request=request
+      )
+    }
+  }
 
 # ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')

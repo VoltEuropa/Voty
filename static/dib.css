@@ -1938,7 +1938,7 @@ a.btn span, a.btn i {
   vertical-align: middle;
 }
 
-/* timer */
+/* ------------------------------ time left counter ------------------------- */
 .voty-timer-wrapper {
   padding: 0;
 }
@@ -1955,7 +1955,7 @@ a.btn span, a.btn i {
   margin-left: 1em;
 }
 
-/* modification */
+/* ------------------------ history modification ---------------------------- */
 .voty-dropdown .voty-modification-dropdown-menu {
   width: 100%;
   text-align: left;
@@ -1967,4 +1967,34 @@ a.btn span, a.btn i {
   min-width: 90%;
   vertical-align: middle;
 }
+.voty-moderation-stale-title {
+  display: inline-block;
+}
+.voty-moderation-interaction {
+  display: block;
+  vertical-align: middle;
+  text-align: right;
+  margin-top: -1.75em;
+}
+
+/* ------------------------- undemocratic zone ------------------------------ */
+.voty-undemocratic-override-wrapper {
+  background-image: linear-gradient(40deg, #d9534f 25%, #fcf8e3 25%, #fcf8e3 50%, #d9534f 50%, #d9534f 75%, #fcf8e3 75%, #fcf8e3 100%);
+  background-size: 62.23px 52.22px;
+}
+.voty-undemocratic-override-wrapper .align-right {
+  padding: 1em;
+}
+.voty-undemocratic-override-wrapper .btn {
+  box-shadow: 0 0 5px 5px #fcf8e3;
+}
+/* ------------------------- discussion ------------------------------------- */
+.voty-discussion-info {
+  line-height: 2em;
+}
+.voty-discussion-anchor {
+  float: right;
+}
+
+
 

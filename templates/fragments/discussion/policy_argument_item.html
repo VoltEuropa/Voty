@@ -17,20 +17,20 @@
     {{argument.title}}
   </div>
 </div>
-  
+
 <div class="row no-gutters">
   {% if argument.icon %}
   <div class="col col-md-10 offset-md-2">
   {% else %}
   <div class="col col-md-12">
   {% endif %}
-    <a data-ajax="true" href="{% url 'show_resp' init_id=argument.initiative.id target_type=argument.type target_id=argument.id %}?fragment={{argument.unique_id}}&amp;full={% if full %}0{% else %}1{% endif %}">
+    <a data-ajax="true" href="{% url 'policy_argument_replies' policy_id=argument.policy.id target_type=argument.type target_id=argument.id %}?fragment={{argument.unique_id}}&amp;full={% if full %}0{% else %}1{% endif %}">
       <div class="row argument-meta no-gutters">
         <div class="col-auto">
           {% if full %}{% trans "Show less" %}{% else %}{% trans "Show more" %}{% endif %}
         </div>
         <div class="col-auto ml-auto stats">
-          {% include 'fragments/like.html' with author=argument.user has_liked=argument.has_liked target=argument     show_text=0 show_count=1 with_link=0 %}
+          {% include 'fragments/like.html' with author=argument.user has_liked=argument.has_liked target=argument show_text=0 show_count=1 with_link=0 %}
           <i class="material-icons">
             <span id="{{argument.unique_id}}-chat-icon" class="comment-icon">chat_bubble{% if not argument.has_commented %}_outline{% endif %}</span>
           </i>
@@ -61,11 +61,11 @@
       {% endif %}
       <div id="{{argument.unique_id}}-comment-list" class="argument-comment-list">
         {% for comment in comments %}
-          {% include 'fragments/comment/item.html' %}
+          {% include 'fragments/comment/comment_item.html' %}
         {% endfor %}
       </div>
       {% if comments.count >= 2 %}
-        <a data-ajax="true" href="{% url 'show_resp' init_id=argument.initiative.id target_type=argument.type target_id=argument.id %}?fragment={{argument.unique_id}}&full=0">
+        <a data-ajax="true" href="{% url 'argument_replies' policy_id=argument.policy.id target_type=argument.type target_id=argument.id %}?fragment={{argument.unique_id}}&full=0">
           {% trans "Show less" %}
         </a>
       {% endif %}
@@ -82,4 +82,3 @@
     </div>
   </div>
 </div>
-

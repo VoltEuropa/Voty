@@ -1,0 +1,17 @@
+{% load i18n %}
+{% load get_setting %}
+{% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+  <div id="argument-list">
+    {% for argument in policy_arguments %}
+      {% include "fragments/discussion/policy_argument_item.html" %}
+    {% empty %}
+      <div id="no-arguments" class="alert alert-info">{% trans "This debate contains no arguments" %}{% if policy.state == discussed %} {% trans "up until now" %}{% endif %}.</div>
+    {% endfor %}
+  </div>
+  <div id="debate-thanks" class="container-fluid push-alert fixed-top"></div>
+  {% if policy.state == discussed %}
+    <div id="new-argument" class="container-fluid">
+      {% include "fragments/discussion/policy_thumbs.html" %}
+    </div>
+  {% endif %}
+{% endwith %}

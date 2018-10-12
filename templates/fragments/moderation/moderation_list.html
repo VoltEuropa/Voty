@@ -1,6 +1,26 @@
 {% load i18n %}
-{% for m in moderations %}
-  {% include "fragments/moderation/moderation_item.html" with full=0 %}
-{% empty %}
-  <i id="no-moderations">{% trans "Not validated by Moderator yet." %}</i>
-{% endfor %}
+{% if stale == 1 %}
+  <div id="moderation-old">
+    <div class="voty-moderation-interaction">
+      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old"><i class="material-icons">remove_red_eye</i></a>
+    </div>
+    {% for m in moderations %}
+      {% include "fragments/moderation/moderation_item.html" with full=0 %}
+    {% empty %}
+      <i id="no-moderations">{% trans "Not reviews yet." %}</i>
+    {% endfor %}
+  </div>
+{% elif stale == 0 %}
+  <div id="moderation-old">
+    <div class="voty-moderation-interaction">
+      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True"><i class="material-icons">remove_red_eye</i></a>
+    </div>
+  </div>
+{% else %}
+  {% for m in moderations %}
+    {% include "fragments/moderation/moderation_item.html" with full=0 %}
+  {% empty %}
+    <i id="no-moderations">{% trans "Not reviews yet." %}</i>
+  {% endfor %}
+{% endif %}
+

@@ -57,8 +57,34 @@
         <div class="alert alert-warning">{{ request.guard.reason }}</div>
       {% endif %}
 
+      {% if request.guard.can_be_undemocratic %}
+        {% if request.guard.policy_discuss %}
+          <div class="row">
+            <div class="col-12">
+              <h2>Undemocratic Zone</h2>
+              <div class="voty-undemocratic-override-wrapper">
+                  <div class="align-right">
+                    <form class="action-form" action="{% url 'policy_discuss' policy_id=policy.id %}" style="display:inline" method="POST">
+                      {% csrf_token %}
+                      <button title="{% trans 'Force Policy into Discussion' %}" class="btn btn-danger" type="submit">
+                        <i class="material-icons forward">forward</i>
+                        <span>{% trans "Force Policy into Discussion" %}</span>
+                      </button>
+                    </form>
+                  </div>  
+                </div>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+
       <div class="row skip-meta">
         <div class="col-4 voty-timer-wrapper">
+          {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+            {% if policy.state == discussed %}
+              <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
+            {% endif %}
+          {% endwith %}
           {% with "PLATFORM_POLICY_STATE_DICT.VALIDATED"|get_setting as validated %}
             {% if policy.state == validated %}
               <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
@@ -69,8 +95,26 @@
               <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Reopen:" %} {{policy.end_of_this_phase | timeuntil}}</span>
             {% endif %}
           {% endwith %}
+          {% with "PLATFORM_POLICY_STATE_DICT.CHALLENGED"|get_setting as challenged %}
+            {% if policy.state == challenged %}
+              <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Reopen:" %} {{policy.end_of_this_phase | timeuntil}}</span>
+            {% endif %}
+          {% endwith %}
+
         </div>
         <div class="col-8">
+
+          {% if request.guard.policy_delete %}
+          <div class="align-right">
+            <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+              {% csrf_token %}
+              <button title="{% trans 'Delete Policy' %}" class="btn btn-success" type="submit">
+                <i class="material-icons forward">forward</i>
+                <span>{% trans "Delete Policy" %}</span>
+              </button>
+            </form>
+          </div>
+          {% endif %}
 
           {% if request.guard.policy_undelete %}
           <div class="align-right">
@@ -188,30 +232,54 @@
             {% endif %}
           {% endif %}
 
+          {% if request.guard.policy_discuss %}
+            {% if policy.ready_for_next_stage %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_discuss' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Move Policy to Discussion' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Move Policy to Discussion" %}</span>
+                  </button>
+                </form>
+              </div>
+            {% elif policy.ready_to_proceed %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_close' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Close Policy' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Close Policy" %}</span>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+          {% endif %}
+
           {% if request.guard.policy_invite %}
             {% with "PLATFORM_POLICY_STATE_DICT.VALIDATED"|get_setting as validated %}
               {% if policy.state == validated %}
-              <div class="align-right" id="invite-supporters">
-                <a data-ajax="true" href="/policy/{{policy.id}}/invite/supporters?fragment=%23invite-supporters" class="btn btn-success">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Invite supporters" %}</span>
-                </a>
-              </div>
+                <div class="align-right" id="invite-supporters">
+                  <a data-ajax="true" href="/policy/{{policy.id}}/invite/supporters?fragment=%23invite-supporters" class="btn btn-success">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Invite supporters" %}</span>
+                  </a>
+                </div>
               {% else %}
-              <div class="align-right" id="invite-initiators">
-              {% with 'initiators' as initiators %}
-                <a data-ajax="true" href="{% url 'policy_invite' policy_id=policy.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Invite Co-Initiators" %}</span>
-                </a>
-              {% endwith %}
-              <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
-                  <i class="material-icons delete_outline">delete_outline</i>
-                </button>
-              </form>
-            </div>
+                <div class="align-right" id="invite-initiators">
+                  {% with 'initiators' as initiators %}
+                    <a data-ajax="true" href="{% url 'policy_invite' policy_id=policy.id invite_type=initiators %}?fragment=%23invite-initiators" class="btn btn-success">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Invite Co-Initiators" %}</span>
+                    </a>
+                  {% endwith %}
+                  <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                      <i class="material-icons delete_outline">delete_outline</i>
+                    </button>
+                  </form>
+                </div>
               {% endif %}
             {% endwith %}
           {% endif %}
@@ -390,6 +458,23 @@
     {% endif %}
   {% endwith %}
 
+  {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+    {% if policy.state == discussed %}
+      <div id="cta" class="container-fluid cta">
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <span class="voty-discussion-info">
+                {% trans "Policy can be discussed" %}
+              </span>
+              <a href="#discuss" class="voty-discussion-anchor btn bg-discussion">{% trans "Jump to discussion" %}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
   <div id="initiative-text" class="container-fluid initiative-single">
     <div class="container">
       <div class="row">
@@ -407,6 +492,31 @@
       {% include "initproc/blocks/policy_content.html" %}
     </div>
   </div>
+
+  {% if policy.show_debate %}
+    {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+      <div id="discuss" class="container-fluid cta {% if not policy.state == discussed %}closed{% endif %}">
+        <div class="container">
+          <div class="row no-gutters">
+            <div class="col-12">
+              <ul class="nav nav-tabs nav-fill" role="tablist">
+                {% include 'fragments/discussion/policy_count.html' with active=True me='debate' list=policy_arguments %}
+                {% include 'fragments/discussion/policy_count.html' with active=False me='proposals' list=policy_proposals %}
+              </ul>
+            </div>
+            <div class="col-12 tab-content">
+              <div class="tab-pane active" id="debate" role="tabpanel">
+                {% include 'fragments/discussion/policy_arguments.html' %}
+              </div>
+              <div class="tab-pane" id="proposals" role="tabpanel">
+                {% include 'fragments/discussion/policy_proposals.html' %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endwith %}
+  {% endif %}
 
   {% if policy.show_supporters %}
   <div class="container-fluid show-supporters">
@@ -448,4 +558,9 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
+
+
+
+
 

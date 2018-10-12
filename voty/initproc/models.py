@@ -247,6 +247,12 @@ class Policy(PolicyBase):
     ]:
       return self.current_moderations.filter(vote="y") > self.current_moderations.filter(vote="n")
 
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
+      upper_bound = self.went_to_discussion_at + \
+        timedelta(days=int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
+      return datetime.now() > \
+        datetime(upper_bound.year, upper_bound.month, upper_bound.day) \
+
     return False
 
   @property
@@ -283,7 +289,7 @@ class Policy(PolicyBase):
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
       #settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
+      settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
       #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
     ]:
       return True
@@ -295,7 +301,10 @@ class Policy(PolicyBase):
     week = timedelta(days=7)
 
     # rejections need to rest 180 days
-    if self.state == settings.PLATFORM_POLICY_STATE_DICT.REJECTED:
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED
+    ]:
       return self.was_rejected_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS))
 
@@ -324,14 +333,15 @@ class Policy(PolicyBase):
     #      if self.variant_of.went_in_discussion_at:
     #        return self.variant_of.went_in_discussion_at + (2 * week)
 
-    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION:
-      return self.went_in_discussion_at + (3 * week)
+    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
+      return self.went_in_discussion_at+ \
+        timedelta(int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
 
-    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
-      return self.went_in_discussion_at + (5 * week)
-
-    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
-      return self.went_in_vote_at + (3 * week)
+    #elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
+    #  return self.went_in_discussion_at + (5 * week)
+    #
+    #elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
+    #  return self.went_in_vote_at + (3 * week)
 
     return None
 
@@ -350,13 +360,12 @@ class Policy(PolicyBase):
   @property
   def show_debate(self):
     return self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.IN_DISCUSSION,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW,
-      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
-      settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
-      settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
-      settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
+      settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+      #settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
+      #settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
+      #settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
     ]
 
   @cached_property
@@ -497,19 +506,19 @@ class Policy(PolicyBase):
       kwargs['sender'] = self
     notify(recipients, notice_type, context, **kwargs)
 
-  def notify_moderators(self, *args, **kwargs):
-    return self.policy_notify([m.user for m in self.policy_moderations.all()], *args, **kwargs)
-
-  def notify_followers(self, *args, **kwargs):
-
-    # while in state staged, we're looking for co-initiators, so followers are
-    # only the co-initiators. outside this state, notifying all supporters
-    query = [s.user for s in self.supporting_policy.filter(ack=True).all()] if self.state == 'staged' else self.supporters.all()
-    return self.policy_notify(query, *args, **kwargs)
-
-  def notify_initiators(self, *args, **kwargs):
-    query = [s.user for s in self.initiators]
-    return self.policy_notify(query, *args, **kwargs)
+  #def notify_moderators(self, *args, **kwargs):
+  #  return self.policy_notify([m.user for m in self.policy_moderations.all()], *args, **kwargs)
+  #
+  #def notify_followers(self, *args, **kwargs):
+  #
+  #  # while in state staged, we're looking for co-initiators, so followers are
+  #  # only the co-initiators. outside this state, notifying all supporters
+  #  query = [s.user for s in self.supporting_policy.filter(ack=True).all()] if self.state == 'staged' else self.supporters.all()
+  #  return self.policy_notify(query, *args, **kwargs)
+  #
+  #def notify_initiators(self, *args, **kwargs):
+  #  query = [s.user for s in self.initiators]
+  #  return self.policy_notify(query, *args, **kwargs)
 
 
 # ------------------------------ Initiative ------------------------------------

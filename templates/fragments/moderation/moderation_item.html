@@ -47,9 +47,11 @@
     </div>
     <div id="{{m.unique_id}}-reaction" class="moderation-reaction">
       {% if not has_commented %}
-      <div id="{{m.unique_id}}-new-comment" class="moderation-new-comment">
-        {% include 'fragments/comment/comment_add.html' %}
-      </div>
+        {% if not m.stale %}
+          <div id="{{m.unique_id}}-new-comment" class="moderation-new-comment">
+            {% include 'fragments/comment/comment_add.html' %}
+          </div>
+        {% endif %}
       {% elif request.guard.reason %}
         <div class="alert alert-warning">{{ request.guard.reason }}</div>
       {% endif %}

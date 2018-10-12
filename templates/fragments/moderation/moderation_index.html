@@ -18,7 +18,11 @@
     <br />
     <hr />
     <br />
-    <strong>{% trans "Validation of previous Versions" %}</strong>
-    {% include 'fragments/moderation/moderation_list.html' with moderations=policy.stale_moderations %}
+    <h6 class="voty-moderation-stale-title"><span class="moderation-title">{% trans "Previous Reviews" %}</span><span>({% trans "no longer valid" %})</h6>
+    <div id="moderation-old">
+      <div class="voty-moderation-interaction">
+        <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True"><i class="material-icons">remove_red_eye</i></a>
+      </div>
+    </div>
   {% endif %}
 </div>
