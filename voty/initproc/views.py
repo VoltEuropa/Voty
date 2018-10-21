@@ -1303,49 +1303,55 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
 @login_required
 @policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
 @simple_form_verifier(NewArgumentForm, template="fragments/discussion/policy_argument_new.html")
-def policy_argument_new(request, form, policy):
-  data = form.cleaned_data
-  argument_class = Pro if data['type'] == "thumbs_up" else Contra
+def policy_argument_new(request, form, policy, *args, **kwargs):
 
-  arg = argumentClass(
-    policy=policy,
-    user_id=request.user.id,
-    title=data['title'],
-    text=data['text'])
+  #if not request.guard.policy_proposal_new(policy):
+  #  raise PermissionDenied()
 
-  arg.save()
+  if form.is_valid():
+    user = request.user
+    data = form.cleaned_data
+    argumentClass = Pro if data['type'] == "thumbs_up" else Contra
 
-  # inform all supporters an argument was posted
-  supporters = policy.supporting_policy.exclude(id=user.id)
-  notify(
-    [supporter.user for _, supporter in enumerate(supporters)],
-    settings.NOTIFICATIONS.PUBLIC.POLICY_ARGUMENT_NEW, {
-      "description": "".join([_("New argument posted in discussion on Policy:"), " ", policy.title])#,
-      #"argument": arg
-      }, sender=user
-    )
+    arg = argumentClass(
+      policy=policy,
+      user_id=request.user.id,
+      title=data['title'],
+      text=data['text'])
+  
+    arg.save()
 
-  return {
-    "fragments": {"#no-arguments": ""},
-    "inner-fragments": {
-      "#new-argument": render_to_string(
-        "fragments/discussion/policy_thumbs.html",
-        context=dict(policy=policy)
-      ),
-      "#debate-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
-      "#debate-count": policy.pros.count() + policy.contras.count()
-    },
-    "append-fragments": {
-      "#argument-list": render_to_string(
-        "fragments/discussion/policy_argument_item.html",
-        context=dict(
-          argument=arg,
-          full=0
-        ),
-        request=request
+    # inform all supporters an argument was posted
+    supporters = policy.supporting_policy.exclude(id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_ARGUMENT_NEW, {
+        "description": "".join([_("New argument posted in discussion on Policy:"), " ", policy.title])#,
+        #"argument": arg
+        }, sender=user
       )
+
+    return {
+      "fragments": {"#no-arguments": ""},
+      "inner-fragments": {
+        "#new-argument": render_to_string(
+          "fragments/discussion/policy_thumbs.html",
+          context=dict(policy=policy)
+        ),
+        "#debate-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
+        "#debate-count": policy.policy_pros.count() + policy.policy_contras.count()
+      },
+      "append-fragments": {
+        "#argument-list": render_to_string(
+          "fragments/discussion/discussion_item.html",
+          context=dict(
+            argument=arg,
+            full=0
+          ),
+          request=request
+        )
+      }
     }
-  }
 
 # ----------------------------- Target Comment  ---------------------------------
 @non_ajax_redir('/')
@@ -1527,10 +1533,10 @@ def target_edit(request, form, *args, **kwargs):
     if not request.guard.target_comment(target_parent):
       fake_context["has_commented"] = True
 
-  if target_parent.type == "proposal":
-    template_url = "fragments/discussion/discussion_item.html"
-  else:
+  if target_parent.type == "moderation":
     template_url = "fragments/moderation/moderation_item.html"
+  else:
+    template_url = "fragments/discussion/discussion_item.html"
 
   return {
     "fragments": {
@@ -1597,10 +1603,10 @@ def target_delete(request, target_type, target_id):
     if not request.guard.target_comment(target_parent):
       fake_context["has_commented"] = True
 
-  if target_parent.type == "proposal":
-    template_url = "fragments/discussion/discussion_item.html"
+  if target_parent.type == "moderation":
+    template_url = "fragments/moderation/moderation_item.html"    
   else:
-    template_url = "fragments/moderation/moderation_item.html"
+    template_url = "fragments/discussion/discussion_item.html"
 
   return {
     "fragments": {
@@ -1636,7 +1642,7 @@ def policy_argument_solve(request, policy, *args, **kwargs):
   payload = _generate_payload(policy)
   payload["argument"] = target_object
   payload["has_liked"] = target_object.has_liked,
-  payload["full"] = 1 if request.GET.get('toggle', None) is None else 0,
+  payload["has_solved"] = True
   payload["comments"] = target_object.comments.order_by('created_at').all()
 
   return {
@@ -1671,7 +1677,7 @@ def policy_argument_details(request, policy, *args, **kwargs):
     has_commented=False,
     has_liked=target_object.has_liked,
     is_likeable=True,
-    stale=target_object.stale,
+    stale=getattr(target_object, "stale", None),
     is_revisable=request.guard.is_revisable(target_object),
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=target_object.comments.order_by('created_at').all()

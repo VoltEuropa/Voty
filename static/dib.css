@@ -1111,6 +1111,7 @@ label.deactivated {
   margin-top: 2rem;
   line-height: 3.5rem;
   font-size: 3rem;
+  width: 100%;
 }
 
 #new-argument label {
@@ -1902,9 +1903,10 @@ a.btn span, a.btn i {
   padding: .5em 0 .5em 0;
 }
 .voty-new-proposal-wrapper {
-  margin-top: 1.5em;
+  margin-top: 1.25em;
   margin-bottom: 1em;
   text-align: right;
+  float: right;
 }
 .voty-new-proposal-wrapper .voty-simple-form {
   text-align: left;
@@ -1920,9 +1922,14 @@ a.btn span, a.btn i {
 .voty-argument .voty-argument-type-icon {
   font-size: 3rem;
   margin: 1rem auto;
+  color: rgba(37, 60, 135, 1);
 }
 .voty-argument {
   margin: 2em 0;
+}
+.voty-debate .voty-argument > div:not(:first-child) {
+  width: 83%;
+  margin-left: auto;
 }
 .voty-argument-header {
   font-size: 1.25rem;
@@ -1975,6 +1982,10 @@ a.btn span, a.btn i {
 }
 .voty-argument-comment-list {
   background: rgba(255, 255, 255, 1);
+}
+.voty-argument-comment-list .container {
+  margin: auto 0;
+  width: 100%;
 }
 .voty-argument .comment {
   border-top: 1px solid #eee;
@@ -2041,7 +2052,9 @@ a.btn span, a.btn i {
   text-align: right;
   padding-top: .5em;
 }
-
+.voty-argument-thumb {
+  color: #014c8c;
+}
 
 
 /* ========================= VOLT specific ================================== */

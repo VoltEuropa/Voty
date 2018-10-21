@@ -7,7 +7,7 @@
 <div id="{{argument.unique_id}}" class="voty-argument container-fluid argument-{{argument.type}}">
   <div class="row no-gutters">
     {% if argument.icon %}
-    <div class="col-3 col-md-2 text-center">
+    <div class="col-3 col-md-2 voty-argument-thumb">
       <i class="voty-argument-type-icon material-icons">{{argument.icon}}</i><br/>{% if argument.type == 'contra' %}{% trans "AGAINST" %}{% elif argument.type == "pro"%}{% trans "IN FAVOR" %}{% endif %}
     </div>
     <div class="col-9 col-md-10 align-self-center short">
@@ -18,11 +18,13 @@
         {{argument.title}}
       </div>
       <div class="voty-argument-interaction">
-        {% if request.guard.policy_proposal_solve %}
-          <a data-ajax="true" class="voty-action voty-argument-solve" title="{% trans 'Mark issue as solved' %}" href="{% url 'policy_argument_solve' policy_id=argument.policy.id target_type=argument.type target_id=argument.id %}?fragment=%23{{argument.unique_id}}&amp;stale={% if stale %}False{% else %}True{% endif %}">
-            {% if stale %}{% trans "Reopen" %}{% else %}{% trans "Mark as Solved" %}{% endif %}
-            <i class="material-icons">{% if is_solved %}assignment_late{% else %}assignment_turned_in{% endif %}</i>
-          </a>
+        {% if not argument.icon %}{# meh #}
+          {% if request.guard.policy_proposal_solve %}
+            <a data-ajax="true" class="voty-action voty-argument-solve" title="{% trans 'Mark issue as solved' %}" href="{% url 'policy_argument_solve' policy_id=argument.policy.id target_type=argument.type target_id=argument.id %}?fragment=%23{{argument.unique_id}}&amp;stale={% if stale %}False{% else %}True{% endif %}">
+              {% if stale %}{% trans "Reopen" %}{% else %}{% trans "Mark as Solved" %}{% endif %}
+              <i class="material-icons">{% if is_solved %}assignment_late{% else %}assignment_turned_in{% endif %}</i>
+            </a>
+          {% endif %}
         {% endif %}
         <a data-ajax="true" class="voty-action voty-argument-expand" title="{% trans 'Show/Hide Details' %}" href="{% url 'policy_argument_details' policy_id=argument.policy.id target_type=argument.type target_id=argument.id %}?fragment=%23{{argument.unique_id}}&amp;{% if full %}toggle=True{% endif %}">
           {% if full %}{% trans "Hide details" %}{% else %}{% trans "Show details" %}{% endif %}
@@ -38,36 +40,33 @@
   </div>
 
   {% if full %}
-     <div class="row no-gutters voty-argument-author">
-        <div class="col-auto voty-argument-avatar">
-          {% include "fragments/avatar.html" with user=argument.user size=55 %}
+   <div class="row no-gutters voty-argument-author">
+      <div class="col-auto voty-argument-avatar">
+        {% include "fragments/avatar.html" with user=argument.user size=55 %}
+      </div>
+      <div class="col-auto">
+        <span class="voty-argument-author-name">{{argument.user.get_full_name|default:argument.user.username}}</span>
+        <span class="voty-argument-author-meta">{{argument.created_at}}</span>
+      </div>
+  </div>
+  <div class="row no-gutters voty-argument-text">
+    {{argument.text|markdown}}
+  </div>
+  <div id="{{argument.unique_id}}-comment-list" class="voty-argument-comment-list">
+    {% for comment in comments %}
+      {% include 'fragments/comment/comment_item.html' %}
+    {% endfor %}
+  </div>
+  <div id="{{argument.unique_id}}-reaction" class="argument-reaction">
+    {% if not argument.stale %}
+      {% if not has_commented %}
+        <div id="{{argument.unique_id}}-new-comment" class="voty-argument-comment-new">
+          {% include 'fragments/comment/comment_add.html' with m=argument %}
         </div>
-        <div class="col-auto">
-          <span class="voty-argument-author-name">{{argument.user.get_full_name|default:argument.user.username}}</span>
-          <span class="voty-argument-author-meta">{{argument.created_at}}</span>
-        </div>
-    </div>
-    <div class="row no-gutters voty-argument-text">
-      {{argument.text|markdown}}
-    </div>
-    {% if comments %}
-      <h6 class="text-muted classification voty-argument-comment-list-header">{% trans "Comments" %}</h6>
-    {% endif %}
-    <div id="{{argument.unique_id}}-comment-list" class="voty-argument-comment-list">
-      {% for comment in comments %}
-        {% include 'fragments/comment/comment_item.html' %}
-      {% endfor %}
-    </div>
-    <div id="{{argument.unique_id}}-reaction" class="argument-reaction">
-      {% if not argument.stale %}
-        {% if not has_commented %}
-          <div id="{{argument.unique_id}}-new-comment" class="voty-argument-comment-new">
-            {% include 'fragments/comment/comment_add.html' with m=argument %}
-          </div>
-        {% elif request.guard.reason %}
-          <div class="alert alert-warning">{{ request.guard.reason }}</div>
-        {% endif %}
+      {% elif request.guard.reason %}
+        <div class="alert alert-warning">{{ request.guard.reason }}</div>
       {% endif %}
-    </div>
+    {% endif %}
+  </div>
   {% endif %}
 </div>
