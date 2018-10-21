@@ -7,7 +7,7 @@
     {% for m in moderations %}
       {% include "fragments/moderation/moderation_item.html" with full=0 %}
     {% empty %}
-      <i id="no-moderations">{% trans "Not reviews yet." %}</i>
+      <i id="no-moderations">{% trans "Not reviewed yet." %}</i>
     {% endfor %}
   </div>
 {% elif stale == 0 %}
@@ -20,7 +20,6 @@
   {% for m in moderations %}
     {% include "fragments/moderation/moderation_item.html" with full=0 %}
   {% empty %}
-    <i id="no-moderations">{% trans "Not reviews yet." %}</i>
+    <i id="no-moderations">{% trans "Not reviewed yet." %}</i>
   {% endfor %}
 {% endif %}
-

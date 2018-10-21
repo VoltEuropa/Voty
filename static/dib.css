@@ -1016,15 +1016,6 @@ label.deactivated {
   line-height: .875rem;
   width: .875rem;
 }
-
-.changes-badge {
-  background: #f1f1f1;
-  padding-left: .25rem;
-  padding-right: .25rem;
-  border-radius: 10%;
-  margin-right: .0625rem;
-}
-
 .history-title {
   font-size: 1em;
   color: #999;
@@ -1107,98 +1098,6 @@ label.deactivated {
 }
 
 
-/*
-
-Argument base design
-
-*/
-.argument {
-  margin: 2rem 0;
-}
-
-.argument.container-fluid {
-  padding: 1rem 0 2rem 0;
-}
-
-.argument .short {
-  font-size: 1.25rem;
-  line-height: 1.875rem;
-  overflow: hidden; /* prevent argument content from overflowing */
-}
-
-.argument .argument-type-icon {
-  font-size: 3rem;
-  margin: 1rem auto;
-}
-
-.argument .argument-meta {
-  margin: .5rem 0 1rem 0;
-  text-transform: uppercase;
-  border-bottom: 2px solid #ddd;
-  padding: 0.25rem 0;
-}
-
-.argument .avatar {
-  border-radius: 50%;
-}
-
-.argument .author-name {
-  margin-top: 0.3em;
-  display: block
-}
-
-.argument .author {
-  padding-right: 1rem;
-}
-
-.argument .arg-meta {
-  color: #aaa;
-  font-size: 0.85em;
-}
-
-.argument h6 {
-  margin-top: 1.5rem;
-}
-
-.argument .argument-head {
-  margin-bottom: 1rem;
-}
-
-.argument .argument-text {
-  padding: 0;
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-  overflow: hidden; /* prevent argument content from overflowing */
-}
-
-.argument .argument-comment-list {
-  background: rgba(255, 255, 255, 1);
-}
-
-.argument .new-comment {
-  padding-top: .75rem;
-}
-
-.argument .comment {
-  border-top: 1px solid #eee;
-  padding: 1rem 1rem;
-}
-
-.argument .comment .comment-text {
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.625rem;
-}
-
-.argument .comment .comment-text * {
-  overflow: hidden; /* prevent comment content from overflowing */
-}
-
-.argument button:disabled.new-comment {
-  border: none;
-  background: transparent;
-  display: none;
-}
 
 #new-argument .btn .material-icons {
   display: block;
@@ -1989,12 +1888,166 @@ a.btn span, a.btn i {
   box-shadow: 0 0 5px 5px #fcf8e3;
 }
 /* ------------------------- discussion ------------------------------------- */
+.nav-tabs li:only-of-type {
+  pointer-events: none;
+  cursor: pointer;
+}
 .voty-discussion-info {
   line-height: 2em;
 }
 .voty-discussion-anchor {
   float: right;
 }
+.voty-discussion-action-wrapper {
+  padding: .5em 0 .5em 0;
+}
+.voty-new-proposal-wrapper {
+  margin-top: 1.5em;
+  margin-bottom: 1em;
+  text-align: right;
+}
+.voty-new-proposal-wrapper .voty-simple-form {
+  text-align: left;
+  display: block;
+  color: #014c8c;
+}
+.voty-new-proposal-wrapper .voty-simple-form  .btn {
+  float: right;
+}
+.voty-new-proposal-wrapper .voty-simple-form-header {
+  padding-top: 0;
+}
+.voty-argument .voty-argument-type-icon {
+  font-size: 3rem;
+  margin: 1rem auto;
+}
+.voty-argument {
+  margin: 2em 0;
+}
+.voty-argument-header {
+  font-size: 1.25rem;
+  line-height: 1.875rem;
+  overflow: hidden;
+  margin-bottom: .5em;
+}
+.voty-argument-interaction {
+  text-align: right;
+  font-size: 1.15rem;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: .25em;
+}
+.voty-argument-interaction .voty-action {
+  font-size: 16px; /* em doesn't work */
+}
+.voty-discussion-item-expand {
 
+}
+.voty-argument-expand:hover,
+.voty-argument-expand + span a,
+.voty-argument-solve:hover {
+  text-decoration: none;
+}
+.voty-argument .voty-argument-avatar {
+  padding-right: 1em;
+}
+.voty-argument-avatar .avatar {
+  border-radius: 50%;
+}
+.voty-argument-author {
+  margin-bottom: 1em;
+  margin-top: 1em;
+}
+.voty-argument-author-name {
+  margin-top: 0.3em;
+  display: block;
+  font-size: 1.15em;
+  text-transform: capitalize; 
+}
+.voty-argument-author-meta {
+  color: #aaa;
+  font-size: 0.95em;
+}
+.voty-argument .voty-argument-text {
+  padding: 0;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  overflow: hidden; /* prevent argument content from overflowing */
+}
+.voty-argument-comment-list {
+  background: rgba(255, 255, 255, 1);
+}
+.voty-argument .comment {
+  border-top: 1px solid #eee;
+  padding: 1rem 1rem;
+}
+.voty-argument .comment .comment-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.625rem;
+}
+.voty-argument .comment .comment-head {
+  line-height: 2.5em;
+}
+.voty-argument .comment .comment-interaction {
+  line-height: 1.5em;
+}
+.voty-argument .comment .comment-text {
+  padding-top: 1em;
+}
+.voty-argument .comment .comment-text p {
+  margin: 0;
+}
+.voty-argument .argument-reaction .alert-warning {
+  background: 0 none;
+  text-align: center;
+  border-color: #ddd;
+  color: #aaa;
+}
+.voty-discussion-no-proposals,
+.voty-argument .argument-reaction .voty-thanks {
+  text-align: center;
+  border-color: #ddd;
+  color: #aaa;
+  display: block;
+  border: 1px solid #ddd;
+  padding: .5em 0;
+  border-bottom-left-radius: .25em;
+  border-bottom-right-radius: .25em;
+}
+.voty-thanks {
+  margin-top: -.5em;
+}
+.voty-muted-title-postfix {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 14px;
+}
+.voty-muted-title-postix-badge {
+  background: #f1f1f1;
+  padding-left: .25rem;
+  padding-right: .25rem;
+  border-radius: 10%;
+  margin-right: .0625rem;
+}
+.voty-muted-title-postix-badge .material-icons {
+  vertical-align: middle;
+}
+.voty-muted-title-stale {
+  float: left;
+  margin-right: .5em;
+  padding: .35em 0;
+}
+.voty-argument-comment-new {
+  text-align: right;
+  padding-top: .5em;
+}
+
+
+
+/* ========================= VOLT specific ================================== */
+.bg-discussion {
+  background-color: #60278e;
+  border-color: #60278e;
+}
 
 

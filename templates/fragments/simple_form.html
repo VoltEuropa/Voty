@@ -1,11 +1,11 @@
 {% load bootstrap %}
 {% load i18n %}
-<form id="{{csrf_token}}" method="POST" {%if ajax%}data-ajax-submit="true"{%endif%} action="{{request.path}}{% if fragment %}?fragment={{fragment|urlencode}}{% endif %}" onsubmit="submitForm.disabled=true; return true;">
-  {% if form.title %}
-    <h2>{{form.title }}</h2>
+<form class="voty-simple-form" id="{{csrf_token}}" method="POST" {%if ajax%}data-ajax-submit="true"{%endif%} action="{{request.path}}{% if fragment %}?fragment={{fragment|urlencode}}{% endif %}" onsubmit="submitForm.disabled=true; return true;">
+  {% if form.form_title %}
+    <h2 class="voty-simple-form-title">{{form.form_title }}</h2>
   {% endif %}
-  {% if form.description %}
-    <p>{{form.description }}</p>
+  {% if form.form_description %}
+    <p class="voty-simple-form-description">{{form.form_description }}</p>
   {% endif %}
     {% csrf_token %}
     {{form|bootstrap}}

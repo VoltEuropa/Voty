@@ -283,6 +283,17 @@
               {% endif %}
             {% endwith %}
           {% endif %}
+          
+          {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+            {% if policy.state == discussed %}
+              <div class="align-right voty-discussion-action-wrapper">
+                <a href="#discuss" class="btn btn-success">
+                  <i class="material-icons forward">forward</i>
+                  <span>{% trans "Jump to discussion" %}</span>
+                </a>
+              </div>
+            {% endif %}
+          {% endwith %}
         </div>
       </div>
     </div>
@@ -297,9 +308,8 @@
     <div class="container">
       <div class="row">
         <div class="col-12">
-          <h6 class="text-muted classification">
-            <span>{% trans "Initiators" %}
-            {% if request.guard.policy_edit %}({% trans "edits require reconfirming support" %}){% endif %}
+          <h6 class="text-muted classification">{% trans "Initiators" %}
+            {% if request.guard.policy_edit %}<span class="voty-muted-title-postfix"> ({% trans "edits require reconfirming support" %})</span>{% endif %}
             </span>
           </h6>
         </div>
@@ -458,31 +468,14 @@
     {% endif %}
   {% endwith %}
 
-  {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
-    {% if policy.state == discussed %}
-      <div id="cta" class="container-fluid cta">
-        <div class="container">
-          <div class="row">
-            <div class="col-12">
-              <span class="voty-discussion-info">
-                {% trans "Policy can be discussed" %}
-              </span>
-              <a href="#discuss" class="voty-discussion-anchor btn bg-discussion">{% trans "Jump to discussion" %}</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    {% endif %}
-  {% endwith %}
-
   <div id="initiative-text" class="container-fluid initiative-single">
     <div class="container">
       <div class="row">
         <div class="col">
           <h6 class="text-muted classification">{% trans "Policy Text" %}
             {% if policy.versions.count > 1 %}
-              <a href="{% url 'policy_history' policy_id=policy.id slug=policy.slug version_id=policy.versions.1.id %}" data-ajax="true" class="change-history">({% trans "View modification history" %}
-                <span class="changes-badge"><span class="material-icons history">history</span> {{ policy.versions.count }}</span>)
+              <a href="{% url 'policy_history' policy_id=policy.id slug=policy.slug version_id=policy.versions.1.id %}" data-ajax="true" class="voty-muted-title-postfix">({% trans "View modification history" %}
+                <span class="voty-muted-title-postix-badge"><span class="material-icons history">history</span> {{ policy.versions.count }}</span>)
               </a>
             {% endif %}
           </h6>
@@ -496,27 +489,19 @@
   {% if policy.show_debate %}
     {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
       <div id="discuss" class="container-fluid cta {% if not policy.state == discussed %}closed{% endif %}">
-        <div class="container">
-          <div class="row no-gutters">
-            <div class="col-12">
-              <ul class="nav nav-tabs nav-fill" role="tablist">
-                {% include 'fragments/discussion/policy_count.html' with active=True me='debate' list=policy_arguments %}
-                {% include 'fragments/discussion/policy_count.html' with active=False me='proposals' list=policy_proposals %}
-              </ul>
-            </div>
-            <div class="col-12 tab-content">
-              <div class="tab-pane active" id="debate" role="tabpanel">
-                {% include 'fragments/discussion/policy_arguments.html' %}
-              </div>
-              <div class="tab-pane" id="proposals" role="tabpanel">
-                {% include 'fragments/discussion/policy_proposals.html' %}
-              </div>
-            </div>
-          </div>
-        </div>
+        {% include "fragments/discussion/discussion_index.html" %}
       </div>
     {% endwith %}
   {% endif %}
+
+  {% with "PLATFORM_POLICY_STATE_DICT.STAGED"|get_setting as staged %}
+    {% if policy.state == staged %}
+      <div id="discuss" class="container-fluid cta">
+        {% include "fragments/discussion/discussion_index.html" %} 
+      </div>
+    {% endif %}
+  {% endwith %}
+
 
   {% if policy.show_supporters %}
   <div class="container-fluid show-supporters">
@@ -558,9 +543,3 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-
-
-
-
-
-

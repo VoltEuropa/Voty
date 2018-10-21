@@ -86,9 +86,10 @@ class NewModerationForm(forms.ModelForm):
     model = Moderation
     fields = ["text", "vote"]
 
-  # custom properties for fragments/simple_form.html
-  title = _("Evaluate Policy Proposal")
-  description = _("Please flag the policy if it:")
+  # custom properties for fragments/simple_form.html, used to be TITLE/TEXT to
+  # not conflict with title/text
+  form_title = _("Evaluate Policy Proposal")
+  form_description = _("Please flag the policy if it:")
 
   text = forms.CharField(
     widget=forms.Textarea,
@@ -145,67 +146,67 @@ class NewCommentForm(forms.ModelForm):
     widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("Please refer to the above Argument in your comment.")})
   )
 
-# ----------------------------- InitiativeForm ---------------------------------
-class InitiativeForm(forms.ModelForm):
+# --------------------------- NewProposalForm ----------------------------------
+class NewProposalForm(forms.Form):
 
-    class Meta:
-      model = Initiative
-      fields = ['title', 'subtitle', 'summary', 'problem', 'forderung',
-                'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument',
-                'einordnung', 'ebene', 'bereich']
+  form_title = _("Add a Proposal")
+  form_description = _("Use proposals in case of issues, corrections or if you think the Policy should be modified or extended.")
 
-      labels = {
-          "title" : _("Headline"),
-          "subtitle": _("Teaser"),
-          "summary" : _("Summary"),
-          "problem": _("Problem Assessment"),
-          "forderung" : _("Proposal"),
-          "kosten": _("Cost Estimation"),
-          "fin_vorschlag": _("Finance Proposition"),
-          "arbeitsweise": _("Methodology"),
-          "init_argument": _("Initiators' Argument"),
-          "einordnung": _("Context"),
-          "ebene": _("Scope"),
-          "bereich": _("Topic"),
+  title = forms.CharField(
+    required=True,
+    label=_("Summary"),
+    max_length=140,
+    widget=forms.Textarea(
+      attrs={
+        "rows":3,
+        "placeholder": _("Please be precise and verify your proposal is new and unique.")
       }
-      help_texts = {
-          "title" : _("The headline should state the proposal in a short and precise way."),
-          "subtitle": _("Briefly describe the problem or situation, the Initiative should adress. Try limiting yourself to 1-2 sentences."),
-          "summary" : _("Summarize the Initiative in 3-4 sentences."),
-          "problem": _("State and assess the situation or problem, the Initiative should solve in 3-4 sentences."),
-          "forderung": _("What are the concreted demands or proposals?"),
-          "kosten": _("Will the Initiative cause costs? Try to give an estimation of the cost associated with the Initiative."),
-          "fin_vorschlag": _("Briefly describe your ideas of how costs associated with the Initiative could be covered. It would be sufficient to write that the Initiative will be financed via tax income."),
-          "arbeitsweise": _("Have you consulted experts? What information is your assessment based on? Is it possible to sources of information?"),
-          "init_argument": _("Please state why this Initiative is important for you and why you are submitting it."),
+    )
+  )
+
+  text = forms.CharField(
+    required=True,
+    label=_("Detailed Overview"),
+    max_length=1000,
+    widget=forms.Textarea(
+      attrs={
+        "rows":10,
+        "placeholder": _("If a similar Proposal already exits, please add a comment to this Proposal.")
       }
-
-
-
+    )
+  )
 
 # --------------------------- NewArgumentForm ----------------------------------
 class NewArgumentForm(forms.Form):
-    TITLE = _("Add New Argument")
-    type = forms.ChoiceField(choices=[('👍', '👍'), ('👎', '👎')], widget=forms.HiddenInput())
-    title = forms.CharField(required=True,
-                            label=_("Summary"),
-                            max_length=140,
-                            widget=forms.Textarea(attrs={'rows':3, 'placeholder':_("Arguments should be kept as clear as possible. Please ensure your argument is new and unique.")}))
-    text = forms.CharField(required=True,
-                           label=_("Complete Description"),
-                           max_length=500,
-                           widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("If a similar Argument already exits, please add a comment to this Argument.")}))
 
+  form_title = _("Add New Argument")
+  form_description = _("Use arguments for questions or to leave feedback and comments.")
 
-# --------------------------- NewProposalForm ----------------------------------
-class NewProposalForm(forms.Form):
-    title = forms.CharField(required=True,
-                            label=_("Summary"),
-                            max_length=140,
-                            widget=forms.Textarea(attrs={'rows':3, 'placeholder': _("Proposals should be kept as clear as possible. Please ensure your proposal is new and unique.")}))
-    text = forms.CharField(required=True,
-                           label=_("Detailed Overview"),
-                           max_length=1000,
-                           widget=forms.Textarea(attrs={'rows':10, 'placeholder': _("If a similar Proposal already exits, please add a comment to this Proposal.")}))
+  type = forms.ChoiceField(
+    choices=[("thumbs_up", "thumbs_up"), ("thumbs_down", "thumbs_down")],
+    widget=forms.HiddenInput()
+  )
 
+  title = forms.CharField(
+    required = True,
+    label = _("Summary"),
+    max_length = 140,
+    widget = forms.Textarea(
+      attrs = {
+        "rows":3,
+        "placeholder": _("Arguments should be kept as clear as possible. Please ensure your argument is new and unique.")
+      }
+    )
+  )
 
+  text = forms.CharField(
+    required = True,
+    label = _("Complete Description"),
+    max_length = 500,
+    widget = forms.Textarea(
+      attrs={
+        "rows":10,
+        "placeholder": _("If a similar Argument already exits, please add a comment to this Argument.")
+      }
+    )
+  )

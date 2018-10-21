@@ -1,0 +1,27 @@
+{% load i18n %}
+{% if stale == 1 %}
+  <div id="proposals-old">
+    <a href="{% url 'policy_stale_proposals' policy_id=policy.id slug=policy.slug %}?fragment=%23proposals-old" data-ajax="true" class="voty-muted-title-postfix">
+     ({% trans "Close list of solved issues" %}
+      <span class="voty-muted-title-postix-badge"><span class="material-icons">visibility_off</span> {{ policy_proposals_stale|length }}</span>)
+    </a>
+    {% for argument in policy_proposals_stale %}
+      {% include "fragments/discussion/discussion_item.html" with full=0 %}
+      {% empty %}
+      <span class="voty-discussion-no-proposals">{% trans "No open issues" %}</span>
+    {% endfor %}
+  </div>
+{% elif stale == 0 %}
+  <div id="proposals-old">
+    <a href="{% url 'policy_stale_proposals' policy_id=policy.id slug=policy.slug %}?fragment=%23proposals-old&amp;toggle=True" data-ajax="true" class="voty-muted-title-postfix">
+     ({% trans "Browse list of solved issues" %}
+      <span class="voty-muted-title-postix-badge"><span class="material-icons">visibility_off</span> {{ policy_proposals_stale|length }}</span>)
+    </a>
+  </div>
+{% else %}
+  {% for argument in policy_proposals_active %}
+    {% include "fragments/discussion/discussion_item.html" with full=0 %}
+    {% empty %}
+    <span class="voty-discussion-no-proposals">{% trans "No open issues" %}</span>
+  {% endfor %}
+{% endif %}

@@ -287,7 +287,6 @@ class Guard:
     return False
 
   # ------------------------------ can like ------------------------------------
-  # XXX used throughout templates, rename later
   def can_like(self, obj=None):
     if obj.user == self.user:
       return False
@@ -440,7 +439,7 @@ class Guard:
 
     if not user.is_authenticated:
       return False
-    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.DRAFT:
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.CLOSED:
       return False
     if user.has_perm("initproc.policy_can_delete") or \
       user.is_superuser:
@@ -513,6 +512,31 @@ class Guard:
       return False
     return True
 
+  # ----------------- solve (open/close policy proposal ------------------------
+  def policy_proposal_solve(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if policy.supporting_policy.filter(initiator=True, ack=True).filter(user_id=user.id):
+      return True
+    return False
+
+  # ---------------------- add proposal to policy ------------------------------
+  def policy_proposal_new(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+      if policy.supporting_policy.filter(initiator=True, ack=True).filter(user_id=user.id):
+        return True
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
+      return True
+    return False
+  
   # ---------------------- validate/reject policy ------------------------------
   # checks if user technically CAN validate
   def policy_validate(self, policy=None):
@@ -651,5 +675,3 @@ def add_guard(get_response):
     return response
 
   return middleware
-
-

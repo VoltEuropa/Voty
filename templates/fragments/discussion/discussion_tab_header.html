@@ -1,0 +1,6 @@
+{% load i18n %}
+<li class="nav-item">
+  <a class="nav-link{% if active %} active{% endif %}" data-toggle="tab" href="#{{me}}" role="tab">
+      {% if me == 'debate' %}{% trans "Debate" %}{% else %}{% trans "Issues" %} (<span id="{{me}}-count">{% trans "open:" %} {{list|length}}</span>){% endif %}
+  </a>
+</li>

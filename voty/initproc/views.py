@@ -39,7 +39,7 @@ import json
 
 from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
 from .models import (Policy, PolicyBase, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
-from .forms import (PolicyForm, InitiativeForm, NewArgumentForm, NewCommentForm,
+from .forms import (PolicyForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
 from .undo import UndoUrlTokenGenerator
 from .serializers import SimpleInitiativeSerializer
@@ -98,9 +98,31 @@ def _getPolicyFieldValue(key, version, field_meta_dict):
       else:
         return version.field_dict.get(key, '')
 
+# shortcut to retrieving object
 def _fetch_object_from_class(target_type, target_id):
   return get_object_or_404(apps.get_model('initproc', target_type), pk=target_id)
-        
+
+# build a payload dict used throughout to render policy_item
+def _generate_payload(policy):
+  proposals = policy.policy_proposals.prefetch_related("likes").all()
+  payload = dict(
+      policy=policy,
+      user_count=policy.eligible_voter_count,
+      policy_proposals_active=[x for x in proposals.filter(stale=False)],
+      policy_proposals_stale=[x for x in proposals.filter(stale=True)],
+      policy_fields=[f.name for f in PolicyBase._meta.get_fields() if f.get_internal_type() == "TextField"],
+      policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
+        [x for x in policy.policy_contras.prefetch_related("likes").all()],
+    )
+
+  payload["policy_proposals_stale_count"] = policy.policy_proposals.filter(stale=True)
+  payload["policy_arguments"].sort(key=lambda x: (-x.likes.count(), x.created_at))
+  payload["policy_proposals_active"].sort(key=lambda x: (-x.likes.count(), x.created_at))
+  payload["policy_proposals_stale"].sort(key=lambda x: (-x.likes.count(), x.changed_at))
+
+  return payload
+
+
 # -------------------------- Simple Form Verifier ------------------------------
 def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_ajax=True,
                          submit_klasses="btn-outline-primary", submit_title=_("Send"),
@@ -108,6 +130,8 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
   def wrap(fn):
     def view(request, *args, **kwargs):
       cancel_url = target_object = None
+
+      # try retrieving the target object (eg comment -> moderation)
       try:
         target_type = kwargs["target_type"]
         target_id = kwargs["target_id"]
@@ -115,17 +139,20 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
         target_type = request.GET.get("target_type")
         target_id = request.GET.get("target_id")
 
+      # POST, should be forwarded to the respective action below
       if request.method == "POST":
         form = form_cls(request.POST)
         if form.is_valid():
           return fn(request, form, *args, **kwargs)
+
+      # GET
       else:
         if request.GET.get("edit"):
           initial_dict = {}
           target_object = target_object or _fetch_object_from_class(target_type, target_id)
           for field in target_object._meta.get_fields():
 
-            # bonuscurl Moderation review tickboxes (weren't stored before)
+            # XXX shouldn't be here, but moderation tickboxes weren't stored
             if field.name == "flags":
               flags = (getattr(target_object, field.name) or "").split(",")
               for flag in flags:
@@ -141,7 +168,7 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
 
       fragment = request.GET.get("fragment")
 
-      # when we actually cancel we need the parent object... to rerender
+      # cancel-urls (eg on edit) we need the parent object to re-render
       if request.GET.get("cancel", None) is not None:
         target_object = target_object or _fetch_object_from_class(target_type, target_id)
 
@@ -229,20 +256,9 @@ def policy_item(request, policy, *args, **kwargs):
   if not request.guard.policy_view(policy):
     messages.warning(request, _("Permission denied."))
     return redirect("home")
-
-  payload = dict(
-    policy=policy,
-    user_count=policy.eligible_voter_count,
-    policy_proposals=[x for x in policy.policy_proposals.prefetch_related("likes").all()],
-    policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
-      [x for x in policy.policy_contras.prefetch_related("likes").all()],
-    policy_fields=[f.name for f in PolicyBase._meta.get_fields() if f.get_internal_type() == "TextField"]
-  )
-
-  payload["policy_arguments"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
-  payload["policy_proposals"].sort(key=lambda x: (-x.policy_likes.count(), x.created_at))
+  
+  payload = _generate_payload(policy)
   payload["is_likeable"] = request.guard.is_likeable (policy)
-
 
   # personalise if authenticated user interacted with policy
   # XXX this should be handled in guard.py
@@ -260,7 +276,7 @@ def policy_item(request, policy, *args, **kwargs):
     policy_votes = policy.policy_votes.filter(user=user_id)
     if (policy_votes.exists()):
       payload['policy_vote'] = policy_votes.first()
-    for arg in payload['policy_arguments'] + payload['policy_proposals']:
+    for arg in payload['policy_arguments'] + payload['policy_proposals_active'] + payload["policy_proposals_stale"]:
       _personalize_argument(arg, user_id)
 
   return render(request, 'initproc/policy_item.html', context=payload)
@@ -353,6 +369,33 @@ def policy_stale_feedback(request, policy, *args, **kwargs):
     "fragments": {
       "#moderation-old": render_to_string(
         "fragments/moderation/moderation_list.html",
+        context=fake_context,
+        request=request,
+      )
+    }
+  }
+
+# ------------------------- Policy Proposals Show ------------------------------
+# toggle proposal content and comments
+@ajax
+@login_required
+@policy_state_access()
+def policy_stale_proposals(request, policy, *args, **kwargs):
+  user = request.user
+
+  fake_context = dict(
+    policy=policy,
+    stale=1 if request.GET.get('toggle', None) else 0,
+  )
+
+  if user:
+    user_id = request.user.id
+    fake_context["policy_proposals_stale"] = policy.policy_proposals.filter(stale=True)
+
+  return {
+    "fragments": {
+      "#proposals-old": render_to_string(
+        "fragments/discussion/discussion_proposal_list.html",
         context=fake_context,
         request=request,
       )
@@ -499,29 +542,6 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
         return render_to_string('fragments/autocomplete/user_item.html',
                                 context=dict(user=item))
 
-@login_required
-def new(request):
-    form = InitiativeForm()
-    if request.method == 'POST':
-        form = InitiativeForm(request.POST)
-        if form.is_valid():
-            ini = form.save(commit=False)
-            with reversion.create_revision():
-                ini.state = STATES.PREPARE
-                ini.save()
-
-                # Store some meta-information.
-                reversion.set_user(request.user)
-                if request.POST.get('commit_message', None):
-                    reversion.set_comment(request.POST.get('commit_message'))
-
-
-            Supporter(initiative=ini, user=request.user, initiator=True, ack=True, public=True).save()
-            return redirect('/initiative/{}-{}'.format(ini.id, ini.slug))
-        else:
-            messages.warning(request, _("Please correct the following problems:"))
-
-    return render(request, 'initproc/new.html', context=dict(form=form))
 
 #@states_required(raise_exception=True)
 #@can_access_initiative()
@@ -1220,51 +1240,62 @@ def policy_history_delete(request, policy, slug, version_id):
 @non_ajax_redir('/')
 @ajax
 @login_required
-@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
-@simple_form_verifier(NewProposalForm)
-def policy_proposal_new(request, form, policy):
-  data = form.cleaned_data
-  proposal = Proposal(
-    policy=policy,
-    user_id=request.user.id,
-    title=data['title'],
-    text=data['text'])
+@policy_state_access(states=[
+  settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+])
+@simple_form_verifier(NewProposalForm, submit_title=_("Submit"))
+def policy_proposal_new(request, form, policy, *args, **kwargs):
 
-  proposal.save()
+  if not request.guard.policy_proposal_new(policy):
+    raise PermissionDenied()
 
-  # inform all supporters proposal was posted
-  supporters = policy.supporting_policy.exclude(id=user.id)
-  notify(
-    [supporter.user for _, supporter in enumerate(supporters)],
-    settings.NOTIFICATIONS.PUBLIC.POLICY_PROPOSAL_NEW, {
-      "description": "".join([_("New proposal posted in discussion on Policy:"), " ", policy.title])#,
-      #"argument": arg
-      }, sender=user
+  if form.is_valid():
+    user = request.user
+    data = form.cleaned_data
+    proposal = Proposal(
+      policy=policy,
+      user_id=user.id,
+      title=data['title'],
+      text=data['text'],
+      stale=False
     )
 
-  return {
-    "fragments": {"#no-proposals": ""},
-    "inner-fragments": {
-      "#new-proposal": render_to_string(
-        "fragments/argument/propose.html",
-        context=dict(policy=policy)
-      ),
-      "#proposals-thanks": render_to_string(
-        "fragments/discussion/policy_proposal_thanks.html"
-      ),
-      "#proposals-count": policy.policy_proposals.count()
-    },
-    "append-fragments": {
-      "#proposal-list": render_to_string(
-        "fragments/discussion/policy_argument_item.html",
-        context=dict(
-          argument=proposal,
-          full=0
-        ),
-        request=request
+    proposal.save()
+
+    # inform all supporters proposal was posted
+    supporters = policy.supporting_policy.exclude(id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_PROPOSAL_NEW, {
+        "description": "".join([_("New proposal posted in discussion on Policy:"), " ", policy.title])#,
+        #"argument": arg
+        }, sender=user
       )
+  
+    return {
+      "fragments": {"#no-proposals": ""},
+      "inner-fragments": {
+        "#new-proposal": render_to_string(
+          "fragments/discussion/policy_propose_new.html",
+          context=dict(policy=policy)
+        ),
+        "#proposals-thanks": render_to_string(
+          "fragments/discussion/policy_propose_thanks.html"
+        ),
+        "#proposals-count": policy.policy_proposals.count()
+      },
+      "append-fragments": {
+        "#proposal-list": render_to_string(
+          "fragments/discussion/discussion_item.html",
+          context=dict(
+            argument=proposal,
+            full=0
+          ),
+          request=request
+        )
+      }
     }
-  }
 
 # ------------------------- Policy Argument New --------------------------------
 @non_ajax_redir('/')
@@ -1306,7 +1337,7 @@ def policy_argument_new(request, form, policy):
     },
     "append-fragments": {
       "#argument-list": render_to_string(
-        "fragments/discussion/policy_arguemnt_item.html",
+        "fragments/discussion/policy_argument_item.html",
         context=dict(
           argument=arg,
           full=0
@@ -1336,9 +1367,10 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
   new_comment.save()
   new_comment.can_modify = True
 
+  # XXX remove html
   return {
     "inner-fragments": {
-      "#{}-new-comment".format(target_object.unique_id): "".join(["<strong>", _("Thank you for your comment."), "</strong><br/>", _("It is editable during the next 5 minutes")]),
+      "#{}-new-comment".format(target_object.unique_id): "".join(["<div class='voty-thanks'><strong>", _("Thank you for your comment."), "</strong>", _("It is editable during the next 5 minutes</div>")]),
       "#{}-chat-icon".format(target_object.unique_id): "chat_bubble",
       "#{}-comment-count".format(target_object.unique_id): target_object.comments.count()
     },
@@ -1440,8 +1472,7 @@ def target_unlike(request, target_type, target_id):
 @non_ajax_redir('/')
 @ajax
 @login_required
-@simple_form_verifier(NewCommentForm,
-                    submit_title=_("Save"))
+@simple_form_verifier(NewCommentForm, submit_title=_("Save"))
 def target_edit(request, form, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
@@ -1455,14 +1486,14 @@ def target_edit(request, form, *args, **kwargs):
   target_object.save()
   user = request.user 
 
-  # XXX Duplicate
-
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
-  # keep the comment thread open
+  # XXX everything that uses target[action] should use a single identifier, not
+  # m or argument
   fake_context = dict(
     m=target_parent,
+    argument=target_parent,
     policy=target_parent.policy,
     has_commented=False,
     has_flags=False,
@@ -1478,7 +1509,7 @@ def target_edit(request, form, *args, **kwargs):
 
   if user:
 
-    if target_parent.flags is not None:
+    if getattr(target_parent, "flags", None) is not None:
       fake_context["has_flags"] = True
       fake_context["flags"] = []
       for flag in target_parent.flags.split(","):
@@ -1496,10 +1527,15 @@ def target_edit(request, form, *args, **kwargs):
     if not request.guard.target_comment(target_parent):
       fake_context["has_commented"] = True
 
+  if target_parent.type == "proposal":
+    template_url = "fragments/discussion/discussion_item.html"
+  else:
+    template_url = "fragments/moderation/moderation_item.html"
+
   return {
     "fragments": {
       "#policy-{moderation.type}-{moderation.id}".format(moderation=target_parent): render_to_string(
-        "fragments/moderation/moderation_item.html",
+        template_url,
         context=fake_context,
         request=request,
       )
@@ -1518,17 +1554,16 @@ def target_delete(request, target_type, target_id):
   if not request.guard.is_editable(target_object):
     raise PermissionDenied()
 
-  # XXX Duplicate
-
   user = request.user
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
-
   target_object.delete()
 
-  # keep the comment thread open
+  # XXX everything that uses target[action] should use a single identifier, not
+  # m or argument
   fake_context = dict(
     m=target_parent,
+    argument=target_parent,
     policy=target_parent.policy,
     has_commented=False,
     has_flags=False,
@@ -1544,7 +1579,7 @@ def target_delete(request, target_type, target_id):
 
   if user:
 
-    if target_parent.flags is not None:
+    if getattr(target_parent, "flags", None) is not None:
       fake_context["has_flags"] = True
       fake_context["flags"] = []
       for flag in target_parent.flags.split(","):
@@ -1562,17 +1597,108 @@ def target_delete(request, target_type, target_id):
     if not request.guard.target_comment(target_parent):
       fake_context["has_commented"] = True
 
+  if target_parent.type == "proposal":
+    template_url = "fragments/discussion/discussion_item.html"
+  else:
+    template_url = "fragments/moderation/moderation_item.html"
+
   return {
     "fragments": {
       "#policy-{moderation.type}-{moderation.id}".format(moderation=target_parent): render_to_string(
-        "fragments/moderation/moderation_item.html",
+        template_url,
         context=fake_context,
         request=request,
       )
     }
   }
 
+# ------------------------ Policy Argument Solve -------------------------------
+# toggle review feedback
+@ajax
+@login_required
+@policy_state_access(states=[
+  settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+])
+def policy_argument_solve(request, policy, *args, **kwargs):
 
+  model_class = apps.get_model('initproc', kwargs["target_type"])
+  target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+
+  if not request.guard.policy_proposal_solve(policy):
+    raise PermissionDenied()
+
+  user = request.user
+  target_object.stale = request.GET.get('stale')
+  target_object.save()
+  _personalize_argument(target_object, user.id)
+
+  payload = _generate_payload(policy)
+  payload["argument"] = target_object
+  payload["has_liked"] = target_object.has_liked,
+  payload["full"] = 1 if request.GET.get('toggle', None) is None else 0,
+  payload["comments"] = target_object.comments.order_by('created_at').all()
+
+  return {
+    "fragments": {
+      "#discuss": render_to_string(
+        "fragments/discussion/discussion_index.html",
+        context=payload,
+        request=request
+      ).join(['<div id="discuss" class="container-fluid cta">', '</div>'])
+    }
+  }
+
+# ------------------------ Policy Argument Details -----------------------------
+# toggle review feedback
+@ajax
+@login_required
+@policy_state_access(states=[
+  settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+])
+def policy_argument_details(request, policy, *args, **kwargs):
+
+  model_class = apps.get_model('initproc', kwargs["target_type"])
+  target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+  user = request.user
+  _personalize_argument(target_object, user.id)
+
+  # toggle the comment thread
+  fake_context = dict(
+    argument=target_object,
+    policy=policy,
+    has_commented=False,
+    has_liked=target_object.has_liked,
+    is_likeable=True,
+    stale=target_object.stale,
+    is_revisable=request.guard.is_revisable(target_object),
+    full=1 if request.GET.get('toggle', None) is None else 0,
+    comments=target_object.comments.order_by('created_at').all()
+  )
+
+  if user:
+    for comment in fake_context["comments"]:
+      if comment.created_at > user.last_login:
+        comment.is_unread = True
+      if user.id != comment.user.id:
+        comment.has_liked = comment.likes.filter(user=user).exists()
+      else:
+        comment.can_modify = request.guard.is_editable(comment)
+  
+    # don't allow two-in-a-row
+    if not request.guard.target_comment(target_object):
+      fake_context["has_commented"] = True
+  
+  return {
+    "fragments": {
+      "#policy-{target.type}-{target.id}".format(target=target_object): render_to_string(
+        "fragments/discussion/discussion_item.html",
+        context=fake_context,
+        request=request,
+      )
+    }
+  }
 
 
 
@@ -1598,31 +1724,6 @@ def submit_to_committee(request, initiative):
         messages.warning(request, _("The requirements for submission have not been met."))
 
     return redirect('/initiative/{}'.format(initiative.id))
-
-@login_required
-#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
-def edit(request, initiative):
-    form = InitiativeForm(request.POST or None, instance=initiative)
-    if request.method == 'POST':
-        if form.is_valid():
-            with reversion.create_revision():
-                initiative.save()
-
-                # Store some meta-information.
-                reversion.set_user(request.user)
-                if request.POST.get('commit_message', None):
-                    reversion.set_comment(request.POST.get('commit_message'))
-
-            initiative.supporting_initiative.filter(initiator=True).update(ack=False)
-
-            messages.success(request, _("Initiative saved."))
-            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.POLICY_EDITED, subject=request.user)
-            return redirect('/initiative/{}'.format(initiative.id))
-        else:
-            messages.warning(request, _("Please correct the following problems:"))
-
-    return render(request, 'initproc/new.html', context=dict(form=form, initiative=initiative))
-
 
 
 @ajax

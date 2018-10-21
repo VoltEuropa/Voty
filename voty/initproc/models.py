@@ -948,6 +948,7 @@ class Proposal(Response):
 
   type = "proposal"
   icon = False
+  stale = models.BooleanField(default=False)
   title = models.CharField(max_length=140)
   text = models.CharField(max_length=1024)
 

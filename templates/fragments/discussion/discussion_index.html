@@ -1,0 +1,49 @@
+{% load i18n %}
+{% load get_setting %}
+<div class="container">
+  <div class="row no-gutters">
+    {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-fill" role="tablist">
+        {% if policy.state == discussed %}
+          {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='debate' list=policy_arguments %}
+          {% include 'fragments/discussion/discussion_tab_header.html' with active=False me='proposals' list=policy_proposals_active %}
+        {% else %}
+          {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='proposals' list=policy_proposals_active %}
+        {% endif %}
+      </ul>
+    </div>
+    <div class="col-12 tab-content">
+  
+      {% if policy.state == discussed %}
+        <div class="tab-pane active" id="debate" role="tabpanel">
+          {% include 'fragments/discussion/discussion_argument_list.html' %}
+        </div>
+      {% endif %}
+  
+      <div class="tab-pane {% if policy.state == discussed %}{% else %}active{% endif %}" id="proposals" role="tabpanel">
+        {% include 'fragments/discussion/discussion_proposal_list.html' %}
+  
+        <div id="proposals-thanks" class="container-fluid push-alert fixed-top"></div>
+        <div id="new-proposal" class="voty-new-proposal-wrapper">
+          <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
+        </div>
+
+        {% if policy_proposals_stale|length > 0 %}
+          <br />
+          <br />
+          <h6 class="text-muted classification voty-muted-title-stale">
+            {% trans "Closed Issues" %}
+          </h6>
+          <div class="voty-muted-header-fake-postfix" id="proposals-old">
+            <a href="{% url 'policy_stale_proposals' policy_id=policy.id slug=policy.slug %}?fragment=%23proposals-old&amp;toggle=True" data-ajax="true" class="voty-muted-title-postfix">
+             ({% trans "Browse list of closed issues" %}
+              <span class="voty-muted-title-postix-badge"><span class="material-icons">remove_red_eye</span> {{ policy_proposals_stale|length }}</span>)
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endwith %}
+  </div>
+</div>
