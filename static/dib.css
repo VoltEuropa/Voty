@@ -1,6 +1,7 @@
 body {
   background: rgba(255, 255, 255, 1);
-  font-family: 'Rubik', sans-serif;
+  /*font-family: 'Rubik', sans-serif;*/
+  font-family: 'Ubuntu', sans-serif;
   color: rgba(55, 58, 60, 1);
   /*background-image: linear-gradient(90deg, #21466b, #62388E, #eb5c4a);*/
 }
