@@ -45,7 +45,7 @@
 
       {% include "initproc/blocks/variants.html" %}
 
-      {% if request.guard.policy_validate or has_reviews %}
+      {% if request.guard.policy_review or has_reviews %}
         <div class="row initiative-moderation">
           <div class="col-12">
           {% include "fragments/moderation/moderation_index.html" %}      
@@ -543,3 +543,5 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
+

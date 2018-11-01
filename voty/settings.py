@@ -333,6 +333,7 @@ PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS = config.get("platform_policy_settings", "P
 PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS")
 PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS")
 PLATFORM_POLICY_DISCUSSION_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_DISCUSSION_DAYS")
+PLATFORM_POLICY_VOTING_DAYS = config.get("platform_policy_settings", "PLATFORM_POLICY_VOTING_DAYS")
 PLATFORM_POLICY_COMMENT_EDIT_SECONDS = config.get("platform_policy_settings", "PLATFORM_POLICY_COMMENT_EDIT_SECONDS")
 
 PLATFORM_POLICY_FIELD_LABELS = _getTranslatedDict("platform_policy_field_title_dict")
@@ -390,5 +391,4 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
-
 

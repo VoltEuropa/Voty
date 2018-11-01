@@ -245,7 +245,7 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
     ]:
-      return self.current_moderations.filter(vote="y") > self.current_moderations.filter(vote="n")
+      return self.current_moderations.filter(vote="y").count() > self.current_moderations.filter(vote="n").count()
 
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
       upper_bound = self.went_to_discussion_at + \

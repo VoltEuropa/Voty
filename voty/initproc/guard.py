@@ -84,8 +84,10 @@ class Guard:
     # by default only check for total
     return (0, 0, total)
 
-
-
+  # ------------------------------- make policy query ----------------------------
+  def make_policy_query(self, filters):
+    return []
+  
 
   def make_intiatives_query(self, filters):
       if not self.user.is_authenticated:
@@ -98,6 +100,8 @@ class Guard:
                   id__in=Supporter.objects.filter(Q(first=True) | Q(initiator=True), user_id=self.user.id).values('initiative_id')))
 
       return Initiative.objects.filter(state__in=filters)
+
+
 
   @_compound_action
   
@@ -401,8 +405,10 @@ class Guard:
       return True
     if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
+    # always allow edits?
     if not policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
-      return False
+      if policy.ready_for_next_stage:
+        return False
 
     return True
 
@@ -555,7 +561,9 @@ class Guard:
     policy = policy or self.request.policy
     user = self.user
 
-    if not user.has_perm("initproc.policy_can_review") or not user.is_superuser:
+    if not policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
+      return False
+    if not user.has_perm("initproc.policy_can_review") and not user.is_superuser:
       return False
     if policy.supporting_policy.filter(user=user.id, initiator=True):
       self.reason = _("Moderation not possible: Initiators can not moderate own Policy.")
@@ -675,3 +683,4 @@ def add_guard(get_response):
     return response
 
   return middleware
+

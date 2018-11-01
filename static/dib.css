@@ -2063,5 +2063,21 @@ a.btn span, a.btn i {
   background-color: #60278e;
   border-color: #60278e;
 }
+.btn-outline-primary {
+  border-color: #60278e;
+  color: #60278e;
+}
+.btn-outline-primary:focus {
+  background-color: #60278e;
+}
+.btn-primary {
+  background-color: #60278e;
+  border-color: #60278e;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #612095;
+}
 
 

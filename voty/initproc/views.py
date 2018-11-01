@@ -106,14 +106,14 @@ def _fetch_object_from_class(target_type, target_id):
 def _generate_payload(policy):
   proposals = policy.policy_proposals.prefetch_related("likes").all()
   payload = dict(
-      policy=policy,
-      user_count=policy.eligible_voter_count,
-      policy_proposals_active=[x for x in proposals.filter(stale=False)],
-      policy_proposals_stale=[x for x in proposals.filter(stale=True)],
-      policy_fields=[f.name for f in PolicyBase._meta.get_fields() if f.get_internal_type() == "TextField"],
-      policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
-        [x for x in policy.policy_contras.prefetch_related("likes").all()],
-    )
+    policy=policy,
+    user_count=policy.eligible_voter_count,
+    policy_proposals_active=[x for x in proposals.filter(stale=False)],
+    policy_proposals_stale=[x for x in proposals.filter(stale=True)],
+    policy_fields=[f.name for f in PolicyBase._meta.get_fields() if f.get_internal_type() == "TextField"],
+    policy_arguments=[x for x in policy.policy_pros.prefetch_related('likes').all()] + \
+      [x for x in policy.policy_contras.prefetch_related("likes").all()],
+  )
 
   payload["policy_proposals_stale_count"] = policy.policy_proposals.filter(stale=True)
   payload["policy_arguments"].sort(key=lambda x: (-x.likes.count(), x.created_at))
@@ -256,9 +256,10 @@ def policy_item(request, policy, *args, **kwargs):
   if not request.guard.policy_view(policy):
     messages.warning(request, _("Permission denied."))
     return redirect("home")
-  
+
   payload = _generate_payload(policy)
   payload["is_likeable"] = request.guard.is_likeable (policy)
+  payload.update({"policy_labels": dict([(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in payload["policy_fields"]])})
 
   # personalise if authenticated user interacted with policy
   # XXX this should be handled in guard.py
@@ -266,7 +267,6 @@ def policy_item(request, policy, *args, **kwargs):
     user_id = request.user.id
     moderations = policy.policy_moderations.filter(user=user_id, stale=False)
 
-    payload.update({"policy_labels": dict([(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in payload["policy_fields"]])})
     payload.update({"has_reviews": request.guard.is_reviewed(policy=policy)})
     payload.update({"has_moderated": moderations.count()})
     if payload["has_moderated"]:
@@ -426,10 +426,12 @@ def policy_feedback(request, policy, *args, **kwargs):
   )
 
   if user:
-    
-    if moderation.flags is not None:
+
+    # XXX fix this, don't set to empty string
+    if moderation.flags is not None and moderation.flags != "":
       fake_context["has_flags"] = True
       fake_context["flags"] = []
+
       for flag in moderation.flags.split(","):
         fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
 
@@ -456,72 +458,75 @@ def policy_feedback(request, policy, *args, **kwargs):
   }
 
 
-
-
-
-
+# ------------------------------ Landing Page ----------------------------------
 def index(request):
-    filters = [f for f in request.GET.getlist("f")]
-    if filters:
-        request.session['init_filters'] = filters
-    else:
-        filters = request.session.get('init_filters', DEFAULT_FILTERS)
+  filters = [f for f in request.GET.getlist("f")]
+  if filters:
+    request.session['init_filters'] = filters
+  else:
+    filters = request.session.get('init_filters', DEFAULT_FILTERS)
 
-    inits = request.guard.make_intiatives_query(filters).prefetch_related("supporting_initiative")
+  inits = request.guard.make_policy_query(filters)#.prefetch_related("supporting_initiative")
 
-    bereiche = [f for f in request.GET.getlist('b')]
-    if bereiche:
-        inits = inits.filter(bereich__in=bereiche)
+  #bereiche = [f for f in request.GET.getlist('b')]
+  # if bereiche:
+  #   inits = inits.filter(bereich__in=bereiche)
 
-    ids = [i for i in request.GET.getlist('id')]
+  # ids = [i for i in request.GET.getlist('id')]
 
-    if ids:
-        inits = inits.filter(id__in=ids)
+  #if ids:
+  #  inits = inits.filter(id__in=ids)
 
-    elif request.GET.get('s', None):
-        searchstr = request.GET.get('s')
+  #elif request.GET.get('s', None):
+  #  searchstr = request.GET.get('s')
 
-        if len(searchstr) >= settings.MIN_SEARCH_LENGTH:
-            if connection.vendor == 'postgresql':
-                inits = inits.annotate(search=SearchVector('title', 'subtitle','summary',
-                        'problem', 'forderung', 'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument')
-                    ).filter(search=searchstr)
-            else:
-                inits = inits.filter(Q(title__icontains=searchstr) | Q(subtitle__icontains=searchstr))
+  #  if len(searchstr) >= settings.MIN_SEARCH_LENGTH:
+  #    if connection.vendor == 'postgresql':
+  #      inits = inits.annotate(search=SearchVector('title', 'subtitle','summary',
+  #              'problem', 'forderung', 'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument')
+  #          ).filter(search=searchstr)
+  #    else:
+  #      inits = inits.filter(Q(title__icontains=searchstr) | Q(subtitle__icontains=searchstr))
 
+  #inits = sorted(inits, key=lambda x: x.sort_index or timedelta(days=1000))
 
-    inits = sorted(inits, key=lambda x: x.sort_index or timedelta(days=1000))
+  # now we filter for urgency
+  #if request.is_ajax():
+  #  return render_to_json({
+  #    'fragments': {
+  #      "#init-card-{}".format(init.id) : render_to_string(
+  #        "fragments/initiative/card.html",
+  #        context=dict(initiative=init),
+  #        request=request
+  #      ) for init in inits
+  #    },
+  #    'inner-fragments': {
+  #      '#init-list': render_to_string(
+  #        "fragments/initiative/list.html",
+  #         context=dict(initiatives=inits),
+  #         request=request
+  #        )
+  #     },
+  #     # FIXME: ugly work-a-round as long as we use django-ajax
+  #     #        for rendering - we have to pass it as a dict
+  #     #        or it chokes on rendering :(
+  #     'initiatives': json.loads(JSONRenderer().render(
+  #        SimpleInitiativeSerializer(inits, many=True).data,
+  #      ))
+  #  }
+  #)
 
-    # now we filter for urgency
+  count_inbox = request.guard.make_intiatives_query(['i']).count()
 
-
-    if request.is_ajax():
-        return render_to_json(
-            {'fragments': {
-                "#init-card-{}".format(init.id) : render_to_string("fragments/initiative/card.html",
-                                                               context=dict(initiative=init),
-                                                               request=request)
-                    for init in inits },
-             'inner-fragments': {
-                '#init-list': render_to_string("fragments/initiative/list.html",
-                                               context=dict(initiatives=inits),
-                                               request=request)
-             },
-             # FIXME: ugly work-a-round as long as we use django-ajax
-             #        for rendering - we have to pass it as a dict
-             #        or it chokes on rendering :(
-             'initiatives': json.loads(JSONRenderer().render(
-                                SimpleInitiativeSerializer(inits, many=True).data,
-                            ))
-        }
-)
-
-
-
-    count_inbox = request.guard.make_intiatives_query(['i']).count()
-
-    return render(request, 'initproc/index.html',context=dict(initiatives=inits,
-                    inbox_count=count_inbox, filters=filters))
+  return render(
+    request, 
+    'initproc/index.html',
+    context=dict(
+      initiatives=inits,
+      inbox_count=count_inbox,
+      filters=filters
+      )
+    )
 
 
 

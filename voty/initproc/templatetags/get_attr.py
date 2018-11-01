@@ -31,4 +31,3 @@ def get_attr(my_obj, my_key):
     return my_obj[int(my_key)]
   else:
     return my_obj.get(my_key)
-
