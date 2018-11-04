@@ -267,7 +267,7 @@ def policy_item(request, policy, *args, **kwargs):
     user_id = request.user.id
     moderations = policy.policy_moderations.filter(user=user_id, stale=False)
 
-    payload.update({"has_reviews": request.guard.is_reviewed(policy=policy)})
+    payload.update({"has_evaluations": request.guard.is_reviewed(policy=policy)})
     payload.update({"has_moderated": moderations.count()})
     if payload["has_moderated"]:
       payload["is_revisable"] = request.guard.is_revisable(moderations[0])
@@ -349,7 +349,7 @@ def policy_new(request, *args, **kwargs):
   return render(request, 'initproc/policy_edit.html', context=dict(form=form))
 
 # ------------------------- Policy Moderation Show -----------------------------
-# toggle review feedback
+# toggle evaluation feedback
 @ajax
 @login_required
 @policy_state_access()
@@ -403,7 +403,7 @@ def policy_stale_proposals(request, policy, *args, **kwargs):
   }
 
 # ------------------------- Policy Validation Show -----------------------------
-# toggle review feedback
+# toggle evaluation feedback
 @ajax
 @login_required
 @policy_state_access()
@@ -1042,6 +1042,29 @@ def policy_discuss(request, policy, *args, **kwargs):
     messages.success(request, _("Policy moved to discussion. It can now be discussed among all users."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
+# ---------------------------- Policy Review ----------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
+def policy_review(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_review(policy):
+    messages.warning(request, _("Permission denied."))
+
+  user = request.user
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.REVIEWED
+  policy.save()
+
+  # notifiy initiators
+  supporters = policy.supporting_policy.filter(initiator=True)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_REVIEWED, {
+      "description": "".join([_("Policy"), " ", policy.title, " ", _("can now be edited for final review and vote.")])
+    }, sender=user
+  )
+
+  messages.success(request, _("Policy moved to final edit stage. Initiators can now make final modifications."))
+  return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 # ---------------------------- Policy Validate ---------------------------------
 # this is the step of moving a policy to validation status
@@ -1110,18 +1133,18 @@ def policy_validate(request, policy, *args, **kwargs):
     #        messages.success(request, _("Initiative activated for Voting."))
     #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
 
-# ----------------------------- Policy Review ----------------------------------
+# --------------------------- Policy Evaluate ----------------------------------
 # used to be for incoming and moderation (submit and release)
-# every validation is a review, once the required number of reviews are in,
-# any moderator can manually validate a proposal into seeksupport/discussion
+# every validation is an evaluation, once the required number of evaluations are 
+# in, any moderator can manually validate a proposal into seeking support stage
 @ajax
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
 @simple_form_verifier(NewModerationForm, submit_title=_("Save"),
   cancel=True, cancel_template="fragments/moderation/moderation_item.html")
-def policy_review(request, form, policy, *args, **kwargs):
+def policy_evaluate(request, form, policy, *args, **kwargs):
 
-  if not request.guard.policy_review(policy):
+  if not request.guard.policy_evaluate(policy):
     messages.warning(request, _("Permission denied."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
@@ -1247,7 +1270,7 @@ def policy_history_delete(request, policy, slug, version_id):
 @login_required
 @policy_state_access(states=[
   settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
-  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED,
 ])
 @simple_form_verifier(NewProposalForm, submit_title=_("Submit"))
 def policy_proposal_new(request, form, policy, *args, **kwargs):
@@ -1624,12 +1647,12 @@ def target_delete(request, target_type, target_id):
   }
 
 # ------------------------ Policy Argument Solve -------------------------------
-# toggle review feedback
 @ajax
 @login_required
 @policy_state_access(states=[
   settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
-  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+  settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
 ])
 def policy_argument_solve(request, policy, *args, **kwargs):
 
@@ -1660,13 +1683,13 @@ def policy_argument_solve(request, policy, *args, **kwargs):
     }
   }
 
-# ------------------------ Policy Argument Details -----------------------------
-# toggle review feedback
+# ------------------------ Policy Argument Toggle -----------------------------
 @ajax
 @login_required
 @policy_state_access(states=[
   settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
-  settings.PLATFORM_POLICY_STATE_DICT.STAGED
+  settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+  settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
 ])
 def policy_argument_details(request, policy, *args, **kwargs):
 
@@ -1725,7 +1748,7 @@ def submit_to_committee(request, initiative):
 
         messages.success(request, _("The Initiative was received and is being validated."))
         initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, subject=request.user)
-        # To notify the review team, we notify all members of groups with moderation permission,
+        # To notify the policy team, we notify all members of groups with moderation permission,
         # which doesn't include superusers, though they individually have moderation permission.
         moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
         initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(),

@@ -115,11 +115,6 @@ class Guard:
       return init.votes.filter(user=self.user.id).first()
 
   @_compound_action
-  def can_view(self, obj=None):
-      # fallback if compound doesn't match
-      return False
-
-  @_compound_action
   def can_edit(self, obj=None):
       # fallback if compound doesn't match
       return False
@@ -196,19 +191,6 @@ class Guard:
       return init.supporting_initiative.filter(initiator=True).count() < INITIATORS_COUNT
 
   ## compounds
-
-  def _can_view_initiative(self, init):
-      if init.state not in TEAM_ONLY_STATES:
-          return True
-
-      if not self.user.is_authenticated:
-          return False
-
-      if not self.user.has_perm('initproc.add_moderation') and \
-         not init.supporting_initiative.filter(Q(first=True) | Q(initiator=True), user_id=self.request.user.id):
-          return False
-
-      return True
 
   def _can_edit_initiative(self, init):
       if not init.state in [STATES.PREPARE, STATES.FINAL_EDIT]:
@@ -293,6 +275,14 @@ class Guard:
   # ------------------------------ can like ------------------------------------
   def can_like(self, obj=None):
     if obj.user == self.user:
+      return False
+    return True
+
+  # ------------------------------ can view ------------------------------------
+  def can_view(self, obj=None):
+    user = self.user
+
+    if not user.is_authenticated:
       return False
     return True
 
@@ -401,10 +391,9 @@ class Guard:
       return False
     if not policy.state in settings.PLATFORM_POLICY_EDIT_STATE_LIST:
       return False
-    if user.is_superuser:
-      return True
     if not policy.supporting_policy.filter(initiator=True, ack=True, user_id=user.id):
       return False
+
     # always allow edits?
     if not policy.policy_moderations.filter(stale=False).exclude(vote="r").count() < policy.required_moderations:
       if policy.ready_for_next_stage:
@@ -557,7 +546,7 @@ class Guard:
 
   # -------------------- review a policy (previous moderation) -----------------
   # checks if user SHOULD validate, test against all "soft" criteria
-  def policy_review(self, policy=None):
+  def policy_evaluate(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
 
@@ -653,6 +642,37 @@ class Guard:
       return False
 
     return True
+
+  # ---------------------- move policy to review ------------------------------
+  def policy_review(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
+      return False
+    if not policy.ready_for_next_stage:
+      if user.has_perm("initproc.policy_can_override"):
+        return True
+      return False
+
+    return True
+
+  # ------------------------ review policy -----------------------------------
+  def policy_finalise(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.REVIEWED:
+      return False
+    if not policy.ready_for_next_stage:
+      return False
+
+    return True
+
 
   # ---------------------------- close policy ----------------------------------
   def policy_close(self, policy=None):

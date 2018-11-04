@@ -170,26 +170,13 @@ class Commentable(models.Model):
   comments = GenericRelation(Comment, content_type_field='target_type', object_id_field='target_id')
 
 # -------------------------------- Policy --------------------------------------
-# our new home!
 @reversion.register()
 class Policy(PolicyBase):
 
-  # fields provided via abstract class from init.ini, so they are configurable
+  # content fields provided via abstract class (init.ini) = configurable
 
-  #summary = models.TextField(blank=True)
-  #problem = models.TextField(blank=True)
-  #forderung = models.TextField(blank=True)
-  #kosten = models.TextField(blank=True)
-  #fin_vorschlag = models.TextField(blank=True)
-  #arbeitsweise = models.TextField(blank=True)
-  #init_argument = models.TextField(blank=True)
-
-  #einordnung = models.CharField(max_length=50, choices=settings.CATEGORIES.CONTEXT_CHOICES)
-  #ebene = models.CharField(max_length=100, choices=settings.CATEGORIES.SCOPE_CHOICES)
-  #bereich = models.CharField(max_length=60, choices=settings.CATEGORIES.TOPIC_CHOICES)
-
-  # there is so much text stored on an initiative/policy, state can also be
-  # human-readable => max-length:20, start in draft
+  # there is so much text stored on an initiative/policy that state can also be
+  # human-readable = we don't use single characters, max-length:20
   state = models.CharField(
     max_length=20,
     choices=settings.PLATFORM_POLICY_STATE_LIST,
@@ -237,70 +224,12 @@ class Policy(PolicyBase):
     else:
       return datetime.now(timezone) - self.staged_at
 
-  @property
-  def ready_to_proceed(self):
-
-    # only called within ready_for_next_stage
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
-      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-    ]:
-      return self.current_moderations.filter(vote="y").count() > self.current_moderations.filter(vote="n").count()
-
-    if self.state == settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED:
-      upper_bound = self.went_to_discussion_at + \
-        timedelta(days=int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
-      return datetime.now() > \
-        datetime(upper_bound.year, upper_bound.month, upper_bound.day) \
-
-    return False
-
-  @property
-  def ready_for_next_stage(self):
-
-    # policy needs minimum initiators and all fields filled
-    # all fields required => len = int [17, 2, 1123, 0] = 17*2*1123*0 = 0 = FAIL
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
-      #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
-      #settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      #settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW
-    ]:
-      return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()])
-      )
-
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
-      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-    ]:
-      return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()]) and
-        self.current_moderations.exclude(vote="r").count() >= self.required_moderations
-      )
-
-    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-      return self.supporting_policy.filter().count() >= self.quorum
-
-    # nothing to do
-    if self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
-      #settings.PLATFORM_POLICY_STATE_DICT.SUPPORTED,
-      settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
-    ]:
-      return True
-
-    return False
-
+  # ---------------------------- end of phase ----------------------------------
+  # this returns time(!) when phase is over. Compare against it elsewhere!
   @cached_property
   def end_of_this_phase(self):
-    week = timedelta(days=7)
 
-    # rejections need to rest 180 days
+    # rejection needs to rest 180 days
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
       settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED
@@ -308,42 +237,105 @@ class Policy(PolicyBase):
       return self.was_rejected_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS))
 
-    # seeking support takes between MIN and MAX days with a COOLDOWN once
-    # support is reached
-
+    # support takes between MIN and MAX days with a COOLDOWN after reaching support
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
       lower_bound = self.was_validated_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS))
 
-      if self.ready_for_next_stage:
+      # if support is reached
+      if self.supporting_policy.filter().count() >= self.quorum:
         return lower_bound + \
           timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS))
 
-      # XXX both naive, should use datetime.now(self.created_at.tzinfo)
+      # XXX both "naive", should use datetime.now(self.created_at.tzinfo)
       if datetime(lower_bound.year, lower_bound.month, lower_bound.day) \
         > datetime.now():
         return lower_bound
+
       return self.was_validated_at + \
         timedelta(int(settings.PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS))
 
-    # XXX broken - no variants when seeking support
-    #if self.was_validated_at:
-    #  if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-    #    if self.variant_of: # NONE?
-    #      if self.variant_of.went_in_discussion_at:
-    #        return self.variant_of.went_in_discussion_at + (2 * week)
-
+    # discussion takes DISCUSSION days
     elif self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
-      return self.went_in_discussion_at+ \
+      return self.went_in_discussion_at + \
         timedelta(int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
 
-    #elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW:
-    #  return self.went_in_discussion_at + (5 * week)
-    #
+    # vote takes VOTE days
     #elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
     #  return self.went_in_vote_at + (3 * week)
 
     return None
+
+  # ----------------------- ready for next phase -------------------------------
+  # check if we can continue to next phase (all conditions met)
+  @property
+  def ready_for_next_stage(self):
+
+    # editing phases need minimum initiators and all fields filled
+    # all fields filled multiplies length, one empty field fails it:
+    # eg len(int[17, 2, 1123, 0]) = 17*2*1123*0 = 0 = FAIL
+
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
+      settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
+      #settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
+    ]:
+      return (
+        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
+        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()])
+      )
+
+    # moderation phases also require minimum amount of moderation reviews
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
+    ]:
+      return (
+        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
+        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()]) and
+
+        # max number of moderations without pending reviews ("r" ~ request info)
+        self.current_moderations.exclude(vote="r").count() >= self.required_moderations
+      )
+
+    # seeking support requires supporters and time
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      upper_bound = self.end_of_this_phase()
+      return self.supporting_policy.filter().count() >= self.quorum and \
+        datetime.now() > \
+          datetime(upper_bound.year, upper_bound.month, upper_bound.day)
+      
+    # discussion requires time
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
+      upper_bound = self.went_in_discussion_at + \
+        timedelta(days=int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
+
+      return datetime.now() > \
+        datetime(upper_bound.year, upper_bound.month, upper_bound.day)
+
+    # nothing to do
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
+      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+    ]:
+      return True
+
+    return False
+
+  # ---------------------- proceed to next phase -------------------------------
+  # ready = proceed to next stage or close (eg, not enough votes). tested here
+  @property
+  def ready_to_proceed(self):
+
+    # not enough supporters
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+    ]:
+      return self.current_moderations.filter(vote="y").count() > self.current_moderations.filter(vote="n").count()
+
+    return False
 
   @cached_property
   def quorum(self):
@@ -360,8 +352,9 @@ class Policy(PolicyBase):
   @property
   def show_debate(self):
     return self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_REVIEW,
+      settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
       #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
       #settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
       #settings.PLATFORM_POLICY_STATE_DICT.REJECTED,

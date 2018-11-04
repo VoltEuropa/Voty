@@ -45,7 +45,7 @@
 
       {% include "initproc/blocks/variants.html" %}
 
-      {% if request.guard.policy_review or has_reviews %}
+      {% if request.guard.policy_evaluate or has_evaluations %}
         <div class="row initiative-moderation">
           <div class="col-12">
           {% include "fragments/moderation/moderation_index.html" %}      
@@ -69,6 +69,23 @@
                       <button title="{% trans 'Force Policy into Discussion' %}" class="btn btn-danger" type="submit">
                         <i class="material-icons forward">forward</i>
                         <span>{% trans "Force Policy into Discussion" %}</span>
+                      </button>
+                    </form>
+                  </div>  
+                </div>
+            </div>
+          </div>                    
+        {% elif request.guard.policy_review %}
+          <div class="row">
+            <div class="col-12">
+              <h2>Undemocratic Zone</h2>
+              <div class="voty-undemocratic-override-wrapper">
+                  <div class="align-right">
+                    <form class="action-form" action="{% url 'policy_review' policy_id=policy.id %}" style="display:inline" method="POST">
+                      {% csrf_token %}
+                      <button title="{% trans 'Force Policy to final Review' %}" class="btn btn-danger" type="submit">
+                        <i class="material-icons forward">forward</i>
+                        <span>{% trans "Force Policy to final Review" %}</span>
                       </button>
                     </form>
                   </div>  
@@ -234,25 +251,27 @@
 
           {% if request.guard.policy_discuss %}
             {% if policy.ready_for_next_stage %}
-              <div class="align-right">
-                <form class="action-form" action="{% url 'policy_discuss' policy_id=policy.id %}" style="display:inline" method="POST">
-                  {% csrf_token %}
-                  <button title="{% trans 'Move Policy to Discussion' %}" class="btn btn-success" type="submit">
-                    <i class="material-icons forward">forward</i>
-                    <span>{% trans "Move Policy to Discussion" %}</span>
-                  </button>
-                </form>
-              </div>
-            {% elif policy.ready_to_proceed %}
-              <div class="align-right">
-                <form class="action-form" action="{% url 'policy_close' policy_id=policy.id %}" style="display:inline" method="POST">
-                  {% csrf_token %}
-                  <button title="{% trans 'Close Policy' %}" class="btn btn-success" type="submit">
-                    <i class="material-icons forward">forward</i>
-                    <span>{% trans "Close Policy" %}</span>
-                  </button>
-                </form>
-              </div>
+              {% if policy.ready_to_proceed %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_discuss' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Move Policy to Discussion' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Move Policy to Discussion" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% else %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_close' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Close Policy' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Close Policy" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
             {% endif %}
           {% endif %}
 
@@ -283,9 +302,19 @@
               {% endif %}
             {% endwith %}
           {% endif %}
-          
-          {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
-            {% if policy.state == discussed %}
+
+          {% if request.guard.policy_review %}
+            {% if policy.ready_for_next_stage %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_review' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Move Policy to final Review' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Move Policy to final Review" %}</span>
+                  </button>
+                </form>
+              </div>
+            {% else %}
               <div class="align-right voty-discussion-action-wrapper">
                 <a href="#discuss" class="btn btn-success">
                   <i class="material-icons forward">forward</i>
@@ -293,7 +322,22 @@
                 </a>
               </div>
             {% endif %}
-          {% endwith %}
+          {% endif %}
+
+          {% if request.guard.policy_finalise %}
+            {% if policy.ready_for_next_stage %}
+              <div class="align-right">
+                <form class="action-form" action="" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Submit Policy for Vote' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Submit Policy for Vote" %}</span>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+          {% endif %}
+
         </div>
       </div>
     </div>
@@ -337,7 +381,9 @@
                         </form>
                       </div>
                     {% else %}
-                      <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
+                      {% if request.guard.can_view %}
+                        <span title="{% trans 'confirmed' %}" class="action-box"><i class="material-icons done">done</i></span>
+                      {% endif %}
                     {% endif %}
 
                   {# once confirmed: #}
@@ -362,7 +408,9 @@
                           </form>
                         </div>
                       {% else %}
-                        <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                        {% if request.guard.can_view %}
+                          <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                        {% endif %}
                       {% endif %}
 
                     {# ... and first initiator can confirm applications or remove incumbent initiators #}
@@ -395,7 +443,9 @@
                           </div>
                         {% endif %}
                       {% else %}
-                        <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                        {% if request.guard.can_view %}
+                          <span title="{% trans 'unconfirmed' %}" class="action-box"><i class="material-icons warning">warning</i></span>
+                        {% endif %}
                       {% endif %}
                     {% endif %}
                   {% endif %}
@@ -493,15 +543,6 @@
       </div>
     {% endwith %}
   {% endif %}
-
-  {% with "PLATFORM_POLICY_STATE_DICT.STAGED"|get_setting as staged %}
-    {% if policy.state == staged %}
-      <div id="discuss" class="container-fluid cta">
-        {% include "fragments/discussion/discussion_index.html" %} 
-      </div>
-    {% endif %}
-  {% endwith %}
-
 
   {% if policy.show_supporters %}
   <div class="container-fluid show-supporters">

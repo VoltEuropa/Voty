@@ -30,10 +30,12 @@
         {% include 'fragments/discussion/discussion_proposal_list.html' %}
   
         <div id="proposals-thanks" class="container-fluid push-alert fixed-top"></div>
-        <div id="new-proposal" class="voty-new-proposal-wrapper">
-          <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
-        </div>
-
+        {% if request.guard.policy_proposal_new %}
+          <div id="new-proposal" class="voty-new-proposal-wrapper">
+            <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
+          </div>
+        {% endif %}
+        
         {% if policy_proposals_stale|length > 0 %}
           <br />
           <h6 class="text-muted classification voty-muted-title-stale">
@@ -51,3 +53,5 @@
     {% endwith %}
   </div>
 </div>
+
+

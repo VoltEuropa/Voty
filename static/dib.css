@@ -1968,7 +1968,7 @@ a.btn span, a.btn i {
 .voty-argument-author-name {
   margin-top: 0.3em;
   display: block;
-  font-size: 1.15em;
+  font-size: 1em;
   text-transform: capitalize; 
 }
 .voty-argument-author-meta {
@@ -1977,8 +1977,8 @@ a.btn span, a.btn i {
 }
 .voty-argument .voty-argument-text {
   padding: 0;
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: 1em;
+  /* line-height: 1.25em; */
   overflow: hidden; /* prevent argument content from overflowing */
 }
 .voty-argument-comment-list {

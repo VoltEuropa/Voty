@@ -55,7 +55,7 @@ class PolicyForm(forms.ModelForm):
     labels = settings.PLATFORM_POLICY_FIELD_LABELS
     help_texts = settings.PLATFORM_POLICY_FIELD_HELPER
 
-  # add choices, sadly hardcoded field names here manually
+  # add choices, sadly requires hardcoded field names
   scope = forms.ChoiceField(
     choices=sorted(settings.CATEGORIES.SCOPE_CHOICES, key=lambda x: x[1]),
   )
