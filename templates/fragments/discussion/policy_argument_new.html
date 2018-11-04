@@ -1,9 +1,9 @@
 {% load bootstrap %}
 {% load i18n %}
 <div>
-  <form id="js-new-argument" method="POST" {%if ajax%}data-ajax-submit="true"{%endif%} action="{{request.path}}{% if fragment %}?fragment={{fragment|urlencode}}{% endif %}" onsubmit="submitForm.disabled=true; return true;">
+  <form id="js-argument-new" method="POST" {%if ajax%}data-ajax-submit="true"{%endif%} action="{{request.path}}{% if fragment %}?fragment={{fragment|urlencode}}{% endif %}" onsubmit="submitForm.disabled=true; return true;">
     <div class="row no-gutters">
-      <div class="offset-md-2 col-10 col-sm-12">
+      <div class="col-10 col-sm-12">
         {% if request.GET.type == "thumbs_up" %}
           <h4>{% trans "Add Argument in Favor" %}</h4>
         {% else %}
@@ -31,6 +31,6 @@
   </form>
   {{form.media}}
   <script type="text/javascript">
-    setup_char_counter("#js-new-argument");
+    setup_char_counter("#js-argument-new");
   </script>
 </div>

@@ -124,6 +124,10 @@
   <header>
       {% block custom_header %} {% endblock %}
   </header>
+    {# ajax error message container #}
+    <div id="voty-error"></div>
+    {# end #}
+
     {% if messages %}
     <div class="container-fluid push-alert fixed-top">
         {% for message in messages %}
@@ -227,3 +231,6 @@
   {% block body-javascript %}{% endblock %}
 </body>
 </html>
+
+
+

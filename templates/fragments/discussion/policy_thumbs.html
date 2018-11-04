@@ -1,12 +1,12 @@
 {% load i18n %}
 <div class="row">
   <div class="{% if policy_arguments %}offset-md-2 {% endif %}col text-center">
-    <a data-ajax="true" href="{% url 'policy_argument_new' policy_id=policy.id %}?type=thumbs_up&amp;fragment=%23new-argument" class="btn">
+    <a data-ajax="true" href="{% url 'policy_argument_new' policy_id=policy.id %}?type=thumbs_up&amp;fragment=%23argument-new" class="btn">
       <i class="material-icons">thumb_up</i> {% trans "Add Argument in Favor" %}
     </a>
 </div>
 <div class="col text-center">
-    <a data-ajax="true" href="{% url 'policy_argument_new' policy_id=policy.id %}?type=thumbs_down&amp;fragment=%23new-argument" class="btn">
+    <a data-ajax="true" href="{% url 'policy_argument_new' policy_id=policy.id %}?type=thumbs_down&amp;fragment=%23argument-new" class="btn">
       <i class="material-icons">thumb_down</i> {% trans "Add Argument Against" %}
     </a>
   </div>

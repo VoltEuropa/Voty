@@ -1100,14 +1100,14 @@ label.deactivated {
 
 
 
-#new-argument .btn .material-icons {
+#argument-new .btn .material-icons {
   display: block;
   font-size: 8rem;
   line-height: 10rem;
   padding-left: 2.25rem;
 }
 
-#new-argument form .material-icons {
+#argument-new form .material-icons {
   display: block;
   margin-top: 2rem;
   line-height: 3.5rem;
@@ -1115,7 +1115,7 @@ label.deactivated {
   width: 100%;
 }
 
-#new-argument label {
+#argument-new label {
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.0625rem;
@@ -1123,13 +1123,13 @@ label.deactivated {
   margin-bottom: .125rem;
 }
 
-#new-argument h4 {
+#argument-new h4 {
   margin-top: 2rem;
   margin-bottom: 1rem;
   line-height: 2rem;
 }
 
-#new-argument.container-fluid {
+#argument-new.container-fluid {
   padding: 0;
 }
 
@@ -1909,6 +1909,9 @@ a.btn span, a.btn i {
   text-align: right;
   float: right;
 }
+.voty-muted-header-fake-postfix {
+  display: inline-block;
+}
 .voty-new-proposal-wrapper .voty-simple-form {
   text-align: left;
   display: block;
@@ -1946,6 +1949,7 @@ a.btn span, a.btn i {
 }
 .voty-argument-interaction .voty-action {
   font-size: 16px; /* em doesn't work */
+  vertical-align: top;
 }
 .voty-discussion-item-expand {
 
@@ -2016,15 +2020,22 @@ a.btn span, a.btn i {
   color: #aaa;
 }
 .voty-discussion-no-proposals,
-.voty-argument .argument-reaction .voty-thanks {
+.voty-argument .argument-reaction .voty-thanks,
+.voty-discussion-no-debate {
   text-align: center;
   border-color: #ddd;
   color: #aaa;
   display: block;
   border: 1px solid #ddd;
   padding: .5em 0;
+}
+.voty-discussion-no-proposals,
+.voty-argument .argument-reaction .voty-thanks {
   border-bottom-left-radius: .25em;
   border-bottom-right-radius: .25em;
+}
+.voty-discussion-no-debate {
+  border-radius: .25em;
 }
 .voty-thanks {
   margin-top: -.5em;

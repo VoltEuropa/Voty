@@ -105,6 +105,7 @@ def _fetch_object_from_class(target_type, target_id):
 # build a payload dict used throughout to render policy_item
 def _generate_payload(policy):
   proposals = policy.policy_proposals.prefetch_related("likes").all()
+
   payload = dict(
     policy=policy,
     user_count=policy.eligible_voter_count,
@@ -276,8 +277,12 @@ def policy_item(request, policy, *args, **kwargs):
     policy_votes = policy.policy_votes.filter(user=user_id)
     if (policy_votes.exists()):
       payload['policy_vote'] = policy_votes.first()
-    for arg in payload['policy_arguments'] + payload['policy_proposals_active'] + payload["policy_proposals_stale"]:
+    for arg in payload["policy_arguments"] + payload["policy_proposals_active"] + payload["policy_proposals_stale"]:
       _personalize_argument(arg, user_id)
+    for arg in payload["policy_arguments"]:
+      if arg.user.id == user_id:
+        payload["has_voiced_his_opinion"] = True
+        break
 
   return render(request, 'initproc/policy_item.html', context=payload)
 
@@ -390,7 +395,9 @@ def policy_stale_proposals(request, policy, *args, **kwargs):
 
   if user:
     user_id = request.user.id
-    fake_context["policy_proposals_stale"] = policy.policy_proposals.filter(stale=True)
+    proposals = policy.policy_proposals.prefetch_related("likes").all()
+    fake_context["policy_proposals_stale"] = [x for x in proposals.filter(stale=True)]
+    fake_context["policy_proposals_stale"].sort(key=lambda x: (-x.likes.count(), x.created_at))
 
   return {
     "fragments": {
@@ -764,10 +771,11 @@ def policy_remove_support(request, policy, user_id, *args, **kwargs):
     )
 
   rm_supporter.delete()
-  messages.success(request, _("Support has been removed."))
 
   # redirect to home handled by policy_item if applicable
+  messages.success(request, _("Support has been removed."))
   return redirect("/policy/{}".format(policy.id))
+  
 
 
 # ---------------------------- Policy Stage ------------------------------------
@@ -1276,7 +1284,8 @@ def policy_history_delete(request, policy, slug, version_id):
 def policy_proposal_new(request, form, policy, *args, **kwargs):
 
   if not request.guard.policy_proposal_new(policy):
-    raise PermissionDenied()
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/%23discuss".format(policy.id))
 
   if form.is_valid():
     user = request.user
@@ -1288,7 +1297,6 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
       text=data['text'],
       stale=False
     )
-
     proposal.save()
 
     # inform all supporters proposal was posted
@@ -1302,16 +1310,15 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
       )
   
     return {
-      "fragments": {"#no-proposals": ""},
       "inner-fragments": {
-        "#new-proposal": render_to_string(
-          "fragments/discussion/policy_propose_new.html",
-          context=dict(policy=policy)
-        ),
-        "#proposals-thanks": render_to_string(
+        #"#": render_to_string(
+        #  "fragments/discussion/policy_propose_new.html",
+        #  context=dict(policy=policy)
+        #),
+        "#proposal-thanks": render_to_string(
           "fragments/discussion/policy_propose_thanks.html"
         ),
-        "#proposals-count": policy.policy_proposals.count()
+        "#proposal-count": policy.policy_proposals.count()
       },
       "append-fragments": {
         "#proposal-list": render_to_string(
@@ -1360,14 +1367,13 @@ def policy_argument_new(request, form, policy, *args, **kwargs):
       )
 
     return {
-      "fragments": {"#no-arguments": ""},
       "inner-fragments": {
-        "#new-argument": render_to_string(
+        "#argument-new": render_to_string(
           "fragments/discussion/policy_thumbs.html",
           context=dict(policy=policy)
         ),
-        "#debate-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
-        "#debate-count": policy.policy_pros.count() + policy.policy_contras.count()
+        "#argument-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
+        "#argument-count": policy.policy_pros.count() + policy.policy_contras.count()
       },
       "append-fragments": {
         "#argument-list": render_to_string(
@@ -1658,20 +1664,47 @@ def policy_argument_solve(request, policy, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
   target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
-
-  if not request.guard.policy_proposal_solve(policy):
-    raise PermissionDenied()
+  target_comments = target_object.comments.order_by('created_at').all()
 
   user = request.user
-  target_object.stale = request.GET.get('stale')
+  set_stale_to = request.GET.get('stale')
+
+  if not request.guard.policy_proposal_solve(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/%23discuss".format(policy.id))
+
+  # user must have last comment to reopen
+  # XXX improve (lost half an hour here on "False" vs False...)
+  if set_stale_to == "False" and request.guard.target_comment(target_object):
+    payload = _generate_payload(policy)
+    payload["voty_error_message"] = _("Please comment on the issue before reopening")
+    payload["stale"] = 1
+    return {
+      "fragments": {
+        "#voty-error": render_to_string(
+          "error.html",
+          context=payload,
+          request=request
+        ),
+        "#proposals-old": render_to_string(
+          "fragments/discussion/discussion_proposal_list.html",
+          context=payload,
+          request=request,
+        )
+      }
+    }
+
+  target_object.stale = set_stale_to
   target_object.save()
   _personalize_argument(target_object, user.id)
 
   payload = _generate_payload(policy)
   payload["argument"] = target_object
-  payload["has_liked"] = target_object.has_liked,
+  payload["has_liked"] = target_object.has_liked
+  payload["comments"] = target_comments
+  
+  # XXX do we really need this?
   payload["has_solved"] = True
-  payload["comments"] = target_object.comments.order_by('created_at').all()
 
   return {
     "fragments": {

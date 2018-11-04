@@ -58,15 +58,14 @@
     {% endfor %}
   </div>
   <div id="{{argument.unique_id}}-reaction" class="argument-reaction">
-    {% if not argument.stale %}
-      {% if not has_commented %}
-        <div id="{{argument.unique_id}}-new-comment" class="voty-argument-comment-new">
-          {% include 'fragments/comment/comment_add.html' with m=argument %}
-        </div>
-      {% elif request.guard.reason %}
-        <div class="alert alert-warning">{{ request.guard.reason }}</div>
-      {% endif %}
+    {% if not has_commented %}
+      <div id="{{argument.unique_id}}-new-comment" class="voty-argument-comment-new">
+        {% include 'fragments/comment/comment_add.html' with m=argument %}
+      </div>
+    {% elif request.guard.reason %}
+      <div class="alert alert-warning">{{ request.guard.reason }}</div>
     {% endif %}
   </div>
   {% endif %}
 </div>
+

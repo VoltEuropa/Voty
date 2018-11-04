@@ -22,16 +22,27 @@
   
       {% if policy.state == discussed %}
         <div class="voty-debate tab-pane {% if not has_solved %}active{% endif %}" id="debate" role="tabpanel">
-          {% include 'fragments/discussion/discussion_argument_list.html' %}
+          <div id="argument-list">
+            {% include 'fragments/discussion/discussion_argument_list.html' %}
+          </div>
+          {% if has_voiced_his_opinion %}
+            <span class="voty-discussion-no-debate">{% trans "You have already added your opinion to the debate. Thank you." %}</span>
+          {% else %}
+            <div id="argument-thanks" class="container-fluid push-alert fixed-top"></div>
+            <div id="argument-new" class="container-fluid">
+              {% include "fragments/discussion/policy_thumbs.html" %}
+            </div>
+          {% endif %}
         </div>
       {% endif %}
   
       <div class="voty-issues tab-pane {% if policy.state == discussed %}{% if has_solved %}active{% endif %}{% else %}active{% endif %}" id="proposals" role="tabpanel">
-        {% include 'fragments/discussion/discussion_proposal_list.html' %}
-  
-        <div id="proposals-thanks" class="container-fluid push-alert fixed-top"></div>
+        <div id="proposal-list">
+          {% include 'fragments/discussion/discussion_proposal_list.html' %}
+        </div>
+        <div id="proposal-thanks" class="container-fluid push-alert fixed-top"></div>
         {% if request.guard.policy_proposal_new %}
-          <div id="new-proposal" class="voty-new-proposal-wrapper">
+          <div id="proposal-new" class="voty-new-proposal-wrapper">
             <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
           </div>
         {% endif %}
@@ -53,5 +64,4 @@
     {% endwith %}
   </div>
 </div>
-
 
