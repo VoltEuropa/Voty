@@ -346,7 +346,8 @@ class Policy(PolicyBase):
     return self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
-      settings.PLATFORM_POLICY_STATE_DICT.VALIDATED
+      settings.PLATFORM_POLICY_STATE_DICT.VALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
     ]
 
   @property
