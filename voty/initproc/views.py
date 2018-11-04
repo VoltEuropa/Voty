@@ -10,7 +10,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.utils.decorators import available_attrs
 from django.utils.safestring import mark_safe
 from django.contrib.postgres.search import SearchVector
@@ -1263,7 +1263,8 @@ def policy_history(request, policy, slug, version_id):
 def policy_history_delete(request, policy, slug, version_id):
 
   if not request.guard.policy_history_delete(policy):
-    raise PermissionDenied()
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}".format(policy.id))
 
   versions = Version.objects.get_for_object(policy)
   latest = versions.first()
@@ -1341,7 +1342,8 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
 def policy_argument_new(request, form, policy, *args, **kwargs):
 
   #if not request.guard.policy_proposal_new(policy):
-  #  raise PermissionDenied()
+    # messages.warning(request, _("Permission denied."))
+    # return redirect("/policy/{}".format(policy.id))
 
   if form.is_valid():
     user = request.user
@@ -1397,10 +1399,11 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
 
-  # do this in the template BEFORE making the Ajax request, else user writes his
-  # comment and then gets permission denied.
-  #if not request.guard.target_comment(target_object):
-  #  raise PermissionDenied()
+  if not request.guard.target_comment(target_object):
+    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
 
   data = form.cleaned_data
   new_comment = Comment(target=target_object, user=request.user, **data)
@@ -1433,10 +1436,16 @@ def target_like(request, target_type, target_id):
   target_object = get_object_or_404(model_class, pk=target_id)
 
   if not request.guard.can_like(target_object):
-    raise PermissionDenied()
+    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
 
   if not request.guard.is_likeable(target_object):
-    raise PermissionDenied()
+    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
 
   fake_context = {
     "target": target_object,
@@ -1477,7 +1486,10 @@ def target_unlike(request, target_type, target_id):
   target_object = get_object_or_404(model_class, pk=target_id)
 
   if not request.guard.is_likeable(target_object):
-    raise PermissionDenied()
+    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
 
   target_object.likes.filter(user_id=request.user.id).delete()
 
@@ -1517,17 +1529,17 @@ def target_edit(request, form, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
   target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
+  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
   if not request.guard.is_editable(target_object):
-    raise PermissionDenied()
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
 
   data = form.cleaned_data
   target_object.text = form.cleaned_data["text"]
   target_object.save()
   user = request.user 
-
-  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
 
   # XXX everything that uses target[action] should use a single identifier, not
   # m or argument
@@ -1590,13 +1602,14 @@ def target_delete(request, target_type, target_id):
 
   model_class = apps.get_model("initproc", target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-
-  if not request.guard.is_editable(target_object):
-    raise PermissionDenied()
-
-  user = request.user
   target_parent_class = apps.get_model("initproc", target_object.target_type.name)
   target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+
+  if not request.guard.is_editable(target_object):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}/".format(target_parent.id))
+
+  user = request.user
   target_object.delete()
 
   # XXX everything that uses target[action] should use a single identifier, not
@@ -1992,10 +2005,6 @@ def moderate(request, form, initiative):
 def comment(request, form, target_type, target_id):
     model_cls = apps.get_model('initproc', target_type)
     model = get_object_or_404(model_cls, pk=target_id)
-
-    if not request.guard.can_comment(model):
-        raise PermissionDenied()
-
 
     data = form.cleaned_data
     cmt = Comment(target=model, user=request.user, **data)
