@@ -13,7 +13,7 @@
 ## Development 
 This runs on Python Django. For Development, you'll need Python 3.0 and a virtual environment.
 
-1. Installation
+### 1. Installation
 To install the packages required for a successful install on Ubuntu, run
 
 ```
@@ -39,9 +39,8 @@ $ crew install postgresql
 $ echo 'export PGDATA="/usr/local/data/pgsql"' >> ~/.bashrc && source ~/.bashrc
 ```
 
-2. Setup Localhost
-To setup the latest version (on the Volt branch currently), please clone the repo,
-create and activate a virtual environment and then setup voty:
+### 2. Setup Localhost   
+To setup the latest version (on the Volt branch currently), please clone the repo, create and activate a virtual environment and then setup voty:
 ```
 $ git clone https://github.com/VoltEuropa/voty
 $ git checkout -b volt <name of remote>/volt
@@ -56,14 +55,14 @@ $ source venv/bin/activate
 ```
 Note both `requirements.txt` and `manage.py` are in the same folder you'll have to navigate to. Once everything ran, the app will be available under `http://localhost:8000`, the admin interface is on `http://localhost:8000/admin/`. The server automatically refreshes when changes are made to the source code (aside from `init.ini` - requires a restart of the server).
 
-## Deployment
+### 3. Deployment
 (not tried) Using docker-compose, right from within this repo, run:
 
 ```
 docker compose up
 ```
 
-### Upgrade database
+### 4. Upgrading database
 
 Don't forget to update the database after/within each deploy:
 ```
@@ -73,3 +72,4 @@ docker compose exec web bash /code/scripts/upgrade.sh
 ## License
 
 This is released under AGPL-3.0. See the LICENSE-file for the full text.
+
