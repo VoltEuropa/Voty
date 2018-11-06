@@ -159,10 +159,10 @@ SITE_ID = 1
 
 DATABASES = {
   #"default": dj_database_url.config(default="sqlite://./db.sqlite3")
-  #"default": dj_database_url.config(default="sqlite:////usr/local/demo/abstimmungstool/db.sqlite3")
+  #"default": dj_database_url.config(default="sqlite:////usr/local/demo/voty/db.sqlite3")
    'default': {
       'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-      'NAME': '/usr/local/demo/abstimmungstool/db.sqlite3',                       # Or path to database file if using sqlite3.
+      'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
       'USER': '',                      # Not used with sqlite3.
       'PASSWORD': '',                  # Not used with sqlite3.
       'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -391,4 +391,5 @@ LISTBOX_OPTION_DICT = SimpleNamespace(**{
   "NUMBER_OF_RECORDS_OPTION_LIST": [("10", "10"), ("20", "20"), ("50", "50"), ("100", "100")],
   "NUMBER_OF_RECORDS_DEFAULT": 2
 })
+
 
