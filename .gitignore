@@ -23,6 +23,7 @@ python-config
 wheel
 
 share/
+venv/
 
 include:
 python3.6m
