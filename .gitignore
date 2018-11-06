@@ -22,6 +22,8 @@ python3.6
 python-config
 wheel
 
+share/
+
 include:
 python3.6m
 
