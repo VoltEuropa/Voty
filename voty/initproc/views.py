@@ -942,7 +942,7 @@ def policy_reject(request, policy, *args, **kwargs):
 
   if not request.guard.policy_validate(policy):
     messages.warning(request, _("Permission denied."))
-    return redirect("home")
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
   if policy.ready_for_next_stage:
     with reversion.create_revision():
@@ -986,6 +986,7 @@ def policy_close(request, policy, *args, **kwargs):
 
   if not request.guard.policy_close(policy):
     messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
   with reversion.create_revision():
     user = request.user
@@ -1021,6 +1022,7 @@ def policy_discuss(request, policy, *args, **kwargs):
 
   if not request.guard.policy_discuss(policy):
     messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
   with reversion.create_revision():
     user = request.user
@@ -1057,6 +1059,7 @@ def policy_review(request, policy, *args, **kwargs):
 
   if not request.guard.policy_review(policy):
     messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
   user = request.user
   policy.state = settings.PLATFORM_POLICY_STATE_DICT.REVIEWED
@@ -1072,6 +1075,39 @@ def policy_review(request, policy, *args, **kwargs):
   )
 
   messages.success(request, _("Policy moved to final edit stage. Initiators can now make final modifications."))
+  return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+# ---------------------------- Policy Finalise --------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.REVIEWED])
+def policy_finalise(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_finalise(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  user = request.user
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.FINALISED
+  policy.save()
+
+  # notifiy existing moderators
+  # XXX all moderators?
+  notify(
+    [moderation.user for moderation in policy.policy_moderations.all()],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_FINALISED, {
+      "description": "".join([_("Policy:"), " ", policy.title, " was submitted for final review."])
+      }, sender=user
+    )
+
+  supporters = policy.supporting_policy.filter(initiator=True)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_REVIEWED, {
+      "description": "".join([_("Policy"), " ", policy.title, " ", _("can be reviewed and put up for vote.")])
+    }, sender=user
+  )
+
+  messages.success(request, _("Policy submitted for final Review."))
   return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 # ---------------------------- Policy Validate ---------------------------------

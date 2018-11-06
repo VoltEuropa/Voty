@@ -83,7 +83,7 @@
                   <div class="align-right">
                     <form class="action-form" action="{% url 'policy_review' policy_id=policy.id %}" style="display:inline" method="POST">
                       {% csrf_token %}
-                      <button title="{% trans 'Force Policy to final Review' %}" class="btn btn-danger" type="submit">
+                      <button title="{% trans 'Force Policy to Final Review' %}" class="btn btn-danger" type="submit">
                         <i class="material-icons forward">forward</i>
                         <span>{% trans "Force Policy to final Review" %}</span>
                       </button>
@@ -327,11 +327,11 @@
           {% if request.guard.policy_finalise %}
             {% if policy.ready_for_next_stage %}
               <div class="align-right">
-                <form class="action-form" action="" style="display:inline" method="POST">
+                <form class="action-form" action="{% url 'policy_finalise' policy_id=policy.id %}" style="display:inline" method="POST">
                   {% csrf_token %}
-                  <button title="{% trans 'Submit Policy for Vote' %}" class="btn btn-success" type="submit">
+                  <button title="{% trans 'Submit Policy for final validation and Vote' %}" class="btn btn-success" type="submit">
                     <i class="material-icons forward">forward</i>
-                    <span>{% trans "Submit Policy for Vote" %}</span>
+                    <span>{% trans "Submit Policy for Final Validation" %}</span>
                   </button>
                 </form>
               </div>
@@ -584,5 +584,4 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
-
 
