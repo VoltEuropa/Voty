@@ -866,34 +866,38 @@ def policy_submit(request, policy, *args, **kwargs):
     messages.warning(request, _("Permission denied."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-  with reversion.create_revision():
-    user = request.user
-    tokeniser = UndoUrlTokenGenerator()
-    revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
-    revert_message = "Policy submitted. Policy submitted for moderation. You will receive a message once feedback on the Policy is availble. <a href='%s'>%s</a>." % (revert_url, _("Click here to UNDO."))
+  user = request.user
+  tokeniser = UndoUrlTokenGenerator()
+  revert_url = "/policy/{}-{}/undo/{}".format(policy.id, policy.slug, tokeniser.create_token(user, policy))
+  revert_message = "Policy submitted. Policy submitted for moderation. You will receive a message once feedback on the Policy is availble. <a href='%s'>%s</a>." % (revert_url, _("Click here to UNDO."))
 
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
-      policy.state = settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED
-    policy.save()
+  if policy.state == settings.PLATFORM_POLICY_STATE_DICT.STAGED:
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED
+  policy.save()
 
-    # XXX we don't reset moderations here, else every draft needs 3 new reviews
-    # policy.policy_moderations.update(stale=True)
-    
-    # XXX how to handle UNDO? sleep?
-    # notifiy initiators
-    supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
-    notify(
-      [supporter.user for _, supporter in enumerate(supporters)],
-      settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, {
-        "description": "".join([_("Policy submitted:"), " ", policy.title, ". ", _("Awaiting moderation.")])
+  # remove unconfirmed supporters
+  policy.supporting_policy.filter(initiator=True, ack=False).delete()
+
+  # XXX how to handle UNDO?
+  # notifiy initiators
+  supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, {
+      "description": "".join([_("Policy submitted:"), " ", policy.title, ". ", _("Awaiting moderation.")])
+    }, sender=user
+  )
+
+  # notify policy team with moderation permission
+  notify(
+    [moderation.user for moderation in policy.policy_moderations.all()],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, {
+      "description": "".join([_("Policy submitted for moderation:"), " ", policy.title, ". "])
       }, sender=user
     )
 
-    # notify policy team with moderation permission
-
-    reversion.set_user(request.user)
-    messages.success(request, mark_safe(revert_message))
-    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+  messages.success(request, mark_safe(revert_message))
+  return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 # --------------------------- Policy Challenge ---------------------------------
 # rejected policies can be challenged once, adding two more moderations to get

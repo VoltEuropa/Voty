@@ -367,19 +367,22 @@ class Guard:
       return False
     return initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
 
-
   # ------------------------ apply as initiator on policy ----------------------
   def policy_apply(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
     initiators = policy.supporting_policy.filter(initiator=True)
 
+    if not user.is_authenticated:
+      return False
     if not policy.state in settings.PLATFORM_POLICY_INVITE_STATE_LIST:
       return False
     if policy.supporting_policy.filter(initiator=True, user_id=user.id):
       return False
-    if not initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
-      return False
+
+    # this will allow to have more than the minimum amount of initiators
+    # if not initiators.count() < int(settings.PLATFORM_POLICY_INITIATORS_COUNT):
+    #   return False
     return True
 
   # ---------------------------- edit policy -----------------------------------
