@@ -16,9 +16,9 @@
     <span>{% blocktrans with time=m.created_at|date:'M-d, H:i' %}posted on {{ time }}.{% endblocktrans %}</span>
     {% if m.text %}
     <span class="moderation-interaction">
-      {% if request.guard.policy_review %}
+      {% if request.guard.policy_evaluate %}
         {% if is_revisable and m.user_id == request.user.id %}
-        <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_review' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
+        <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_evaluate' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
         {% endif %}
       {% endif %}
       <a class="voty-link" title="{% trans 'Show/Hide Comments' %}" data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}"><i class="material-icons">comment</i></a>
