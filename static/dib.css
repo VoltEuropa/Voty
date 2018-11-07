@@ -1820,6 +1820,9 @@ a.btn span, a.btn i {
 .moderation-interaction .voty-link {
   text-decoration: none;
 }
+.moderation-interaction .voty-link .material-icons {
+  padding-bottom: 3px;
+}
 .moderation-text {
   margin-top: -1em;
 }
@@ -2021,7 +2024,8 @@ a.btn span, a.btn i {
 }
 .voty-discussion-no-proposals,
 .voty-argument .argument-reaction .voty-thanks,
-.voty-discussion-no-debate {
+.voty-discussion-no-debate,
+.voty-moderation-no-comment {
   text-align: center;
   border-color: #ddd;
   color: #aaa;
@@ -2034,7 +2038,8 @@ a.btn span, a.btn i {
   border-bottom-left-radius: .25em;
   border-bottom-right-radius: .25em;
 }
-.voty-discussion-no-debate {
+.voty-discussion-no-debate,
+.voty-moderation-no-comment {
   border-radius: .25em;
 }
 .voty-thanks {
@@ -2080,6 +2085,9 @@ a.btn span, a.btn i {
 }
 .btn-outline-primary:focus {
   background-color: #60278e;
+}
+.btn-outline-primary:hover {
+  
 }
 .btn-primary {
   background-color: #60278e;

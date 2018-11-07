@@ -21,7 +21,10 @@
         <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_evaluate' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
         {% endif %}
       {% endif %}
-      <a class="voty-link" title="{% trans 'Show/Hide Comments' %}" data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}"><i class="material-icons">comment</i></a>
+      <a class="voty-link" title="{% trans 'Show/Hide Comments' %}" data-ajax="true" href="{% url 'policy_feedback' policy_id=m.policy.id slug=m.policy.slug target_id=m.id %}?fragment=%23{{m.unique_id}}&amp;{% if full %}toggle=True{% endif %}">
+        {% if full %}{% trans "Hide details" %}{% else %}{% trans "Show details" %}{% endif %}
+        <i class="material-icons">{% if full %}visibility_off{% else %}remove_red_eye{% endif %}</i>
+      </a>
     </span>
     {% endif %}
     {% if full %}
@@ -53,7 +56,7 @@
           </div>
         {% endif %}
       {% elif request.guard.reason %}
-        <div class="alert alert-warning">{{ request.guard.reason }}</div>
+        <div class="alert alert-warning voty-moderation-no-comment">{{ request.guard.reason }}</div>
       {% endif %}
     </div>
   {% endif %}

@@ -223,7 +223,9 @@
       // XXX meh...fadeout messages
       [].slice.call(document.querySelectorAll(".alert-dismissible")).forEach(function (element) {
         window.setTimeout(function() {
-          element.parentNode.removeChild(element);
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
         }, 4000);
       });
   </script>
@@ -231,6 +233,4 @@
   {% block body-javascript %}{% endblock %}
 </body>
 </html>
-
-
 
