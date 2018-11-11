@@ -1,0 +1,59 @@
+{% load i18n %}
+<div class="col-12" id="voting">
+  {% if has_voted %}
+    <h3>{% trans "You have voted for this Policy" %}</h3>
+    <form data-ajax-submit="true" action="{% url 'policy_vote_reset' policy_id=policy.id slug=policy.slug %}" method="POST">
+      {% include "fragments/vote/vote_participation.html" with closed=0 %}
+      {% csrf_token %}
+      <button title="{% trans 'Withdraw Vote' %}" class="btn btn-warning" type="submit">
+        {% trans "Withdraw Vote" %}
+      </button>
+    </form>
+  {% else %}
+    <h3>{% trans "Vote for this Policy?" %}</h3>
+    <form id="initial_vote" class="row" data-ajax-submit="true" action="{% url 'policy_vote' policy_id=policy.id slug=policy.slug %}" method="POST">
+      {% csrf_token %}
+      {% if policy.allows_abstention %}
+        <div class="col-12 col-sm-4 text-center">
+          <label class="voty-vote-label" for="voted_yes">
+            <input type="radio" onchange="javascript:document.getElementById('intial_vote_submit').disabled = false" required="true" id="voted_yes" name="voted" value="yes" />
+            <i class="material-icons">thumb_up</i>
+            <span>{% trans "Yes" %}</span>
+          </label>
+        </div>
+        <div class="col-12 col-sm-4 text-center">
+          <label class="voty-vote-label" for="voted_abstain">
+            <input onchange="javascript:document.getElementById('intial_vote_submit').disabled = false" type="radio" required="true" id="voted_abstain" name="voted" value="abstain" />
+            <i class="material-icons">panorama_fish_eye</i>
+            <span>{% trans "Abstention" %}</span>
+          </label>
+        </div>
+        <div class="col-12 col-sm-4 text-center">
+          <label class="voty-vote-label" for="voted_no">
+            <input onchange="javascript:document.getElementById('intial_vote_submit').disabled = false" type="radio" required="true" id="voted_no" name="voted" value="no" />
+            <i class="material-icons">thumb_down</i>
+            <span>{% trans "No" %}</span>
+          </label>
+        </div>
+      {% else %}
+        <div class="col-12 col-sm-6 text-center">
+          <label class="voty-vote-label" for="voted_yes">
+            <input type="radio" onchange="javascript:document.getElementById('intial_vote_submit').disabled = false" required="true" id="voted_yes" name="voted" value="yes" />
+            <i class="material-icons">thumb_up</i>
+            <span>{% trans "Yes" %}</span>
+          </label>
+        </div>
+        <div class="col-12 col-sm-6 text-center">
+          <label class="voty-vote-label" for="voted_no">
+            <input onchange="javascript:document.getElementById('intial_vote_submit').disabled = false" type="radio" required="true" id="voted_no" name="voted" value="no" />
+            <i class="material-icons">thumb_down</i>
+            <span>{% trans "No" %}</span>
+          </label>
+        </div>
+      {% endif %}
+        <div class="col-12 text-center submit-vote">
+          <button id="intial_vote_submit" type="submit" disabled="disabled" class="voty-vote-submit btn btn-lg btn-primary">{% trans "Cast your Vote" %}</button>
+        </div>
+    </form>
+  {% endif %}
+</div>

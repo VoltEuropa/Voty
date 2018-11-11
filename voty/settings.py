@@ -158,16 +158,16 @@ SITE_ID = 1
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 
 DATABASES = {
-  "default": dj_database_url.config(default="sqlite://./db.sqlite3")
+  #"default": dj_database_url.config(default="sqlite://./db.sqlite3")
   #"default": dj_database_url.config(default="sqlite:////usr/local/demo/voty/db.sqlite3")
-   # 'default': {
-   #    'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-   #    'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
-   #    'USER': '',                      # Not used with sqlite3.
-   #    'PASSWORD': '',                  # Not used with sqlite3.
-   #    'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-   #    'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-   #  }
+   'default': {
+      'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+      'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
+      'USER': '',                      # Not used with sqlite3.
+      'PASSWORD': '',                  # Not used with sqlite3.
+      'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+      'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
 }
 
 
@@ -312,6 +312,7 @@ VOTED_CHOICES = [(code_tuple[1], _strip(config._sections["policy_vote_state_valu
 # --------------------------- Application Options ------------------------------
 USE_UNIQUE_EMAILS = config.get("settings", "USER_USE_UNIQUE_EMAILS")
 USE_DIVERSE_MODERATION_TEAM = config.get("settings", "USER_USE_DIVERSE_MODERATION_TEAM")
+USE_ARGUMENT_COMMENTS = config.get("settings", "USER_CAN_COMMENT_ARGUMENT")
 
 # --------------------------- Policy (ex Initiative) ---------------------------
 PLATFORM_POLICY_BASE_CONFIG = dict(config.items("platform_policy_base_config"))

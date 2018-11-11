@@ -1163,22 +1163,6 @@ label.deactivated {
   font-size: inherit;
 }
 
-#voting .btn-primary {
-  background-color: #AB4778;
-  border-color: #AB4778;
-}
-
-#voting .btn-primary:hover, #voting .btn-primary:active {
-  background-color: #AE2568;
-  border-color: #AE2568;
-}
-
-#voting .btn-primary:disabled {
-  background-color: #AAAAAA;
-  border-color: #AAAAAA;
-}
-
-
 .your-vote strong {
  display: block;
  width: 4rem;
@@ -1967,6 +1951,10 @@ a.btn span, a.btn i {
 .voty-moderations-stale:hover {
   text-decoration: none;
 }
+.voty-argument-solve,
+.voty-argument-expand {
+  float: left;
+}
 .voty-moderations-stale {
   padding-right: 3px;
 }
@@ -2081,9 +2069,22 @@ a.btn span, a.btn i {
 .voty-argument-thumb {
   color: #014c8c;
 }
+.voty-vote-label:hover {
+  cursor: pointer;
+}
+.voty-vote-submit[disabled=disabled] {
+  opacity: .5;
+  pointer-events: none;
+  cursor: default;
+}
 
 
 /* ========================= VOLT specific ================================== */
+.voty-vote-submit[disabled=disabled],
+.voty-vote-submit {
+  background-color: #60278e;
+}
+
 .bg-discussion {
   background-color: #60278e;
   border-color: #60278e;

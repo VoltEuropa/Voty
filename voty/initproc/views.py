@@ -8,6 +8,7 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
@@ -37,7 +38,7 @@ import reversion
 from functools import wraps
 import json
 
-from .globals import STATES, VOTED, INITIATORS_COUNT, COMPARING_FIELDS
+from .globals import STATES, INITIATORS_COUNT, COMPARING_FIELDS
 from .models import (Policy, PolicyBase, Initiative, Pro, Contra, Proposal, Comment, Vote, Moderation, Quorum, Supporter, Like)
 from .forms import (PolicyForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
@@ -53,36 +54,27 @@ DEFAULT_FILTERS = [
     STATES.DISCUSSION,
     STATES.VOTING]
 
-def param_as_bool(param):
-    try:
-        return bool(int(param))
-    except ValueError:
-        return param.lower() in ['true', 'y', 'yes', '✔', '✔', 'j', 'ja' 'yay', 'yop', 'yope']
-
-
-def non_ajax_redir(*redir_args, **redir_kwargs):
-    def decorator(func):
-        @wraps(func, assigned=available_attrs(func))
-        def inner(request, *args, **kwargs):
-            if not request.is_ajax():
-                # we redirect you 
-                return redirect(*redir_args, **redir_kwargs)
-            return func(request, *args, **kwargs)
-
-        return inner
-    return decorator
-
-def get_voting_fragments(vote, initiative, request):
-    context = dict(vote=vote, initiative=initiative, user_count=initiative.eligible_voter_count)
-    return {'fragments': {
-        '#voting': render_to_string("fragments/voting.html",
-                                    context=context,
-                                    request=request),
-        '#jump-to-vote': render_to_string("fragments/jump_to_vote.html",
-                                    context=context)
-        }}
-
 # ============================= HELPERS ========================================
+
+# XXX used/useful
+def _non_ajax_redir(*redir_args, **redir_kwargs):
+  def decorator(func):
+    @wraps(func, assigned=available_attrs(func))
+    def inner(request, *args, **kwargs):
+      if not request.is_ajax():
+        # we redirect you 
+        return redirect(*redir_args, **redir_kwargs)
+      return func(request, *args, **kwargs)
+    return inner
+  return decorator
+
+# I removed the emojis...
+def _param_as_bool(param):
+  try:
+    return bool(int(param))
+  except ValueError:
+    return param.lower() in ['true', 'y', 'yes', 'j', 'ja' 'yay', 'yop', 'yope']
+
 # for categories, display category translation not database-placeholder
 def _get_policy_field_value(key, version, field_meta_dict):
   for f in field_meta_dict:
@@ -270,6 +262,7 @@ def policy_item(request, policy, *args, **kwargs):
     return redirect("home")
 
   payload = _generate_payload(policy)
+  payload["is_commentable"] = settings.USE_ARGUMENT_COMMENTS == 1
   payload["is_likeable"] = request.guard.is_likeable(policy)
   payload.update({"policy_labels": dict([(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in payload["policy_fields"]])})
   payload.update({"is_evaluated": request.guard.is_evaluated(policy=policy)})
@@ -280,9 +273,8 @@ def policy_item(request, policy, *args, **kwargs):
     user_id = request.user.id
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
     payload.update({"has_initiated": policy.supporting_policy.filter(user=user_id, initiator=True).count()})
-    policy_votes = policy.policy_votes.filter(user=user_id)
-    if (policy_votes.exists()):
-      payload['policy_vote'] = policy_votes.first()
+    payload.update({"has_voted": policy.policy_votes.filter(user=user_id).count()})
+
     for arg in payload["policy_arguments"] + payload["policy_proposals_active"] + payload["policy_proposals_stale"]:
       _personalize_argument(arg, user_id)
     for arg in payload["policy_arguments"]:
@@ -599,16 +591,20 @@ def policy_apply(request, policy, *args, **kwargs):
     messages.warning(request, _("Permission denied."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-  Supporter(
-    policy=policy,
-    user_id=request.user.id,
-    initiator=True,
-    first=False,
-    ack=False,
+  # careful, if applicant may already be supporter
+  user = request.user
+  try:
+    supporting_supporter = policy.supporting_policy.get(user_id=user.id)
+  except Supporter.DoesNotExist:
+    supporting_supporter = Supporter(user=user, policy=policy, ack=False)
 
-    # we hijack this field to distinguish between invitiation and application
-    public=False,
-  ).save()
+  supporting_supporter.initiator=True
+  supporting_supporter.first=False
+  supporting_supporter.ack=False
+  
+  # we hijack this field to distinguish between invitiation and application
+  supporting_supporter.public=False
+  supporting_supporter.save()
 
   messages.success(request, _("You have applied as Co-Initiator for this Policy. Please wait for approval."))
   return redirect('/policy/{}'.format(policy.id))
@@ -1076,29 +1072,6 @@ def policy_validate(request, policy, *args, **kwargs):
       messages.success(request, _("Policy validated. It can now seek supporters and be discussed."))
       return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-    # XXX used to be here, move to release
-    #if request.guard.policy_release(policy):
-    #  policy_to_release = [policy]
-    #
-    #  # check the variants, too
-    #  if policy.all_variants:
-    #    for variant in policy.all_variants:
-    #      if variant.state != STATES.MODERATION or not request.guard.can_publish(ini):
-    #        policy_to_release = None
-    #          break
-    #      policy_to_release.append(variant)
-    #
-    #      if policy_to_release:
-    #        for releaseable_policy in policy_to_release:
-    #          releasable_policy.went_to_voting_at = datetime.now()
-    #          releasable_policy.state = STATES.VOTING
-    #          releasable_policy.save()
-    #          releasable_policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
-    #          releasable_policy.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
-    #
-    #        messages.success(request, _("Initiative activated for Voting."))
-    #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
-
 # --------------------------- Policy Evaluate ----------------------------------
 # used to be for incoming and moderation (submit and release)
 # every validation is an evaluation, once the required number of evaluations are 
@@ -1116,6 +1089,17 @@ def policy_evaluate(request, form, policy, *args, **kwargs):
 
   if form.is_valid():
     user = request.user
+
+    # always invalidate with every moderation unless we're in finalised
+    if not policy.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.FINALISED
+    ]:
+      raise Exception("CHANGING TO INVALITDAWD")
+      policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+      policy.save()
+
     blockers = [field_id for field_id, _ in form.fields.items() if request.POST.get(field_id, False) and field_id.startswith("q")]
 
     # a user can only moderate a policy once, so user already moderated this 
@@ -1144,14 +1128,6 @@ def policy_evaluate(request, form, policy, *args, **kwargs):
       moderation.blockers = ",".join(blockers) if blockers else None
       moderation.save()
 
-  # always invalidate with every moderation
-  if not policy.state in [
-    settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-    settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-  ]:
-    policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-    policy.save()
-
   messages.success(request, _("Moderation review recorded."))
   return redirect('/policy/{}'.format(policy.id))
 
@@ -1171,6 +1147,53 @@ def policy_support(request, policy, *args, **kwargs):
   messages.success(request, _("You are supporting this policy."))
   return redirect('/policy/{}'.format(policy.id))
 
+# ----------------------------- Policy Release --------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.FINALISED])
+def policy_release(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_release(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+
+  policy.went_to_vote_at = datetime.now()
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.VOTED
+  policy.save()
+
+  # inform all users a vote is pending
+  notify(
+    [user for user, _ in enumerate(User.objects.filter(is_active=True))],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_RELEASED, {
+      "description": "".join([_("Policy has been released for vote:"), " ", policy.title, ". "])
+      }, sender=request.user
+    )
+
+  #if request.guard.policy_release(policy):
+  #  policy_to_release = [policy]
+  #
+  #  # check the variants, too
+  #  if policy.all_variants:
+  #    for variant in policy.all_variants:
+  #      if variant.state != STATES.MODERATION or not request.guard.can_publish(ini):
+  #        policy_to_release = None
+  #          break
+  #      policy_to_release.append(variant)
+  #
+  #      if policy_to_release:
+  #        for releaseable_policy in policy_to_release:
+  #          releasable_policy.went_to_voting_at = datetime.now()
+  #          releasable_policy.state = STATES.VOTING
+  #          releasable_policy.save()
+  #          releasable_policy.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
+  #          releasable_policy.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
+  #
+  #        messages.success(request, _("Initiative activated for Voting."))
+  #        return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
+
+  messages.success(request, _("Policy released for vote."))
+  return redirect('/policy/{}'.format(policy.id))
+
+
 # ----------------------------- Policy Refrain ---------------------------------
 # XXX no checks?
 @login_required
@@ -1185,7 +1208,7 @@ def policy_refrain(request, policy, *args, **kwargs):
 
 
 # ----------------------------- Policy History ---------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @policy_state_access()
 def policy_history(request, policy, slug, version_id):
@@ -1227,7 +1250,7 @@ def policy_history(request, policy, slug, version_id):
 
 # ------------------------- Policy History Delete ------------------------------
 # not sure this is so wise
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @policy_state_access()
 def policy_history_delete(request, policy, slug, version_id):
@@ -1244,7 +1267,7 @@ def policy_history_delete(request, policy, slug, version_id):
   return policy_history(request, policy, slug, latest.id)  
 
 # ------------------------- Policy Proposal New --------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @policy_state_access(states=[
@@ -1306,7 +1329,7 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
     }
 
 # ------------------------- Policy Argument New --------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED])
@@ -1362,7 +1385,7 @@ def policy_argument_new(request, form, policy, *args, **kwargs):
     }
 
 # ----------------------------- Target Comment  ---------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @simple_form_verifier(NewCommentForm, cancel=True, cancel_template="fragments/comment/comment_add.html")
@@ -1397,7 +1420,7 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
   }
 
 # ------------------------------ Target Like -----------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 def target_like(request, target_type, target_id):
@@ -1421,7 +1444,7 @@ def target_like(request, target_type, target_id):
 
   for key in ['show_text', 'show_count']:
     if key in request.GET:
-      fake_context[key] = param_as_bool(request.GET[key])
+      fake_context[key] = _param_as_bool(request.GET[key])
 
   Like(target=target_object, user=request.user).save()
 
@@ -1440,7 +1463,7 @@ def target_like(request, target_type, target_id):
   }
 
 # ----------------------------- Target Unlike ----------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 def target_unlike(request, target_type, target_id):
@@ -1466,7 +1489,7 @@ def target_unlike(request, target_type, target_id):
 
   for key in ['show_text', 'show_count']:
     if key in request.GET:
-        fake_context[key] = param_as_bool(request.GET[key])
+        fake_context[key] = _param_as_bool(request.GET[key])
 
   return {
     "fragments": {
@@ -1483,7 +1506,7 @@ def target_unlike(request, target_type, target_id):
   }
 
 # ----------------------------- Target Edit ----------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @simple_form_verifier(NewCommentForm, submit_title=_("Save"))
@@ -1552,7 +1575,7 @@ def target_edit(request, form, *args, **kwargs):
   }
 
 # ----------------------------- Target Delete ----------------------------------
-@non_ajax_redir('/')
+@_non_ajax_redir('/')
 @ajax
 @login_required
 def target_delete(request, target_type, target_id):
@@ -1685,7 +1708,7 @@ def policy_argument_solve(request, policy, *args, **kwargs):
 
 # ------------------------ Policy Argument Toggle -----------------------------
 @ajax
-@login_required
+#@login_required
 @policy_state_access(states=[
   settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
   settings.PLATFORM_POLICY_STATE_DICT.STAGED,
@@ -1710,7 +1733,7 @@ def policy_argument_details(request, policy, *args, **kwargs):
     comments=target_object.comments.order_by('created_at').all()
   )
 
-  if user:
+  if user.is_authenticated:
     for comment in fake_context["comments"]:
       if comment.created_at > user.last_login:
         comment.is_unread = True
@@ -1733,42 +1756,80 @@ def policy_argument_details(request, policy, *args, **kwargs):
     }
   }
 
-
-
-
-@non_ajax_redir('/')
+# ------------------------------ Policy Vote ----------------------------------
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @require_POST
-#@can_access_initiative(STATES.VOTING) # must be in voting
-def vote(request, init):
-    voted_value = request.POST.get('voted')
-    if voted_value == 'no':
-        voted = VOTED.NO
-    elif voted_value == "yes":
-        voted = VOTED.YES
-    else:
-        voted = VOTED.ABSTAIN
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VOTED])
+def policy_vote(request, policy, *args, **kwargs):
+  
+  voted_value = request.POST.get('voted')
+  if voted_value == "no":
+    voted = settings.VOTED.NO
+  elif voted_value == "yes":
+    voted = settings.VOTED.YES
+  else:
+    voted = settings.VOTED.ABSTAIN
 
+  reason = request.POST.get("reason", "")
+  try:
+    user_vote = Vote.objects.get(policy=policy, user_id=request.user)
+  except Vote.DoesNotExist:
+    user_vote = Vote(policy=policy, user_id=request.user.id, value=voted)
+  else:
+    user_vote.voted = voted
+    user_vote.reason = reason
+  user_vote.save()
 
-    reason = request.POST.get("reason", "")
-    try:
-        my_vote = Vote.objects.get(initiative=init, user_id=request.user)
-    except Vote.DoesNotExist:
-        my_vote = Vote(initiative=init, user_id=request.user.id, value=voted)
-    else:
-        my_vote.voted = voted
-        my_vote.reason = reason
-    my_vote.save()
+  fake_context = dict(
+    vote=user_vote,
+    policy=policy,
+    user_count=policy.eligible_voter_count
+  )
+  
+  return {
+    "fragments": {},
+    "inner-fragments": {
+      "#voting": render_to_string(
+        "fragments/vote/vote_item.html",
+         context=fake_context,
+         request=request
+       ),
+      "#jump-to-vote": render_to_string(
+        "fragments/vote/vote_jump.html",
+        context=fake_context
+      )
+    }
+  }
 
-    return get_voting_fragments(my_vote, init, request)
-
-
-@non_ajax_redir('/')
+# ------------------------------ Policy Vote Reset ---------------------------
+@_non_ajax_redir('/')
 @ajax
 @login_required
 @require_POST
-#@can_access_initiative(STATES.VOTING) # must be in voting
-def reset_vote(request, init):
-    Vote.objects.filter(initiative=init, user_id=request.user).delete()
-    return get_voting_fragments(None, init, request)
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VOTED])
+def policy_vote_reset(request, policy, *args, **kwargs):
+
+  Vote.objects.filter(policy=policy, user_id=request.user).delete()
+
+  fake_context = dict(
+    policy=policy,
+    user_count=policy.eligible_voter_count
+  )
+  
+  return {
+    "fragments": {},
+    "inner-fragments": {
+      "#voting": render_to_string(
+        "fragments/vote/vote_item.html",
+         context=fake_context,
+         request=request
+       ),
+      "#jump-to-vote": render_to_string(
+        "fragments/vote/vote_jump.html",
+        context=fake_context
+      )
+    }
+  }
+

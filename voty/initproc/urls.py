@@ -50,6 +50,9 @@ urlpatterns = [
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/evaluate", views.policy_evaluate, name="policy_evaluate"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/review", views.policy_review, name="policy_review"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/finalise", views.policy_finalise, name="policy_finalise"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/vote", views.policy_vote, name="policy_vote"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/reset", views.policy_vote_reset, name="policy_vote_reset"),
+  url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/release", views.policy_release, name="policy_release"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/proposal_new$", views.policy_proposal_new, name="policy_proposal_new"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/argument_new$", views.policy_argument_new, name="policy_argument_new"),
   url(r"^policy/(?P<policy_id>\d+)(?:-(?P<slug>.*))?/argument_solve/(?P<target_type>.*)/(?P<target_id>\d+)$", views.policy_argument_solve, name="policy_argument_solve"),
@@ -65,4 +68,3 @@ urlpatterns = [
   url(r"^delete/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_delete, name="target_delete"),
   url(r"^edit/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_edit, name="target_edit"),
 ]
-

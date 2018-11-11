@@ -258,8 +258,9 @@ class Policy(PolicyBase):
         timedelta(int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
 
     # vote takes VOTE days
-    #elif self.state == settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE:
-    #  return self.went_in_vote_at + (3 * week)
+    elif self.state == settings.PLATFORM_POLICY_STATE_DICT.VOTED:
+      return self.went_in_vote_at + \
+        timedelta(int(settings.PLATFORM_POLICY_VOTING_DAYS))
 
     return None
 
@@ -284,10 +285,13 @@ class Policy(PolicyBase):
   # challenged policy, so we need to check by date again
   @property
   def required_evaluations(self):
+    moderations = self.policy_moderations.exclude(vote="r")
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.FINALISED:
+      moderations = moderations.filter(stale=False)
     if self.was_reopened_at:
-      return len([x for x in self.policy_moderations.exclude(vote="r") if x.changed_at > self.was_reopened_at]) >= self.required_moderations
+      return len([x for x in moderations if x.changed_at > self.was_reopened_at]) >= self.required_moderations
     else:
-      return self.policy_moderations.exclude(vote="r").count() >= self.required_moderations
+      return moderations.count() >= self.required_moderations
 
   # ----------------------- ready for next phase -------------------------------
   # ready for next stage says when ready, proceed says continue or close
@@ -305,7 +309,7 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
       settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
-      #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
+      settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
     ]:
       return (self.required_initiators and self.required_fields and self.required_evaluations)
 
@@ -341,17 +345,20 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
       settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+      settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
     ]:
-      mods = self.policy_moderations
+      moderations = self.policy_moderations.all()
 
-      # on re-opened policy, everything from previous lifecycle doesn't count
+      # finalised must ignore stale reviews
+      if self.state == settings.PLATFORM_POLICY_STATE_DICT.FINALISED:
+        moderations = moderations.filter(stale=False)
+
+      # reopened must also ignore previous reviews
       if self.was_reopened_at:
-        return len([x for x in mods.filter(vote="y") if x.changed_at > self.was_reopened_at]) \
-          >= len([x for x in mods.filter(vote="n") if x.changed_at > self.was_reopened_at])
-
-      # all other cases need to take stale and active reviews into account
+        return len([x for x in moderations.filter(vote="y") if x.changed_at > self.was_reopened_at]) > \
+          len([x for x in moderations.filter(vote="n") if x.changed_at > self.was_reopened_at])
       else:
-        return mods.filter(vote="y").count() > mods.filter(vote="n").count()
+        return moderations.filter(vote="y").count() > moderations.filter(vote="n").count()
 
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
       return self.supporting_policy.filter().count() >= self.quorum
@@ -372,12 +379,17 @@ class Policy(PolicyBase):
     ]
 
   @property
+  def show_vote(self):
+    return self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.VOTED,
+    ]
+
+  @property
   def show_debate(self):
     return self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
       settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
       #settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
       #settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
       #settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
@@ -858,23 +870,6 @@ class Vote(models.Model):
 
   initiative = models.ForeignKey(Initiative, related_name="initiative_votes", null=True)
   policy = models.ForeignKey(Policy, related_name="policy_votes", null=True)
-
-  #target_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-  #target_id = models.IntegerField()
-  #target = GenericForeignKey('target_type', 'target_id')
-
-  @property
-  def nay_survey_options(self):
-    return [
-      _("Does not conform to my convictions."), 
-      _("Is not important enough."),
-      _("Is not specific enough."),
-      _("Is not mature enough (in terms of contents.)"),
-      _("Contains a detail, I do not agree with."),
-      "".join([_("Does not fit to:"), settings.PLATFORM_TITLE_ACRONYM]),
-      _("Is difficult to stand in for."),
-      _("Is no longer relevant."),
-    ]
 
   @cached_property
   def in_favor(self):

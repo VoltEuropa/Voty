@@ -128,6 +128,11 @@
 
       <div class="row skip-meta">
         <div class="col-4 voty-timer-wrapper">
+          {% with "PLATFORM_POLICY_STATE_DICT.VOTED"|get_setting as voted %}
+            {% if policy.state == voted %}
+              <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
+            {% endif %}
+          {% endwith %}
           {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
             {% if policy.state == discussed %}
               <span class="skip-meta voty-timer"><i class="material-icons">schedule</i> {% trans "Time left:" %} {{policy.end_of_this_phase | timeuntil}}</span>
@@ -286,15 +291,31 @@
           {% if request.guard.policy_validate %}
             {% if policy.ready_to_proceed %}
               {% if policy.ready_for_next_stage %}
-                <div class="align-right">
-                  <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
-                    {% csrf_token %}
-                    <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
-                      <i class="material-icons forward">forward</i>
-                      <span>{% trans "Validate Policy (to seek support)" %}</span>
-                    </button>
-                  </form>
-                </div>
+                {% with "PLATFORM_POLICY_STATE_DICT.FINALISED"|get_setting as finalised %}
+                  {% if policy.state == finalised %}
+                    {% if request.guard.policy_release %}
+                    <div class="align-right">
+                      <form class="action-form" action="{% url 'policy_release' policy_id=policy.id %}" style="display:inline" method="POST">
+                        {% csrf_token %}
+                        <button title="{% trans 'Release Policy for Vote' %}" class="btn btn-success" type="submit">
+                          <i class="material-icons forward">forward</i>
+                          <span>{% trans "Release Policy for Vote" %}</span>
+                        </button>
+                      </form>
+                    </div>
+                    {% endif %}
+                  {% else %}
+                    <div class="align-right">
+                      <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
+                        {% csrf_token %}
+                        <button title="{% trans 'Validate Policy to seek support' %}" class="btn btn-success" type="submit">
+                          <i class="material-icons forward">forward</i>
+                          <span>{% trans "Validate Policy (to seek support)" %}</span>
+                        </button>
+                      </form>
+                    </div>
+                  {% endif %}
+                {% endwith %}
               {% endif %}
             {% else %}
               {# we don't care for ready-for-next stage here, eg all fields filled, enough initiators, as we reject anyway #}
@@ -387,9 +408,9 @@
               <div class="align-right">
                 <form class="action-form" action="{% url 'policy_finalise' policy_id=policy.id %}" style="display:inline" method="POST">
                   {% csrf_token %}
-                  <button title="{% trans 'Submit Policy for Vote' %}" class="btn btn-success" type="submit">
+                  <button title="{% trans 'Submit Policy for final Review and Vote' %}" class="btn btn-success" type="submit">
                     <i class="material-icons forward">forward</i>
-                    <span>{% trans "Submit Policy for Vote" %}</span>
+                    <span>{% trans "Submit Policy for finale Review and Vote" %}</span>
                   </button>
                 </form>
               </div>
@@ -594,6 +615,17 @@
     </div>
   </div>
 
+
+  {% if policy.show_vote %}
+  <div id="vote" class="container-fluid cta">
+    <div class="container">
+        <div class="row no-gutters">
+          {% include "fragments/vote/vote_item.html" %}
+        </div>
+      </div>
+  </div>
+  {% endif %}
+
   {% if policy.show_debate %}
     {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
       <div id="discuss" class="container-fluid cta {% if not policy.state == discussed %}closed{% endif %}">
@@ -642,6 +674,12 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
+
+
+
+
+
 
 
 

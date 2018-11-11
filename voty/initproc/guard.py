@@ -53,16 +53,14 @@ class Guard:
     config = settings.PLATFORM_MODERATION_SETTING_LIST
     moderations = policy.policy_moderations.exclude(vote="r")
 
-    # rejection and challenge and we're back after x days
-    # XXX not sure this works all the way looping a rejected proposal through
-    # the process
-    if policy.was_rejected_at:
-      if policy.was_challenged_at:
-        total -= len([x for x in moderations if x.changed_at > policy.was_challenged_at])
-      else:
-        total -= len([x for x in moderations if x.changed_at > policy.was_rejected_at])
+    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.FINALISED:
+      moderations = moderations.filter(stale=False)
+    if policy.was_reopened_at:
+      relevant_count = len([x for x in moderations if x.changed_at > policy.was_reopened_at])
     else:
-      total -= moderations.count()
+      relevant_count = moderations.count()
+
+    total = total - relevant_count
 
     # moderator diversity is optional
     if bool(int(settings.USE_DIVERSE_MODERATION_TEAM)):
@@ -92,7 +90,10 @@ class Guard:
 
   # ------------------------------ can like ------------------------------------
   def can_like(self, obj=None):
-    if obj.user == self.user:
+    user = self.user
+    if not user.is_authenticated:
+      return False
+    if obj.user == user:
       return False
     return True
 
@@ -414,7 +415,7 @@ class Guard:
     return (total >= female) & (total >= diverse)
 
   # --------------------------- is evaluated ----------------------------------
-  # when to show moderation box to non-moderators
+  # => when to show moderation box to non-moderators
   def is_evaluated(self, policy=None):
     policy = policy or self.request.policy
     user = self.user
@@ -491,25 +492,30 @@ class Guard:
 
   # ---------------------- comment X (anything...) -----------------------------
   def target_comment(self, target_object=None):
-    policy = _find_parent_policy(target_object)
-    # XXX why should moderations have no restrictions toward multiple comments?
-    #if (isinstance (target_object, Moderation)):
-    #  return True
+    user = self.user
 
+    if not user.is_authenticated:
+      return False
+  
+    policy = _find_parent_policy(target_object)
     self.reason = None
     last_comment = target_object.comments.order_by("-created_at").first()
 
+    # XXX why should moderations have no restrictions toward multiple comments?
+    #if (isinstance (target_object, Moderation)):
+    #  return True
+  
     # can't access policy from here
     if policy and policy.state == settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED:
       self.reason = _("Commenting not possible in challenged state.")
       return False
 
-    if not last_comment and target_object.user == self.user:
+    if not last_comment and target_object.user == user:
       self.reason = _("Comment not possible: Please wait for another user to comment.")
       return False
 
     # XXX what's the difference?
-    elif last_comment and last_comment.user == self.user:
+    elif last_comment and last_comment.user == user:
       self.reason = _("Comment not possible: Please wait for another user to comment.")
       return False
 
@@ -586,6 +592,19 @@ class Guard:
     if not policy.ready_for_next_stage:
       return False
 
+    return True
+
+  # ------------------------ release policy for vote --------------------------
+  def policy_release(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.FINALISED:
+      return False
+    if not user.has_perm("initproc.policy_can_override"):
+      return False
     return True
 
   # ---------------------------- close policy ----------------------------------
