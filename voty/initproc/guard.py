@@ -475,7 +475,10 @@ class Guard:
     user = self.user
 
     # moderator who reviewed a challenged policy can not evaluate it again
-    if policy.state == settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED:
+    if policy.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+      settings.PLATFORM_POLICY_STATE_DICT.REJECTED
+    ]:
       moderations = policy.policy_moderations
     else:
       moderations = policy.policy_moderations.filter(stale=False)

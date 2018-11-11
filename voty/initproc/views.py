@@ -103,11 +103,10 @@ def _get_policy_field_value(key, version, field_meta_dict):
 def _get_related_policy(target_object):
   parent_id = getattr(target_object, "policy_id", None)
   if parent_id:
-    return _fetch_object_from_class("Policy", parent_id)
+    return _fetch_object_from_class("Policy", parent_id), None
   else:
-    #target_parent_class = apps.get_model("initproc", target_object.target_type.name)
     target_parent = _fetch_object_from_class(target_object.target_type.name, target_object.target_id)
-    return _fetch_object_from_class("Policy", target_parent.policy_id)
+    return _fetch_object_from_class("Policy", target_parent.policy_id), target_parent
 
 # shortcut to retrieving object
 def _fetch_object_from_class(target_type, target_id):
@@ -1405,7 +1404,7 @@ def target_like(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  parent_policy = _get_related_policy(target_object)
+  parent_policy, target_parent = _get_related_policy(target_object)
 
   if not request.guard.can_like(target_object):
     messages.warning(request, _("Permission denied."))
@@ -1448,7 +1447,7 @@ def target_unlike(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  parent_policy = _get_related_policy(target_object)
+  parent_policy, target_parent = _get_related_policy(target_object)
 
   if not request.guard.can_like(target_object):
     messages.warning(request, _("Permission denied."))
@@ -1492,7 +1491,7 @@ def target_edit(request, form, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
   target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
-  parent_policy = _get_related_policy(target_object)
+  parent_policy, target_parent = _get_related_policy(target_object)
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))
@@ -1560,7 +1559,7 @@ def target_delete(request, target_type, target_id):
 
   model_class = apps.get_model("initproc", target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  parent_policy = _get_related_policy(target_object)
+  parent_policy, target_parent = _get_related_policy(target_object)
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))

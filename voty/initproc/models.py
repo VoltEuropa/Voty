@@ -242,17 +242,15 @@ class Policy(PolicyBase):
       lower_bound = self.was_validated_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_MINIMUM_DAYS))
 
-      # if support is reached
+      # if support is reached, wait cooldown days
       if self.supporting_policy.filter().count() >= self.quorum:
-        return lower_bound + \
-          timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS))
+        return lower_bound + timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS))
 
-      # XXX both "naive", should use datetime.now(self.created_at.tzinfo)
-      if lower_bound > datetime.now():
+      # minimum time not reached
+      if datetime(lower_bound.year, lower_bound.month, lower_bound.day) > datetime.now():
         return lower_bound
 
-      return self.was_validated_at + \
-        timedelta(int(settings.PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS))
+      return self.was_validated_at + timedelta(int(settings.PLATFORM_POLICY_SUPPORT_MAXIMUM_DAYS))
 
     # discussion takes DISCUSSION days
     elif self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
@@ -317,12 +315,12 @@ class Policy(PolicyBase):
       
     # discussion requires time
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
-      return datetime.now() > self.went_in_discussion_at + \
+      return datetime.now(self.created_at.tzinfo) > self.went_in_discussion_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
 
     # rejected takes time
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.REJECTED:
-      return datetime.now(self.was_rejected_at.tzinfo) > self.was_rejected_at + \
+      return datetime.now(self.created_at.tzinfo) > self.was_rejected_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS))
 
     # nothing to do
