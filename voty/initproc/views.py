@@ -84,7 +84,7 @@ def get_voting_fragments(vote, initiative, request):
 
 # ============================= HELPERS ========================================
 # for categories, display category translation not database-placeholder
-def _getPolicyFieldValue(key, version, field_meta_dict):
+def _get_policy_field_value(key, version, field_meta_dict):
   for f in field_meta_dict:
     if key == f.name:
 
@@ -97,6 +97,17 @@ def _getPolicyFieldValue(key, version, field_meta_dict):
         return getattr(settings.CATEGORIES.CONTEXT_DICT, version.field_dict.get(key, '').upper().replace("-", "_"))
       else:
         return version.field_dict.get(key, '')
+
+# like/unlike/edit/delete can be on a comment or moderation/proposal/pro/con
+# comments have only a target-type/id, the others have policy_id defined
+def _get_related_policy(target_object):
+  parent_id = getattr(target_object, "policy_id", None)
+  if parent_id:
+    return _fetch_object_from_class("Policy", parent_id)
+  else:
+    #target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+    target_parent = _fetch_object_from_class(target_object.target_type.name, target_object.target_id)
+    return _fetch_object_from_class("Policy", target_parent.policy_id)
 
 # shortcut to retrieving object
 def _fetch_object_from_class(target_type, target_id):
@@ -1190,8 +1201,8 @@ def policy_history(request, policy, slug, version_id):
 
   compare = {key: mark_safe(
     html_diff(
-      _getPolicyFieldValue(key, selected, policy_field_meta),
-      _getPolicyFieldValue(key, latest, policy_field_meta)
+      _get_policy_field_value(key, selected, policy_field_meta),
+      _get_policy_field_value(key, latest, policy_field_meta)
     )
   ) for key in policy_fields}
 
@@ -1394,13 +1405,11 @@ def target_like(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
-  policy = getattr(target_object, "policy", None) or target_parent.policy
+  parent_policy = _get_related_policy(target_object)
 
   if not request.guard.can_like(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(request.policy.id))
+    return redirect("/policy/{}/".format(parent_policy.id))
 
   fake_context = {
     "target": target_object,
@@ -1408,7 +1417,7 @@ def target_like(request, target_type, target_id):
     "show_text": False,
     "show_count": True,
     "has_liked": True,
-    "is_likeable": request.guard.is_likeable(policy)
+    "is_likeable": request.guard.is_likeable(parent_policy)
   }
 
   for key in ['show_text', 'show_count']:
@@ -1439,13 +1448,11 @@ def target_unlike(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
-  policy = getattr(target_object, "policy", None) or target_parent.policy
+  parent_policy = _get_related_policy(target_object)
 
   if not request.guard.can_like(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(request.policy.id))
+    return redirect("/policy/{}/".format(parent_policy.id))
 
   target_object.likes.filter(user_id=request.user.id).delete()
 
@@ -1455,7 +1462,7 @@ def target_unlike(request, target_type, target_id):
     "show_text": False,
     "show_count": True,
     "has_liked": False,
-    "is_likeable": request.guard.is_likeable(policy)
+    "is_likeable": request.guard.is_likeable(parent_policy)
   }
 
   for key in ['show_text', 'show_count']:
@@ -1485,37 +1492,33 @@ def target_edit(request, form, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
   target_object = get_object_or_404(model_class, pk=kwargs["target_id"])
-  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+  parent_policy = _get_related_policy(target_object)
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(request.policy.id))
+    return redirect("/policy/{}/".format(parent_policy.id))
 
   data = form.cleaned_data
   target_object.text = form.cleaned_data["text"]
   target_object.save()
   user = request.user 
 
-  # XXX everything that uses target[action] should use a single identifier, not
-  # m or argument
+  # XXX fix: also add to request, guard throws over missing policy on edit
+  request.policy = parent_policy
+
+  # XXX target[action] should use a single identifier, not m or argument
   fake_context = dict(
     m=target_parent,
     argument=target_parent,
-    policy=target_parent.policy,
+    policy=parent_policy,
     has_commented=False,
     has_blockers=False,
-    is_likeable=request.guard.is_likeable(target_parent.policy),
+    is_likeable=request.guard.is_likeable(parent_policy),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
 
-  # XXX fix: also add to request, because guard throws over missing policy when 
-  # saving edits
-  request.policy = target_parent.policy
-
   if user:
-
     if getattr(target_parent, "blockers", None) is not None:
       fake_context["has_blockers"] = True
       fake_context["blockers"] = []
@@ -1557,12 +1560,11 @@ def target_delete(request, target_type, target_id):
 
   model_class = apps.get_model("initproc", target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
-  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+  parent_policy = _get_related_policy(target_object)
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(request.policy.id))
+    return redirect("/policy/{}/".format(parent_policy.id))
 
   user = request.user
   target_object.delete()
@@ -1572,17 +1574,16 @@ def target_delete(request, target_type, target_id):
   fake_context = dict(
     m=target_parent,
     argument=target_parent,
-    policy=target_parent.policy,
+    policy=parent_policy,
     has_commented=False,
     has_blockers=False,
-    is_likeable=request.guard.is_likeable(target_parent.policy),
+    is_likeable=request.guard.is_likeable(parent_policy),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
 
-  # XXX fix: also add to request, because guard throws over missing policy when 
-  # saving edits
-  request.policy = target_parent.policy
+  # XXX fix: also add to request, guard throws over missing policy on edit
+  request.policy = parent_policy
 
   if user:
 
