@@ -25,7 +25,6 @@ from pinax.notifications.models import send as init_notify
 # policy (same as initadmin)
 from pinax.notifications.backends.base import BaseBackend
 from notifications.signals import notify
-
 from datetime import datetime, timedelta, date
 from .globals import STATES, VOTED, INITIATORS_COUNT, SPEED_PHASE_END, ABSTENTION_START
 from django.db import models
@@ -189,16 +188,17 @@ class Policy(PolicyBase):
 
   # staged is going from draft (private) to staged (public)
   created_at = models.DateTimeField(auto_now_add=True)
-  staged_at = models.DateTimeField(auto_now=True)
   changed_at = models.DateTimeField(auto_now=True)
 
   # changed published to validated and closed (not used, no?) to published
-  was_validated_at = models.DateField(blank=True, null=True)
-  went_in_discussion_at = models.DateField(blank=True, null=True)
-  went_in_vote_at = models.DateField(blank=True, null=True)
-  was_published_at = models.DateField(blank=True, null=True)
-  was_rejected_at = models.DateField(blank=True, null=True)
-  was_challenged_at = models.DateField(blank=True, null=True)
+  was_staged_at = models.DateTimeField(auto_now=True)
+  was_validated_at = models.DateTimeField(blank=True, null=True)
+  went_in_discussion_at = models.DateTimeField(blank=True, null=True)
+  went_in_vote_at = models.DateTimeField(blank=True, null=True)
+  was_published_at = models.DateTimeField(blank=True, null=True)
+  was_rejected_at = models.DateTimeField(blank=True, null=True)
+  was_challenged_at = models.DateTimeField(blank=True, null=True)
+  was_reopened_at = models.DateTimeField(blank=True, null=True)
 
   @cached_property
   def slug(self):
@@ -214,15 +214,15 @@ class Policy(PolicyBase):
 
     # recently published first
     if self.was_published_at:
-      return datetime.today().date() - self.was_published_at
+      return datetime.today() - self.was_published_at
 
     # closest to deadline first
     elif self.end_of_this_phase:
-      return self.end_of_this_phase - datetime.today().date()
+      return self.end_of_this_phase - datetime.today()
 
     # newest first
     else:
-      return datetime.now(timezone) - self.staged_at
+      return datetime.now(timezone) - self.was_staged_at
 
   # ---------------------------- end of phase ----------------------------------
   # this returns time(!) when phase is over. Compare against it elsewhere!
@@ -248,8 +248,7 @@ class Policy(PolicyBase):
           timedelta(days=int(settings.PLATFORM_POLICY_SUPPORT_COOLDOWN_DAYS))
 
       # XXX both "naive", should use datetime.now(self.created_at.tzinfo)
-      if datetime(lower_bound.year, lower_bound.month, lower_bound.day) \
-        > datetime.now():
+      if lower_bound > datetime.now():
         return lower_bound
 
       return self.was_validated_at + \
@@ -266,53 +265,65 @@ class Policy(PolicyBase):
 
     return None
 
+
+  # checked by multiplying field length, because one empty field will fail, eg 
+  # len(int[17, 1123, 0]) = 17*1123*0 = 0 = FAIL
+  @property
+  def required_fields(self):
+    return reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()])
+
+  
+  # XXX if an initiator leaves/does not confirm an edit in a non-invite state, 
+  # we are blocked
+  @property
+  def required_initiators(self):
+    return self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT)
+
+  # XXX name "required_moderations" already used.
+  # max number of moderations without pending reviews ("r" ~ request info) cannot 
+  # use current, because these do not include stale moderations and for challenged 
+  # and finalised, stale moderations count. Must also be aware of previously
+  # challenged policy, so we need to check by date again
+  @property
+  def required_evaluations(self):
+    if self.was_reopened_at:
+      return len([x for x in self.policy_moderations.exclude(vote="r") if x.changed_at > self.was_reopened_at]) >= self.required_moderations
+    else:
+      return self.policy_moderations.exclude(vote="r").count() >= self.required_moderations
+
   # ----------------------- ready for next phase -------------------------------
-  # check if we can continue to next phase (all conditions met)
+  # ready for next stage says when ready, proceed says continue or close
   @property
   def ready_for_next_stage(self):
-
-    # editing phases need minimum initiators and all fields filled
-    # all fields filled multiplies length, one empty field fails it:
-    # eg len(int[17, 2, 1123, 0]) = 17*2*1123*0 = 0 = FAIL
 
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
-      #settings.PLATFORM_POLICY_STATE_DICT.AMENDED,
     ]:
-      return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()])
-      )
+      return (self.required_initiators and self.required_fields)
 
-    # moderation phases also require minimum amount of moderation reviews
+    # moderation states requires complete policy, initiators and number of mods
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
       settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
       #settings.PLATFORM_POLICY_STATE_DICT.FINALISED,
     ]:
-      return (
-        self.supporting_policy.filter(initiator=True, ack=True).count() >= int(settings.PLATFORM_POLICY_INITIATORS_COUNT) and
-        reduce(lambda x, y: x*y, [len(getattr(self, f.name, "")) for f in PolicyBase._meta.get_fields()]) and
-
-        # max number of moderations without pending reviews ("r" ~ request info)
-        self.current_moderations.exclude(vote="r").count() >= self.required_moderations
-      )
+      return (self.required_initiators and self.required_fields and self.required_evaluations)
 
     # seeking support requires supporters and time
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
-      upper_bound = self.end_of_this_phase()
-      return self.supporting_policy.filter().count() >= self.quorum and \
-        datetime.now() > \
-          datetime(upper_bound.year, upper_bound.month, upper_bound.day)
+      return datetime.now() > self.end_of_this_phase()
       
     # discussion requires time
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
-      upper_bound = self.went_in_discussion_at + \
+      return datetime.now() > self.went_in_discussion_at + \
         timedelta(days=int(settings.PLATFORM_POLICY_DISCUSSION_DAYS))
 
-      return datetime.now() > \
-        datetime(upper_bound.year, upper_bound.month, upper_bound.day)
+    # rejected takes time
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.REJECTED:
+      return datetime.now(self.was_rejected_at.tzinfo) > self.was_rejected_at + \
+        timedelta(days=int(settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS))
 
     # nothing to do
     if self.state in [
@@ -324,16 +335,28 @@ class Policy(PolicyBase):
     return False
 
   # ---------------------- proceed to next phase -------------------------------
-  # ready = proceed to next stage or close (eg, not enough votes). tested here
+  # ready for next stage says when ready, proceed says continue or close
   @property
   def ready_to_proceed(self):
 
-    # not enough supporters
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.SUBMITTED,
-      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+      settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
     ]:
-      return self.current_moderations.filter(vote="y").count() > self.current_moderations.filter(vote="n").count()
+      mods = self.policy_moderations
+
+      # on re-opened policy, everything from previous lifecycle doesn't count
+      if self.was_reopened_at:
+        return len([x for x in mods.filter(vote="y") if x.changed_at > self.was_reopened_at]) \
+          >= len([x for x in mods.filter(vote="n") if x.changed_at > self.was_reopened_at])
+
+      # all other cases need to take stale and active reviews into account
+      else:
+        return mods.filter(vote="y").count() > mods.filter(vote="n").count()
+
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+      return self.supporting_policy.filter().count() >= self.quorum
 
     return False
 
@@ -448,23 +471,42 @@ class Policy(PolicyBase):
     return True
 
   @property
-  def required_moderations(self):
+  def total_moderators(self):
     group = settings.PLATFORM_GROUP_VALUE_TITLE_LIST
     if isinstance(group, six.string_types):
       groups = (group, )
     else:
       groups = group
+    return User.objects.filter(groups__name__in=groups).distinct().count()
 
-    total_moderators = User.objects.filter(groups__name__in=groups).distinct()
-    minimum_moderators_by_percent = round(int(int(total_moderators.count()) * int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_PERCENTAGE)/100))
+  @property
+  def required_moderations(self):
+
+    minimum_moderators_by_percent = round(int(int(self.total_moderators) * int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_PERCENTAGE)/100))
     minimum_moderators_by_count = int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_MODERATOR_VOTES)
+
+    # we can include the rejected here, because we don't show the initial 
+    # reviews required anymore after the policy has been rejected. So we can
+    # calculate the total for a challenge and see whether challenge is possible.
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+      settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
+    ]:
+      minimum_moderators_by_count += int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_ADDED_VOTES_FOR_CHALLENGE)
+  
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.REVIEWED:
+      minimum_moderators_by_count += int(settings.PLATFORM_MODERATION_SETTING_LIST.MINIMUM_ADDED_VOTES_FOR_REVIEW)
 
     if minimum_moderators_by_percent >= minimum_moderators_by_count:
       return minimum_moderators_by_percent
 
-    # in case of a patt
+    # in case of a patt, 1 less
     if minimum_moderators_by_count % 2 == 0:
-      return minimum_moderators_by_count + 1
+      return minimum_moderators_by_count - 1
+
+    # in case not enough moderators, we ask for a board decision?
+    # if minimum_moderators_by_count > total_moderators:
+
     return minimum_moderators_by_count
 
   @property
@@ -488,32 +530,6 @@ class Policy(PolicyBase):
 
   def __str__(self):
     return self.title;
-
-  # XXX we wrap pinax:notify onto policy:notify. And we don't like this so much...
-  # XXX if using only cached properties, then why not, but else redundant
-  def policy_notify(self, recipients, notice_type, extra_context=None, subject=None, **kwargs):
-    context = extra_context or dict()
-    if subject:
-      kwargs['sender'] = subject
-      context['target'] = self
-    else:
-      kwargs['sender'] = self
-    notify(recipients, notice_type, context, **kwargs)
-
-  #def notify_moderators(self, *args, **kwargs):
-  #  return self.policy_notify([m.user for m in self.policy_moderations.all()], *args, **kwargs)
-  #
-  #def notify_followers(self, *args, **kwargs):
-  #
-  #  # while in state staged, we're looking for co-initiators, so followers are
-  #  # only the co-initiators. outside this state, notifying all supporters
-  #  query = [s.user for s in self.supporting_policy.filter(ack=True).all()] if self.state == 'staged' else self.supporters.all()
-  #  return self.policy_notify(query, *args, **kwargs)
-  #
-  #def notify_initiators(self, *args, **kwargs):
-  #  query = [s.user for s in self.initiators]
-  #  return self.policy_notify(query, *args, **kwargs)
-
 
 # ------------------------------ Initiative ------------------------------------
 @reversion.register()
@@ -578,10 +594,10 @@ class Initiative(models.Model):
   def sort_index(self):
     timezone = self.created_at.tzinfo
     if self.was_closed_at: #recently closed first
-      return datetime.today().date() - self.was_closed_at
+      return datetime.today() - self.was_closed_at
 
     elif self.end_of_this_phase: #closest to deadline first
-      return self.end_of_this_phase - datetime.today().date()
+      return self.end_of_this_phase - datetime.today()
 
     else: #newest first
       return datetime.now(timezone) - self.created_at
@@ -971,6 +987,6 @@ class Moderation(Response):
 
   type = "moderation"
   stale = models.BooleanField(default=False)
-  flags = models.CharField(max_length=100, blank=True, null=True)
+  blockers = models.CharField(max_length=100, blank=True, null=True)
   vote = models.CharField(max_length=1, choices=settings.PLATFORM_MODERATION_CHOICE_LIST)
   text = models.CharField(max_length=500, blank=True)

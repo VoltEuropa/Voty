@@ -89,7 +89,7 @@ class NewModerationForm(forms.ModelForm):
   # custom properties for fragments/simple_form.html, used to be TITLE/TEXT to
   # not conflict with title/text
   form_title = _("Evaluate Policy Proposal")
-  form_description = _("Please flag the policy if it:")
+  form_description = _("Please set a blocker on the policy if it:")
 
   text = forms.CharField(
     widget=forms.Textarea,
@@ -105,13 +105,21 @@ class NewModerationForm(forms.ModelForm):
 
   def clean(self):
     cleaned_data = super().clean()
+    blocker = None
 
     # cannot give positive validation with a flag checked
     if cleaned_data['vote'] == 'y':
       for key in settings.PLATFORM_MODERATION_FIELD_LABELS:
         if cleaned_data[key]:
-          self.add_error("vote", _("You cannot flag a Policy and approve it at the same time."))
+          self.add_error("vote", _("You cannot set a blocker on a Policy and approve it at the same time."))
           break
+
+    if cleaned_data["vote"] == 'n':
+      for key in settings.PLATFORM_MODERATION_FIELD_LABELS :
+        if cleaned_data[key]:
+          blocker = True
+      if not blocker:
+        self.add_error("vote", _("You have to set at least one flag when disapproving a Policy."))
 
     # non-confirmations need to have a justification
     else: 
@@ -120,6 +128,13 @@ class NewModerationForm(forms.ModelForm):
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
+
+    # so much time spent here to add the challenged flag to the link calling 
+    # the form so we can check it on form-init and remove the request option
+    # from the vote choices as in a challenge, there is only a final verdict
+    
+    if kwargs and "challenged" in kwargs["initial"]:
+      self.fields["vote"].choices = self.fields["vote"].choices[:-1]
 
     # Note: we're adding a lot of checks dynamically here which need to be 
     # unchecked for the actual moderation (which doesn't store them) to be saved

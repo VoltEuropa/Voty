@@ -16,8 +16,8 @@
     <span>{% blocktrans with time=m.created_at|date:'M-d, H:i' %}posted on {{ time }}.{% endblocktrans %}</span>
     {% if m.text %}
     <span class="moderation-interaction">
-      {% if request.guard.policy_evaluate %}
-        {% if is_revisable and m.user_id == request.user.id %}
+      {% if request.guard.is_reviseable %}
+        {% if m.user_id == request.user.id %}
         <a class="voty-link" title="{% trans 'Edit Review' %}" data-ajax="true" href="{% url 'policy_evaluate' policy_id=policy.id %}?fragment=%23{{m.unique_id}}&amp;edit=True&amp;target_type={{m.type}}&amp;target_id={{m.id}}"><i class="material-icons">edit</i></a>
         {% endif %}
       {% endif %}
@@ -28,9 +28,9 @@
     </span>
     {% endif %}
     {% if full %}
-      {% if has_flags %}
-      <ul id="{{m.unique_id}}-flag-list" class="moderation-flag-list">
-      {% for flag in flags %}<li>{{ flag }}</li>{% endfor %}
+      {% if has_blockers %}
+      <ul id="{{m.unique_id}}-blocker-list" class="moderation-blocker-list">
+      {% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}
       </ul>
       {% endif %}
     <div class="moderation-text">
@@ -61,3 +61,4 @@
     </div>
   {% endif %}
 </div>
+

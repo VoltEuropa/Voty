@@ -154,10 +154,10 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
           for field in target_object._meta.get_fields():
 
             # XXX shouldn't be here, but moderation tickboxes weren't stored
-            if field.name == "flags":
-              flags = (getattr(target_object, field.name) or "").split(",")
-              for flag in flags:
-                initial_dict[flag] = True
+            if field.name == "blockers":
+              blockers = (getattr(target_object, field.name) or "").split(",")
+              for blocker in blockers:
+                initial_dict[blocker] = True
             else:
               initial_dict[field.name] = getattr(target_object, field.name)
           form = form_cls(initial=initial_dict)
@@ -170,14 +170,15 @@ def simple_form_verifier(form_cls, template="fragments/simple_form.html", via_aj
       fragment = request.GET.get("fragment")
 
       # cancel-urls (eg on edit) we need the parent object to re-render
-      if request.GET.get("cancel", None) is not None:
+      # XXX moderation initial write + cancel, I don't have the moderation object
+      if request.GET.get("cancel", None):
         target_object = target_object or _fetch_object_from_class(target_type, target_id)
-
         rendered = render_to_string(
           cancel_template,
           context=dict(
             fragment=fragment,
-            m=target_object
+            m=target_object,
+            policy=getattr(request, "policy", None)
           ),
           request=request
         )
@@ -259,19 +260,14 @@ def policy_item(request, policy, *args, **kwargs):
     return redirect("home")
 
   payload = _generate_payload(policy)
-  payload["is_likeable"] = request.guard.is_likeable (policy)
+  payload["is_likeable"] = request.guard.is_likeable(policy)
   payload.update({"policy_labels": dict([(key, settings.PLATFORM_POLICY_FIELD_LABELS[key]) for key in payload["policy_fields"]])})
+  payload.update({"is_evaluated": request.guard.is_evaluated(policy=policy)})
 
   # personalise if authenticated user interacted with policy
-  # XXX this should be handled in guard.py
+  # XXX permission things should be handled in guard.py
   if request.user.is_authenticated:
     user_id = request.user.id
-    moderations = policy.policy_moderations.filter(user=user_id, stale=False)
-
-    payload.update({"has_evaluations": request.guard.is_reviewed(policy=policy)})
-    payload.update({"has_moderated": moderations.count()})
-    if payload["has_moderated"]:
-      payload["is_revisable"] = request.guard.is_revisable(moderations[0])
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
     payload.update({"has_initiated": policy.supporting_policy.filter(user=user_id, initiator=True).count()})
     policy_votes = policy.policy_votes.filter(user=user_id)
@@ -425,9 +421,8 @@ def policy_feedback(request, policy, *args, **kwargs):
     m=moderation,
     policy=policy,
     has_commented=False,
-    has_flags=False,
-    is_likeable=True,
-    is_revisable=request.guard.is_revisable(moderation),
+    has_blockers=False,
+    is_likeable=request.guard.is_likeable(policy) and not moderation.stale,
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=moderation.comments.order_by('created_at').all()
   )
@@ -435,12 +430,12 @@ def policy_feedback(request, policy, *args, **kwargs):
   if user:
 
     # XXX fix this, don't set to empty string
-    if moderation.flags is not None and moderation.flags != "":
-      fake_context["has_flags"] = True
-      fake_context["flags"] = []
+    if moderation.blockers:
+      fake_context["has_blockers"] = True
+      fake_context["blockers"] = []
 
-      for flag in moderation.flags.split(","):
-        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+      for blocker in moderation.blockers.split(","):
+        fake_context["blockers"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[blocker])
 
     for comment in fake_context["comments"]:
       if comment.created_at > user.last_login:
@@ -523,7 +518,8 @@ def index(request):
   #  }
   #)
 
-  count_inbox = request.guard.make_intiatives_query(['i']).count()
+  #count_inbox = request.guard.make_intiatives_query(['i']).count()
+  count_inbox = 0
 
   return render(
     request, 
@@ -553,92 +549,6 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
     def get_result_label(self, item):
         return render_to_string('fragments/autocomplete/user_item.html',
                                 context=dict(user=item))
-
-
-#@states_required(raise_exception=True)
-#@can_access_initiative()
-def item(request, init, slug=None):
-
-    ctx = dict(initiative=init,
-               user_count=init.eligible_voter_count,
-               proposals=[x for x in init.proposals.prefetch_related('likes').all()],
-               arguments=[x for x in init.pros.prefetch_related('likes').all()] +\
-                         [x for x in init.contras.prefetch_related('likes').all()])
-
-    ctx['arguments'].sort(key=lambda x: (-x.likes.count(), x.created_at))
-    ctx['proposals'].sort(key=lambda x: (-x.likes.count(), x.created_at))
-
-    ctx['is_likeable'] = request.guard.is_likeable (init)
-
-    if request.user.is_authenticated:
-        user_id = request.user.id
-
-        ctx.update({'has_supported': init.supporting_initiative.filter(user=user_id).count()})
-
-        votes = init.votes.filter(user=user_id)
-        if (votes.exists()):
-            ctx['vote'] = votes.first()
-
-        for arg in ctx['arguments'] + ctx['proposals']:
-            _personalize_argument(arg, user_id)
-
-    print(ctx)
-    return render(request, 'initproc/item.html', context=ctx)
-
-
-@ajax
-#@can_access_initiative()
-def show_resp(request, initiative, target_type, target_id, slug=None):
-
-    model_cls = apps.get_model('initproc', target_type)
-    arg = get_object_or_404(model_cls, pk=target_id)
-
-    assert arg.initiative == initiative, "How can this be?"
-
-    ctx = dict(argument=arg,
-               has_commented=False,
-               is_likeable=request.guard.is_likeable(arg),
-               full=param_as_bool(request.GET.get('full', 0)),
-               comments=arg.comments.order_by('created_at').prefetch_related('likes').all())
-
-    if request.user.is_authenticated:
-        _personalize_argument(arg, request.user.id)
-        for cmt in ctx['comments']:
-            cmt.has_liked = cmt.likes.filter(user=request.user).exists()
-
-    template = 'fragments/argument/item.html'
-
-
-    return {'fragments': {
-        '#{arg.type}-{arg.id}'.format(arg=arg): render_to_string(template,
-                                                                 context=ctx, request=request)
-        }}
-
-@ajax
-@login_required
-#@can_access_initiative(None, 'can_moderate')
-def show_moderation(request, initiative, target_id, slug=None):
-    arg = get_object_or_404(Moderation, pk=target_id)
-
-    assert arg.initiative == initiative, "How can this be?"
-
-    ctx = dict(m=arg,
-               has_commented=False,
-               has_liked=False,
-               is_likeable=True,
-               full=1,
-               comments=arg.comments.order_by('created_at').all())
-
-    if request.user:
-        ctx['has_liked'] = arg.likes.filter(user=request.user).exists()
-        if arg.user == request.user:
-            ctx['has_commented'] = True
-
-    return {'fragments': {
-        '#{arg.type}-{arg.id}'.format(arg=arg): render_to_string('fragments/moderation/item.html',
-                                                                 context=ctx, request=request)
-        }}
-
 
 #
 #      ___       ______ .___________. __    ______   .__   __.      _______.
@@ -780,22 +690,22 @@ def policy_remove_support(request, policy, user_id, *args, **kwargs):
 
 # ---------------------------- Policy Stage ------------------------------------
 @login_required
-@policy_state_access(states=settings.PLATFORM_POLICY_STATE_DICT.DRAFT)
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.DRAFT,settings.PLATFORM_POLICY_STATE_DICT.REJECTED])
 def policy_stage(request, policy, *args, **kwargs):
 
   if not request.guard.policy_edit(policy):
     messages.warning(request, _("Permission denied."))
     return redirect("home")
 
-  with reversion.create_revision():
-    policy.state = settings.PLATFORM_POLICY_STATE_DICT.STAGED
-    policy.staged_at = datetime.now()
-    policy.save()
+  if policy.was_challenged_at:
+    policy.was_reopened_at = datetime.now()
 
-    reversion.set_user(request.user)
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.STAGED
+  policy.was_staged_at = datetime.now()
+  policy.save()
 
-    messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
-    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+  messages.success(request, _("Policy moved to public status 'Staged'. It is now possible to invite co-initiators and supporters."))
+  return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 
 # ----------------------------- Policy Delete ----------------------------------
@@ -948,40 +858,38 @@ def policy_reject(request, policy, *args, **kwargs):
     messages.warning(request, _("Permission denied."))
     return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
-  if policy.ready_for_next_stage:
-    with reversion.create_revision():
-      user = request.user
+  # rejection does not need ready-for-next-stage (fields filled, initiators),
+  # ready-to-proceed will check if Yes > No
+  if not policy.ready_to_proceed:
+    user = request.user
 
-      # reviews are now stale = OLD
-      policy.policy_moderations.update(stale=True)
-      policy.was_rejected_at = datetime.now()
-      policy.state = settings.PLATFORM_POLICY_STATE_DICT.REJECTED
-      policy.save()
+    policy.policy_moderations.update(stale=True)
+    policy.was_rejected_at = datetime.now()
+    policy.state = settings.PLATFORM_POLICY_STATE_DICT.REJECTED
+    policy.save()
 
-      reversion.set_user(request.user)
+    # we can inform all supporters, because there is only initiators
+    supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
+    notify(
+      [supporter.user for _, supporter in enumerate(supporters)],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
+        "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
+        }, sender=user
+      )
   
-      # we can inform all supporters, because there is only initiators
-      supporters = policy.supporting_policy.filter(initiator=True).exclude(id=user.id)
-      notify(
-        [supporter.user for _, supporter in enumerate(supporters)],
-        settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
-          "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
-          }, sender=user
-        )
-    
-      notify(
-        [moderation.user for moderation in policy.policy_moderations.all()],
-        settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
-          "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
-          }, sender=user
-        )
+    notify(
+      [moderation.user for moderation in policy.policy_moderations.all()],
+      settings.NOTIFICATIONS.PUBLIC.POLICY_REJECTED, {
+        "description": "".join([_("Policy rejected:"), " ", policy.title, ". "])
+        }, sender=user
+      )
 
-      messages.success(request, "".join([
-        _("Policy rejected. Aside from a challenge by initiators this policy now is frozen for:"),
-        settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS,
-        _("days")
-      ]))
-      return redirect("/policy/{}-{}".format(policy.id, policy.slug))
+    messages.success(request, "".join([
+      _("Policy rejected. Aside from a one-time option to challenge by initiators this policy is now frozen for: "),
+      settings.PLATFORM_POLICY_RELAUNCH_MORATORIUM_DAYS,
+      _("days")
+    ]))
+    return redirect("/policy/{}-{}".format(policy.id, policy.slug))
 
 # ---------------------------- Policy Close ------------------------------------
 @login_required
@@ -1184,7 +1092,7 @@ def policy_validate(request, policy, *args, **kwargs):
 # --------------------------- Policy Evaluate ----------------------------------
 # used to be for incoming and moderation (submit and release)
 # every validation is an evaluation, once the required number of evaluations are 
-# in, any moderator can manually validate a proposal into seeking support stage
+# in, policy lead can manually validate a proposal into seeking support stage
 @ajax
 @login_required
 @policy_state_access(states=settings.PLATFORM_POLICY_MODERATION_STATE_LIST)
@@ -1201,26 +1109,38 @@ def policy_evaluate(request, form, policy, *args, **kwargs):
     blockers = [field_id for field_id, _ in form.fields.items() if request.POST.get(field_id, False) and field_id.startswith("q")]
 
     # a user can only moderate a policy once, so user already moderated this 
-    # policy, it's an edit
+    # policy, it's an edit, new text will be a comment
     moderation = policy.policy_moderations.filter(user=user.id, stale=False)
     if moderation:
       moderation = moderation[0]
       moderation.vote = form.cleaned_data["vote"]
-      moderation.text = form.cleaned_data["text"]
-      moderation.flags = ",".join(blockers)
+      #moderation.text = form.cleaned_data["text"]
+      moderation.blockers = ",".join(blockers) if blockers else None
       moderation.changed_at = datetime.now()
       moderation.save()
+
+      new_comment = Comment(
+        target=moderation,
+        user=request.user,
+        text=form.cleaned_data["text"]
+      )
+      new_comment.save()
+      new_comment.can_modify = True
+
     else:
       moderation = form.save(commit=False)
       moderation.policy = policy
       moderation.user = user
-      moderation.flags = ",".join(blockers)
+      moderation.blockers = ",".join(blockers) if blockers else None
       moderation.save()
 
-  # "r" like reject is a bad choice to request more info
-  if moderation.vote == "r":
+  # always invalidate with every moderation
+  if not policy.state in [
+    settings.PLATFORM_POLICY_STATE_DICT.CHALLENGED,
+    settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
+  ]:
     policy.state = settings.PLATFORM_POLICY_STATE_DICT.INVALIDATED
-  policy.save()
+    policy.save()
 
   messages.success(request, _("Moderation review recorded."))
   return redirect('/policy/{}'.format(policy.id))
@@ -1351,15 +1271,17 @@ def policy_proposal_new(request, form, policy, *args, **kwargs):
       )
   
     return {
+      "fragments": {"#no-proposals": ""},
       "inner-fragments": {
-        #"#": render_to_string(
-        #  "fragments/discussion/policy_propose_new.html",
-        #  context=dict(policy=policy)
-        #),
+        "#proposal-new": render_to_string(
+          "fragments/discussion/policy_propose_new.html",
+          context=dict(policy=policy)
+        ),
         "#proposal-thanks": render_to_string(
           "fragments/discussion/policy_propose_thanks.html"
         ),
-        "#proposal-count": policy.policy_proposals.count()
+        # must be proposals - because tab header is dynamic...
+        "#proposals-count": policy.policy_proposals.count()
       },
       "append-fragments": {
         "#proposal-list": render_to_string(
@@ -1415,7 +1337,7 @@ def policy_argument_new(request, form, policy, *args, **kwargs):
           context=dict(policy=policy)
         ),
         "#argument-thanks": render_to_string("fragments/discussion/policy_argument_thanks.html"),
-        "#argument-count": policy.policy_pros.count() + policy.policy_contras.count()
+        "#arguments-count": policy.policy_pros.count() + policy.policy_contras.count()
       },
       "append-fragments": {
         "#argument-list": render_to_string(
@@ -1440,10 +1362,8 @@ def target_comment(request, form, target_type, target_id, *args, **kwargs):
   target_object = get_object_or_404(model_class, pk=target_id)
 
   if not request.guard.target_comment(target_object):
-    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
+    return redirect("/policy/{}/".format(request.policy.id))
 
   data = form.cleaned_data
   new_comment = Comment(target=target_object, user=request.user, **data)
@@ -1474,18 +1394,13 @@ def target_like(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
+  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+  policy = getattr(target_object, "policy", None) or target_parent.policy
 
   if not request.guard.can_like(target_object):
-    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
-
-  if not request.guard.is_likeable(target_object):
-    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
-    messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
+    return redirect("/policy/{}/".format(request.policy.id))
 
   fake_context = {
     "target": target_object,
@@ -1493,7 +1408,7 @@ def target_like(request, target_type, target_id):
     "show_text": False,
     "show_count": True,
     "has_liked": True,
-    "is_likeable": True
+    "is_likeable": request.guard.is_likeable(policy)
   }
 
   for key in ['show_text', 'show_count']:
@@ -1524,12 +1439,13 @@ def target_unlike(request, target_type, target_id):
 
   model_class = apps.get_model('initproc', target_type)
   target_object = get_object_or_404(model_class, pk=target_id)
+  target_parent_class = apps.get_model("initproc", target_object.target_type.name)
+  target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+  policy = getattr(target_object, "policy", None) or target_parent.policy
 
-  if not request.guard.is_likeable(target_object):
-    target_parent_class = apps.get_model("initproc", target_object.target_type.name)
-    target_parent = get_object_or_404(target_parent_class, pk=target_object.target_id)
+  if not request.guard.can_like(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
+    return redirect("/policy/{}/".format(request.policy.id))
 
   target_object.likes.filter(user_id=request.user.id).delete()
 
@@ -1539,7 +1455,7 @@ def target_unlike(request, target_type, target_id):
     "show_text": False,
     "show_count": True,
     "has_liked": False,
-    "is_likeable": True
+    "is_likeable": request.guard.is_likeable(policy)
   }
 
   for key in ['show_text', 'show_count']:
@@ -1574,7 +1490,7 @@ def target_edit(request, form, *args, **kwargs):
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
+    return redirect("/policy/{}/".format(request.policy.id))
 
   data = form.cleaned_data
   target_object.text = form.cleaned_data["text"]
@@ -1588,9 +1504,8 @@ def target_edit(request, form, *args, **kwargs):
     argument=target_parent,
     policy=target_parent.policy,
     has_commented=False,
-    has_flags=False,
-    is_likeable=True,
-    is_revisable=request.guard.is_revisable(target_parent),
+    has_blockers=False,
+    is_likeable=request.guard.is_likeable(target_parent.policy),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
@@ -1601,11 +1516,11 @@ def target_edit(request, form, *args, **kwargs):
 
   if user:
 
-    if getattr(target_parent, "flags", None) is not None:
-      fake_context["has_flags"] = True
-      fake_context["flags"] = []
-      for flag in target_parent.flags.split(","):
-        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+    if getattr(target_parent, "blockers", None) is not None:
+      fake_context["has_blockers"] = True
+      fake_context["blockers"] = []
+      for blocker in target_parent.blockers.split(","):
+        fake_context["blockers"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[blocker])
 
     for comment in fake_context["comments"]:
       if comment.created_at > user.last_login:
@@ -1647,7 +1562,7 @@ def target_delete(request, target_type, target_id):
 
   if not request.guard.is_editable(target_object):
     messages.warning(request, _("Permission denied."))
-    return redirect("/policy/{}/".format(target_parent.id))
+    return redirect("/policy/{}/".format(request.policy.id))
 
   user = request.user
   target_object.delete()
@@ -1659,9 +1574,8 @@ def target_delete(request, target_type, target_id):
     argument=target_parent,
     policy=target_parent.policy,
     has_commented=False,
-    has_flags=False,
-    is_likeable=True,
-    is_revisable=request.guard.is_revisable(target_parent),
+    has_blockers=False,
+    is_likeable=request.guard.is_likeable(target_parent.policy),
     full=1,
     comments=target_parent.comments.order_by('created_at').all()
   )
@@ -1672,11 +1586,11 @@ def target_delete(request, target_type, target_id):
 
   if user:
 
-    if getattr(target_parent, "flags", None) is not None:
-      fake_context["has_flags"] = True
-      fake_context["flags"] = []
-      for flag in target_parent.flags.split(","):
-        fake_context["flags"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[flag])
+    if getattr(target_parent, "blockers", None) is not None:
+      fake_context["has_blockers"] = True
+      fake_context["blockers"] = []
+      for blocker in target_parent.blockers.split(","):
+        fake_context["blockers"].append(settings.PLATFORM_MODERATION_FIELD_LABELS[blocker])
 
     for comment in fake_context["comments"]:
       if comment.created_at > user.last_login:
@@ -1790,9 +1704,8 @@ def policy_argument_details(request, policy, *args, **kwargs):
     policy=policy,
     has_commented=False,
     has_liked=target_object.has_liked,
-    is_likeable=True,
+    is_likeable=request.guard.is_likeable(policy),
     stale=getattr(target_object, "stale", None),
-    is_revisable=request.guard.is_revisable(target_object),
     full=1 if request.GET.get('toggle', None) is None else 0,
     comments=target_object.comments.order_by('created_at').all()
   )
@@ -1822,247 +1735,6 @@ def policy_argument_details(request, policy, *args, **kwargs):
 
 
 
-@login_required
-#@can_access_initiative([STATES.PREPARE, STATES.FINAL_EDIT], 'can_edit')
-def submit_to_committee(request, initiative):
-    if initiative.ready_for_next_stage:
-        initiative.state = STATES.INCOMING if initiative.state == STATES.PREPARE else STATES.MODERATION
-        initiative.save()
-
-        # make sure moderation starts from the top
-        initiative.moderations.update(stale=True)
-
-        messages.success(request, _("The Initiative was received and is being validated."))
-        initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, subject=request.user)
-        # To notify the policy team, we notify all members of groups with moderation permission,
-        # which doesn't include superusers, though they individually have moderation permission.
-        moderation_permission = Permission.objects.filter(content_type__app_label='initproc', codename='add_moderation')
-        initiative.notify(get_user_model().objects.filter(groups__permissions=moderation_permission, is_active=True).all(),
-                          settings.NOTIFICATIONS.PUBLIC.POLICY_SUBMITTED, subject=request.user)
-        return redirect('/initiative/{}'.format(initiative.id))
-    else:
-        messages.warning(request, _("The requirements for submission have not been met."))
-
-    return redirect('/initiative/{}'.format(initiative.id))
-
-
-@ajax
-@login_required
-#@can_access_initiative(STATES.PREPARE, 'can_edit') 
-@simple_form_verifier(InviteUsersForm, submit_title=_("Invite"))
-def invite(request, form, initiative, invite_type):
-    for user in form.cleaned_data['user']:
-        if user == request.user: continue # we skip ourselves
-        if invite_type == 'initiators' and \
-            initiative.supporting_initiative.filter(initiator=True).count() >= INITIATORS_COUNT:
-            break
-
-        # XXX: supporting = initiative.supporting is confusing?
-        try:
-            supporting_supporter = initiative.supporting_initiative.get(user_id=user.id)
-        except Supporter.DoesNotExist:
-            supporting_supporter = Supporter(user=user, initiative=initiative, ack=False)
-
-            if invite_type == 'initiators':
-                supporting_supporter.initiator = True
-            elif invite_type == 'supporters':
-                supporting_supporter.first = True
-        else:
-            if invite_type == 'initiators' and not supporting_supporter.initiator:
-                # we only allow promoting of supporters to initiators
-                # not downwards.
-                supporting_supporter.initiator = True
-                supporting_supporter.first = False
-                supporting_supporter.ack = False
-            else:
-                continue
-        
-        supporting_supporter.save()
-
-        notify([user], settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_INVITE, {"target": initiative}, sender=request.user)
-
-    messages.success(request, _("Initiators invited.") if invite_type == 'initiators' else _("Supporters invited."))
-    return redirect("/initiative/{}-{}".format(initiative.id, initiative.slug))
-
-
-
-@login_required
-#@can_access_initiative(STATES.SEEKING_SUPPORT, 'can_support') # must be seeking for supporters
-def support(request, initiative):
-    Supporter(initiative=initiative, user_id=request.user.id,
-              public=not not request.GET.get("public", False)).save()
-
-    return redirect('/initiative/{}'.format(initiative.id))
-
-
-@require_POST
-@login_required
-#@can_access_initiative([STATES.PREPARE, STATES.INCOMING, STATES.FINAL_EDIT])
-def ack_support(request, initiative):
-    sup = get_object_or_404(Supporter, initiative=initiative, user_id=request.user.id)
-    sup.ack = True
-    sup.save()
-
-    messages.success(request, _("Thank you for the confirmation"))
-    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_ACCEPTED, subject=request.user)
-
-    return redirect('/initiative/{}'.format(initiative.id))
-
-
-@require_POST
-@login_required
-#@can_access_initiative([STATES.SEEKING_SUPPORT, STATES.INCOMING, STATES.PREPARE])
-def rm_support(request, initiative):
-    sup = get_object_or_404(Supporter, initiative=initiative, user_id=request.user.id)
-    sup.delete()
-
-    messages.success(request, _("Your support has been retracted"))
-    initiative.notify_initiators(settings.NOTIFICATIONS.PUBLIC.POLICY_SUPPORT_REJECTED, subject=request.user)
-
-    if initiative.state == 's':
-        return redirect('/initiative/{}'.format(initiative.id))
-    return redirect('/')
-
-
-@non_ajax_redir('/')
-@ajax
-@login_required
-#@can_access_initiative(STATES.DISCUSSION) # must be in discussion
-@simple_form_verifier(NewArgumentForm, template="fragments/argument/new.html")
-def new_argument(request, form, initiative):
-    data = form.cleaned_data
-    argCls = Pro if data['type'] == "👍" else Contra
-
-    arg = argCls(initiative=initiative,
-                 user_id=request.user.id,
-                 title=data['title'],
-                 text=data['text'])
-
-    arg.save()
-
-    initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.NEW_ARGUMENT, dict(argument=arg), subject=request.user)
-
-    return {
-        'fragments': {'#no-arguments': ""},
-        'inner-fragments': {'#new-argument': render_to_string("fragments/argument/thumbs.html",
-                                                  context=dict(initiative=initiative)),
-                            '#debate-thanks': render_to_string("fragments/argument/argument_thanks.html"),
-                            '#debate-count': initiative.pros.count() + initiative.contras.count()},
-        'append-fragments': {'#argument-list': render_to_string("fragments/argument/item.html",
-                                                  context=dict(argument=arg,full=0),
-                                                  request=request)}
-    }
-
-
-
-@non_ajax_redir('/')
-@ajax
-@login_required
-#@can_access_initiative(STATES.DISCUSSION) # must be in discussion
-@simple_form_verifier(NewProposalForm)
-def new_proposal(request, form, initiative):
-    data = form.cleaned_data
-    proposal = Proposal(initiative=initiative,
-                        user_id=request.user.id,
-                        title=data['title'],
-                        text=data['text'])
-
-    proposal.save()
-
-    return {
-        'fragments': {'#no-proposals': ""},
-        'inner-fragments': {'#new-proposal': render_to_string("fragments/argument/propose.html",
-                                                  context=dict(initiative=initiative)),
-                            '#proposals-thanks': render_to_string("fragments/argument/proposal_thanks.html"),
-                            '#proposals-count': initiative.proposals.count()},
-        'append-fragments': {'#proposal-list': render_to_string("fragments/argument/item.html",
-                                                  context=dict(argument=proposal,full=0),
-                                                  request=request)}
-    }
-
-
-@ajax
-@login_required
-#@can_access_initiative([STATES.INCOMING, STATES.MODERATION], 'can_moderate') # must be in discussion
-@simple_form_verifier(NewModerationForm)
-def moderate(request, form, initiative):
-    model = form.save(commit=False)
-    model.initiative = initiative
-    model.user = request.user
-    model.save()
-
-    if request.guard.can_publish(initiative):
-        if initiative.state == STATES.INCOMING:
-            initiative.supporting_initiative.filter(ack=False).delete()
-            initiative.went_public_at = datetime.now()
-            initiative.state = STATES.SEEKING_SUPPORT
-            initiative.save()
-
-            messages.success(request, _("Initiative published"))
-            initiative.notify_followers(settings.NOTIFICATIONS.PUBLIC.POLICY_PUBLISHED)
-            initiative.notify_moderators(settings.NOTIFICATIONS.PUBLIC.POLICY_PUBLISHED, subject=request.user)
-            return redirect('/initiative/{}'.format(initiative.id))
-
-        elif initiative.state == STATES.MODERATION:
-
-            publish = [initiative]
-            if initiative.all_variants:
-                # check the variants, too
-
-                for ini in initiative.all_variants:
-                    if ini.state != STATES.MODERATION or not request.guard.can_publish(ini):
-                        publish = None
-                        break
-                    publish.append(ini)
-
-            if publish:
-                for init in publish:
-                    init.went_to_voting_at = datetime.now()
-                    init.state = STATES.VOTING
-                    init.save()
-                    init.notify_followers(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE)
-                    init.notify_moderators(settings.NOTIFICATIONS.PUBLIC.WENT_TO_VOTE, subject=request.user)
-
-                messages.success(request, _("Initiative activated for Voting."))
-                return redirect('/initiative/{}-{}'.format(initiative.id, initiative.slug))
-
-
-    
-    return {
-        'fragments': {'#no-moderations': ""},
-        'inner-fragments': {'#moderation-new': "".join(["<strong>", _("Entry registered"), "</strong>"])},
-        'append-fragments': {'#moderation-list': render_to_string("fragments/moderation/item.html",
-                                                  context=dict(m=model,initiative=initiative,full=0),
-                                                  request=request)}
-    }
-
-
-
-@non_ajax_redir('/')
-@ajax
-@login_required
-@simple_form_verifier(NewCommentForm)
-def comment(request, form, target_type, target_id):
-    model_cls = apps.get_model('initproc', target_type)
-    model = get_object_or_404(model_cls, pk=target_id)
-
-    data = form.cleaned_data
-    cmt = Comment(target=model, user=request.user, **data)
-    cmt.save()
-
-    return {
-        'inner-fragments': {'#{}-new-comment'.format(model.unique_id):
-                "".join(["<strong>", _("Thank you for your comment."), "</strong>"]),
-                '#{}-chat-icon'.format(model.unique_id):
-                "chat_bubble", # This user has now commented, so fill in the chat icon
-                '#{}-comment-count'.format(model.unique_id):
-                model.comments.count()},
-        'append-fragments': {'#{}-comment-list'.format(model.unique_id):
-            render_to_string("fragments/comment/item.html",
-                             context=dict(comment=cmt),
-                             request=request)}
-    }
-
 
 @non_ajax_redir('/')
 @ajax
@@ -2090,32 +1762,6 @@ def vote(request, init):
     my_vote.save()
 
     return get_voting_fragments(my_vote, init, request)
-
-
-
-@non_ajax_redir('/')
-@ajax
-#@can_access_initiative()
-def compare(request, initiative, version_id):
-    versions = Version.objects.get_for_object(initiative)
-    latest = versions.first()
-    selected = versions.filter(id=version_id).first()
-    compare = {key: mark_safe(html_diff(selected.field_dict.get(key, ''), latest.field_dict.get(key, ''))) for key in COMPARING_FIELDS}
-
-    compare['went_public_at'] = initiative.went_public_at
-
-
-    return {
-        'inner-fragments': {
-            'header': "",
-            '.main': render_to_string("fragments/compare.html",
-                                      context=dict(initiative=initiative,
-                                                    selected=selected,
-                                                    latest=latest,
-                                                    compare=compare),
-                                      request=request)}
-    }
-
 
 
 @non_ajax_redir('/')

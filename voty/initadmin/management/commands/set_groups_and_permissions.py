@@ -115,20 +115,23 @@ def create_custom_groups_and_permissions():
   for (perm_key, perm_code_model) in settings.PLATFORM_USER_PERMISSION_LIST:
     perm_code, perm_app_model = perm_code_model.split(",")
     perm_name = settings.PLATFORM_USER_PERMISSION_VALUE_LIST[perm_key]
+
+    # delete and recreate
     perm_query_set = Permission.objects.filter(name=perm_name)
+    perm_query_set.delete()
 
     # add permissions which don't exist yet
-    if perm_query_set.exists() == False:
+    #if perm_query_set.exists() == False:
 
-      # permission is added to a group, permission pertains to a content-type
-      # in this case a user (2) or an initiative (37) or policy (38)
-      perm_app, perm_model = perm_app_model.split(".")
-      perm = Permission(
-        name=perm_name,
-        codename=perm_code,
-        content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
-      )
-      perm.save()
+    # permission is added to a group, permission pertains to a content-type
+    # in this case a user (2) or an initiative (37) or policy (38)
+    perm_app, perm_model = perm_app_model.split(".")
+    perm = Permission(
+      name=perm_name,
+      codename=perm_code,
+      content_type=ContentType.objects.get(app_label=perm_app, model=perm_model)
+    )
+    perm.save()
 
     # add all relevant permissions to perm_list
     perm_list.append((perm_key, perm_query_set[0]))

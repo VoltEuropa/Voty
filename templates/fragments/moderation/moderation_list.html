@@ -2,24 +2,28 @@
 {% if stale == 1 %}
   <div id="moderation-old">
     <div class="voty-moderation-interaction">
-      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old"><i class="material-icons">remove_red_eye</i></a>
+      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old">
+        {% trans "Hide details" %}<i class="material-icons">visibility_off</i>
+      </a>
     </div>
+    <hr/>
     {% for m in moderations %}
       {% include "fragments/moderation/moderation_item.html" with full=0 %}
-    {% empty %}
-      <i id="no-moderations">{% trans "Not reviewed yet." %}</i>
     {% endfor %}
   </div>
 {% elif stale == 0 %}
   <div id="moderation-old">
     <div class="voty-moderation-interaction">
-      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True"><i class="material-icons">remove_red_eye</i></a>
+      <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True">
+        {% trans "Show details" %}<i class="material-icons">remove_red_eye</i>
+      </a>
     </div>
+    <hr/>
   </div>
 {% else %}
   {% for m in moderations %}
     {% include "fragments/moderation/moderation_item.html" with full=0 %}
   {% empty %}
-    <i id="no-moderations">{% trans "Not reviewed yet." %}</i>
+    <i id="no-moderations">{% if request.guard.has_moderated %}{% trans "You have already reviewed this Policy." %}{% else %}{% trans "No (new) reviews so far." %}{% endif %}</i>
   {% endfor %}
 {% endif %}

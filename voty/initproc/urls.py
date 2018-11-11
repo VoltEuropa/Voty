@@ -64,20 +64,5 @@ urlpatterns = [
   url(r"^unlike/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_unlike, name="target_unlike"),
   url(r"^delete/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_delete, name="target_delete"),
   url(r"^edit/(?P<target_type>.*)/(?P<target_id>\d+)$", views.target_edit, name="target_edit"),
-
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/support$", views.support, name="support"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/ack_support$", views.ack_support, name="ack_support"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/rm_support$", views.rm_support, name="rm_support"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/submit_to_committee$", views.submit_to_committee, name="submit_to_committee"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/new_argument$", views.new_argument, name="new_argument"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/new_proposal$", views.new_proposal, name="new_proposal"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/new_moderation$", views.moderate, name="moderate"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/vote$", views.vote, name="vote"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/reset_vote$", views.reset_vote, name="reset_vote"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/compare/(?P<version_id>\d+)$", views.compare, name="compare"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/invite/(?P<invite_type>.*)$", views.invite, name="invite"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/moderation/(?P<target_id>\d+)$", views.show_moderation, name="show_moderation"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?/(?P<target_type>.*)/(?P<target_id>\d+)$", views.show_resp, name="show_resp"),
-  url(r"^initiative/(?P<init_id>\d+)(?:-(?P<slug>.*))?$", views.item, name="initiative_item"),
 ]
 

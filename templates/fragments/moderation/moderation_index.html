@@ -1,28 +1,41 @@
 {% load i18n %}
-<div id="moderation" class="moderation alert alert-warning">
-  <h6><span class="moderation-title">{% trans "Validation" %}</span><span>({% trans "Reviews required: " %}{{ policy.required_moderations }})</span></h6>
-  <div id="moderation-list">
-    {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
-  </div>
-
-  {% if request.guard.policy_evaluate %}
-    {% if not has_moderated %}
-      <br/>
-      <div id="moderation-new">
-        <a data-ajax="true" href="{% url 'policy_evaluate' policy_id=policy.id %}?fragment=%23moderation-new" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>
+{% load get_setting %}
+{% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+  {% with "PLATFORM_POLICY_STATE_DICT.CHALLENGED"|get_setting as challenged %}
+  <div id="moderation" class="moderation alert alert-warning">
+    {% if not policy.state == rejected %}
+      <h6><span class="moderation-title">{% trans "Reviews" %}</span><span>({% if policy.state == challenged %}{% trans "required overall: " %}{% else %}{% trans "required: " %}{% endif %}{{ policy.required_moderations }})</span></h6>
+      <div id="moderation-list">
+        {% include 'fragments/moderation/moderation_list.html' with moderations=policy.current_moderations %}
+      </div>
+    
+      {% if request.guard.policy_evaluate %}
+        {% if not request.guard.has_moderated and request.guard.misses_moderations %}
+          <br/>
+          <div id="moderation-new">
+            <a data-ajax="true" href="{% url 'policy_evaluate' policy_id=policy.id %}?fragment=%23moderation-new{% if request.policy.state == challenged %}&amp;challenged=1{% endif %}" class="btn btn-outline-primary">{% trans "Add Validation Review" %}</a>
+          </div>
+        {% endif %}
+      {% endif %}
+    <br />
+    <br />
+    {% endif %}
+    {% if policy.stale_moderations.count %}
+      <h6 class="voty-moderation-stale-title">
+        <span class="moderation-title">
+          {% if not policy.state == rejected %}{% trans "Previous Reviews" %}{% else %}{% trans "Reviews" %}{% endif %}
+        </span>
+        {% if not policy.state == challenged %}<span>({% trans "no longer applicable" %})</span>{% endif %}
+      </h6>
+      <div id="moderation-old">
+        <div class="voty-moderation-interaction">
+          <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True">
+            {% trans "Show details" %}<i class="material-icons">remove_red_eye</i>
+          </a>
+        </div>
       </div>
     {% endif %}
-  {% endif %}
+  </div>
+  {% endwith %}
+{% endwith %}
 
-  {% if policy.stale_moderations.count %}
-    <br />
-    <hr />
-    <br />
-    <h6 class="voty-moderation-stale-title"><span class="moderation-title">{% trans "Previous Reviews" %}</span><span>({% trans "no longer valid" %})</h6>
-    <div id="moderation-old">
-      <div class="voty-moderation-interaction">
-        <a class="voty-moderations-stale" data-ajax="true" href="{% url 'policy_stale_feedback' policy_id=policy.id slug=policy.slug %}?fragment=%23moderation-old&amp;toggle=True"><i class="material-icons">remove_red_eye</i></a>
-      </div>
-    </div>
-  {% endif %}
-</div>

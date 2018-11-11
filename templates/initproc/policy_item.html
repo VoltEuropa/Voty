@@ -45,7 +45,7 @@
 
       {% include "initproc/blocks/variants.html" %}
 
-      {% if request.guard.policy_evaluate or has_evaluations %}
+      {% if request.guard.policy_evaluate or is_evaluated %}
         <div class="row initiative-moderation">
           <div class="col-12">
           {% include "fragments/moderation/moderation_index.html" %}      
@@ -53,9 +53,19 @@
         </div>
       {% endif %}
 
-      {% if request.guard.reason %}
-        <div class="alert alert-warning">{{ request.guard.reason }}</div>
-      {% endif %}
+      {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+        {% if policy.state == rejected %}
+          {% if not request.guard.policy_challenge %}
+            {% if request.guard.reason %}
+            <div class="row initiative-moderation">
+              <div class="col-12">
+                <div class="voty-rejection-status alert alert-warning">{{ request.guard.reason }}</div>
+              </div>
+            </div>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endwith %}
 
       {% if request.guard.can_be_undemocratic %}
         {% if request.guard.policy_discuss %}
@@ -92,6 +102,27 @@
                 </div>
             </div>
           </div>
+        {% elif request.guard.policy_reject %}
+          {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+            {% if policy.state == rejected %}
+              <div class="row">
+                <div class="col-12">
+                  <h2>Undemocratic Zone</h2>
+                  <div class="voty-undemocratic-override-wrapper">
+                    <div class="align-right">
+                      <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
+                        {% csrf_token %}
+                        <button title="{% trans 'Reopen Policy' %}" class="btn btn-danger" type="submit">
+                          <i class="material-icons forward">forward</i>
+                          <span>{% trans "Reopen Policy" %}</span>
+                        </button>
+                      </form>
+                    </div>  
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          {% endwith %}
         {% endif %}
       {% endif %}
 
@@ -158,33 +189,39 @@
           {% endif %}
 
           {% if request.guard.policy_apply %}
-            <div class="align-right">
-              <form class="action-form" action="{% url 'policy_apply' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Apply as Co-Initiator' %}" class="btn btn-success" type="submit">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Apply as Co-Initiator" %}</span>
-                </button>
-              </form>
-            </div>
+            {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+              {% if not policy.state == rejected %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_apply' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Apply as Co-Initiator' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Apply as Co-Initiator" %}</span>
+                  </button>
+                </form>
+              </div>
+              {% endif %}
+            {% endwith %}
           {% endif %}
 
           {% if request.guard.policy_stage %}
-          <div class="align-right">
-            <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
-              {% csrf_token %}
-              <button title="{% trans 'Put policy into public draft and find co-initiators' %}" class="btn btn-success" type="submit">
-                <i class="material-icons forward">forward</i>
-                <span>{% trans "Stage Policy (public draft)" %}</span>
-              </button>
-            </form>
-            <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
-              {% csrf_token %}
-              <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
-                <i class="material-icons delete_outline">delete_outline</i>
-              </button>
-            </form>
-          </div>
+            {% if not request.guard.can_be_undemocratic %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Put policy into public draft and find co-initiators' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Stage Policy (public draft)" %}</span>
+                  </button>
+                </form>
+                <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                    <i class="material-icons delete_outline">delete_outline</i>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
           {% endif %}
 
           {% if request.guard.policy_submit %}
@@ -205,27 +242,50 @@
           </div>          
           {% endif %}
 
-          {% if request.guard.policy_challenge %}
-            <div class="align-right">
-              <form class="action-form" action="{% url 'policy_challenge' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Challenge Rejection' %}" class="btn btn-success" type="submit">
-                  <i class="material-icons forward">forward</i>
-                  <span>{% trans "Challenge Rejection" %}</span>
-                </button>
-              </form>
-              <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
-                {% csrf_token %}
-                <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
-                  <i class="material-icons delete_outline">delete_outline</i>
-                </button>
-              </form>
-            </div>    
-          {% endif %}
+          {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+            {% if policy.state == rejected %}
+              {% if request.guard.policy_challenge %}
+                {% if not policy.ready_for_next_stage %}
+                  <div class="align-right">
+                    <form class="action-form" action="{% url 'policy_challenge' policy_id=policy.id %}" style="display:inline" method="POST">
+                      {% csrf_token %}
+                      <button title="{% trans 'Challenge Rejection' %}" class="btn btn-success" type="submit">
+                        <i class="material-icons forward">forward</i>
+                        <span>{% trans "Challenge Rejection" %}</span>
+                      </button>
+                    </form>
+                    <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+                      {% csrf_token %}
+                      <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                        <i class="material-icons delete_outline">delete_outline</i>
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
+              {% endif %}
+              {% if policy.ready_for_next_stage %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_stage' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Reopen Policy' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Reopen Policy" %}</span>
+                    </button>
+                  </form>
+                  <form class="action-form" action="{% url 'policy_delete' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Delete Policy' %}" class="btn btn-danger" type="submit">
+                      <i class="material-icons delete_outline">delete_outline</i>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endwith %}
 
           {% if request.guard.policy_validate %}
-            {% if policy.ready_for_next_stage %}
-              {% if policy.ready_to_proceed %}
+            {% if policy.ready_to_proceed %}
+              {% if policy.ready_for_next_stage %}
                 <div class="align-right">
                   <form class="action-form" action="{% url 'policy_validate' policy_id=policy.id %}" style="display:inline" method="POST">
                     {% csrf_token %}
@@ -235,17 +295,22 @@
                     </button>
                   </form>
                 </div>
-              {% else %}
-                <div class="align-right">
-                  <form class="action-form" action="{% url 'policy_reject' policy_id=policy.id %}" style="display:inline" method="POST">
-                    {% csrf_token %}
-                    <button title="{% trans 'Reject Policy' %}" class="btn btn-danger" type="submit">
-                      <i class="material-icons forward">forward</i>
-                      <span>{% trans "Reject Policy" %}</span>
-                    </button>
-                  </form>
-                </div>
               {% endif %}
+            {% else %}
+              {# we don't care for ready-for-next stage here, eg all fields filled, enough initiators, as we reject anyway #}
+              {% with "PLATFORM_POLICY_STATE_DICT.REJECTED"|get_setting as rejected %}
+                {% if not policy.state == rejected and policy.required_evaluations %}
+                  <div class="align-right">
+                    <form class="action-form" action="{% url 'policy_reject' policy_id=policy.id %}" style="display:inline" method="POST">
+                      {% csrf_token %}
+                      <button title="{% trans 'Reject Policy' %}" class="btn btn-danger" type="submit">
+                        <i class="material-icons forward">forward</i>
+                        <span>{% trans "Reject Policy" %}</span>
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
+              {% endwith %}
             {% endif %}
           {% endif %}
 
@@ -329,9 +394,9 @@
               <div class="align-right">
                 <form class="action-form" action="{% url 'policy_finalise' policy_id=policy.id %}" style="display:inline" method="POST">
                   {% csrf_token %}
-                  <button title="{% trans 'Submit Policy for final validation and Vote' %}" class="btn btn-success" type="submit">
+                  <button title="{% trans 'Submit Policy for Vote' %}" class="btn btn-success" type="submit">
                     <i class="material-icons forward">forward</i>
-                    <span>{% trans "Submit Policy for Final Validation" %}</span>
+                    <span>{% trans "Submit Policy for Vote" %}</span>
                   </button>
                 </form>
               </div>
@@ -584,4 +649,7 @@ $(document).ready(function () {
 });
 </script>
 {% endblock %}
+
+
+
 

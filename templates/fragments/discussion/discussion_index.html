@@ -43,7 +43,7 @@
         <div id="proposal-thanks" class="container-fluid push-alert fixed-top"></div>
         {% if request.guard.policy_proposal_new %}
           <div id="proposal-new" class="voty-new-proposal-wrapper">
-            <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23new-proposal" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
+            <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23proposal-new" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
           </div>
         {% endif %}
         
