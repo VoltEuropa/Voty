@@ -527,7 +527,7 @@ def index(request):
     request, 
     'initproc/index.html',
     context=dict(
-      initiatives=inits,
+      policy_list=inits,
       inbox_count=count_inbox,
       filters=filters
       )

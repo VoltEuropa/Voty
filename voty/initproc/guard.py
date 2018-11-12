@@ -17,7 +17,7 @@ from functools import wraps
 from voty.initadmin.models import UserConfig
 from voty.initproc.models import Moderation
 from .globals import STATES, PUBLIC_STATES, TEAM_ONLY_STATES, INITIATORS_COUNT
-from .models import Initiative, Supporter, Comment
+from .models import Policy, Supporter, Comment
 from django.conf import settings
 from django.utils import six
 from django.utils.translation import ugettext as _
@@ -81,7 +81,7 @@ class Guard:
   # ------------------------------- make policy query ----------------------------
   # XXX keep until landing page is done
   def make_policy_query(self, filters):
-    return []
+    return Policy.objects.all() #for now, just return all
 
   # XXX this should be calculated elsewhere?
   # @cached_property
