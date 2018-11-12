@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Initiative
+from .models import Initiative, Policy
 
 class SimpleInitiativeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,4 +12,11 @@ class SimpleInitiativeSerializer(serializers.ModelSerializer):
                   # and calculated fields also matter:
                   "slug", "end_of_this_phase"]
 
+
+class SimplePolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Policy
+        fields = ["id", "title", "subtitle", "state", "created_at",
+                  "changed_at"]
+    #TODO: Add more fields
 

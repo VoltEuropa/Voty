@@ -43,7 +43,7 @@ from .models import (Policy, PolicyBase, Initiative, Pro, Contra, Proposal, Comm
 from .forms import (PolicyForm, NewArgumentForm, NewCommentForm,
                     NewProposalForm, NewModerationForm, InviteUsersForm)
 from .undo import UndoUrlTokenGenerator
-from .serializers import SimpleInitiativeSerializer
+from .serializers import SimpleInitiativeSerializer, SimplePolicySerializer
 from django.contrib.auth.models import Permission
 from django.utils.translation import ugettext as _
 
@@ -465,12 +465,12 @@ def policy_feedback(request, policy, *args, **kwargs):
 # ------------------------------ Landing Page ----------------------------------
 def index(request):
   filters = [f for f in request.GET.getlist("f")]
-  if filters:
-    request.session['init_filters'] = filters
-  else:
-    filters = request.session.get('init_filters', DEFAULT_FILTERS)
+  # if filters:
+  #   request.session['init_filters'] = filters
+  # else:
+  #   filters = request.session.get('init_filters', DEFAULT_FILTERS)
 
-  inits = request.guard.make_policy_query(filters)#.prefetch_related("supporting_initiative")
+  policies = request.guard.make_policy_query(filters)#.prefetch_related("supporting_initiative")
 
   #bereiche = [f for f in request.GET.getlist('b')]
   # if bereiche:
@@ -495,30 +495,30 @@ def index(request):
   #inits = sorted(inits, key=lambda x: x.sort_index or timedelta(days=1000))
 
   # now we filter for urgency
-  #if request.is_ajax():
-  #  return render_to_json({
-  #    'fragments': {
-  #      "#init-card-{}".format(init.id) : render_to_string(
-  #        "fragments/initiative/card.html",
-  #        context=dict(initiative=init),
-  #        request=request
-  #      ) for init in inits
-  #    },
-  #    'inner-fragments': {
-  #      '#init-list': render_to_string(
-  #        "fragments/initiative/list.html",
-  #         context=dict(initiatives=inits),
-  #         request=request
-  #        )
-  #     },
-  #     # FIXME: ugly work-a-round as long as we use django-ajax
-  #     #        for rendering - we have to pass it as a dict
-  #     #        or it chokes on rendering :(
-  #     'initiatives': json.loads(JSONRenderer().render(
-  #        SimpleInitiativeSerializer(inits, many=True).data,
-  #      ))
-  #  }
-  #)
+  if request.is_ajax():
+    return render_to_json({
+      'fragments': {
+        "#init-card-{}".format(pol.id): render_to_string(
+         "fragments/policy/policy_card.html",
+         context=dict(policy=pol),
+         request=request
+       ) for pol in policies
+     },
+     # 'inner-fragments': {
+     #   '#init-list': render_to_string(
+     #     "fragments/initiative/list.html",
+     #      context=dict(initiatives=inits),
+     #      request=request
+     #     )
+     #  },
+      # FIXME: ugly work-a-round as long as we use django-ajax
+      #        for rendering - we have to pass it as a dict
+      #        or it chokes on rendering :(
+      'policy_list': json.loads(JSONRenderer().render(
+         SimplePolicySerializer(policies, many=True).data,
+       ))
+   }
+  )
 
   #count_inbox = request.guard.make_intiatives_query(['i']).count()
   count_inbox = 0
@@ -527,7 +527,7 @@ def index(request):
     request, 
     'initproc/index.html',
     context=dict(
-      policy_list=inits,
+      policy_list=policies,
       inbox_count=count_inbox,
       filters=filters
       )
