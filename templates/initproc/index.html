@@ -17,11 +17,12 @@
     </div>
   </div>
   
-  {% include "initproc/blocks/filter.html" %}
+  {# include "initproc/blocks/filter.html" #}
 
 {% endblock %}
 
 {% block content %}
+    {% comment %}
   <div class="container-fluid">
   	<div class="container filter-list">
   		{% if user.is_authenticated %}
@@ -42,6 +43,7 @@
   		{% endif %}
   	</div>
   </div>
+  {% endcomment %}
   <div id="init-list" class="container init-index">
   	{% include "fragments/policy/policy_list.html" %}
   </div>

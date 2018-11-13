@@ -1,13 +1,18 @@
 {% load i18n %}
-{% for policy in policy_list %}
-    {% include "fragments/policy/policy_card.html" %}
-  {% empty %}
-  <div class="card">
-    <div class="card-block">
-      <em>{% trans "No Policies found matching your search criteria." %}</em>
-    </div>
-  </div>
-{% endfor %}
+
+<form action="" method="get">
+    {% for state in filter.form.state %}
+    <span>
+        {{ state }}
+    </span>
+    {% endfor %}
+    <button type="submit">Apply filters</button>
+    </form>
+    {% for policy in filter.qs %}
+        {% include "fragments/policy/policy_card.html" %}
+    {% endfor %}
+
+
 <script>
 
 // Initialize Tooltips
@@ -19,3 +24,5 @@
 }(window));
 </script>
 
+
+<!--   -->

@@ -80,7 +80,7 @@ class Guard:
 
   # ------------------------------- make policy query ----------------------------
   # XXX keep until landing page is done
-  def make_policy_query(self, filters):
+  def make_policy_query(self):
     return Policy.objects.all() #for now, just return all
 
   # XXX this should be calculated elsewhere?

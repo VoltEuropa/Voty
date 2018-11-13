@@ -16,7 +16,5 @@ class SimpleInitiativeSerializer(serializers.ModelSerializer):
 class SimplePolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = Policy
-        fields = ["id", "title", "subtitle", "state", "created_at",
-                  "changed_at"]
-    #TODO: Add more fields
+        
 
