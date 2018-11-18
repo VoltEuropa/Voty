@@ -273,7 +273,10 @@ def policy_item(request, policy, *args, **kwargs):
     user_id = request.user.id
     payload.update({"has_supported": policy.supporting_policy.filter(user=user_id, ack=True).count()})
     payload.update({"has_initiated": policy.supporting_policy.filter(user=user_id, initiator=True).count()})
-    payload.update({"has_voted": policy.policy_votes.filter(user=user_id).count()})
+    vote = policy.policy_votes.filter(user=user_id)
+    payload.update({"has_voted": vote.count()})
+    if vote:
+      payload.update({"vote": vote[0]})
 
     for arg in payload["policy_arguments"] + payload["policy_proposals_active"] + payload["policy_proposals_stale"]:
       _personalize_argument(arg, user_id)
@@ -1193,6 +1196,47 @@ def policy_release(request, policy, *args, **kwargs):
   messages.success(request, _("Policy released for vote."))
   return redirect('/policy/{}'.format(policy.id))
 
+# ------------------------- Policy Vote Conclude -------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VOTED])
+def policy_conclude(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_conclude(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}".format(policy.id))
+ 
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED
+  policy.save()
+  
+  messages.success(request, _("Policy vote concluded. Please accept or close the Policy."))
+  return redirect('/policy/{}'.format(policy.id))
+
+
+# ---------------------------- Policy Publish ----------------------------------
+@login_required
+@policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED])
+def policy_publish(request, policy, *args, **kwargs):
+
+  if not request.guard.policy_publish(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}".format(policy.id))
+ 
+  user = request.user
+  supporters = policy.supporting_policy.filter(initiator=True).exclude(user_id=user.id)
+  notify(
+    [supporter.user for _, supporter in enumerate(supporters)],
+    settings.NOTIFICATIONS.PUBLIC.POLICY_PUBLISHED, {
+      "description": "".join([_("Policy published:"), " ", policy.title, ". ", _("Congratulations!")])
+    }, sender=user
+  )
+
+  policy.state = settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
+  policy.was_published_at = datetime.now()
+  policy.save()
+  
+  messages.success(request, _("The Policy was published successfully."))
+  return redirect('/policy/{}'.format(policy.id))
+
 
 # ----------------------------- Policy Refrain ---------------------------------
 # XXX no checks?
@@ -1265,6 +1309,7 @@ def policy_history_delete(request, policy, slug, version_id):
     selected = versions.filter(id=version_id).first().delete()
 
   return policy_history(request, policy, slug, latest.id)  
+
 
 # ------------------------- Policy Proposal New --------------------------------
 @_non_ajax_redir('/')
@@ -1713,7 +1758,7 @@ def policy_argument_solve(request, policy, *args, **kwargs):
   settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
   settings.PLATFORM_POLICY_STATE_DICT.STAGED,
   settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
-])
+] + settings.PLATFORM_POLICY_STALE_DISCUSSION_LIST)
 def policy_argument_details(request, policy, *args, **kwargs):
 
   model_class = apps.get_model('initproc', kwargs["target_type"])
@@ -1764,26 +1809,29 @@ def policy_argument_details(request, policy, *args, **kwargs):
 @policy_state_access(states=[settings.PLATFORM_POLICY_STATE_DICT.VOTED])
 def policy_vote(request, policy, *args, **kwargs):
   
+  if not request.guard.policy_vote(policy):
+    messages.warning(request, _("Permission denied."))
+    return redirect("/policy/{}".format(policy.id))
+    
   voted_value = request.POST.get('voted')
   if voted_value == "no":
-    voted = settings.VOTED.NO
+    voted = settings.VOTED.NO #0
   elif voted_value == "yes":
-    voted = settings.VOTED.YES
+    voted = settings.VOTED.YES #1
   else:
-    voted = settings.VOTED.ABSTAIN
+    voted = settings.VOTED.ABSTAIN #2
 
-  reason = request.POST.get("reason", "")
   try:
     user_vote = Vote.objects.get(policy=policy, user_id=request.user)
   except Vote.DoesNotExist:
     user_vote = Vote(policy=policy, user_id=request.user.id, value=voted)
   else:
     user_vote.voted = voted
-    user_vote.reason = reason
   user_vote.save()
 
   fake_context = dict(
     vote=user_vote,
+    has_voted=1,
     policy=policy,
     user_count=policy.eligible_voter_count
   )
@@ -1812,7 +1860,6 @@ def policy_vote(request, policy, *args, **kwargs):
 def policy_vote_reset(request, policy, *args, **kwargs):
 
   Vote.objects.filter(policy=policy, user_id=request.user).delete()
-
   fake_context = dict(
     policy=policy,
     user_count=policy.eligible_voter_count
