@@ -1,21 +1,70 @@
 {% load i18n %}
-{% for policy in policy_list %}
-    {% include "fragments/policy/policy_card.html" %}
-  {% empty %}
-  <div class="card">
-    <div class="card-block">
-      <em>{% trans "No Policies found matching your search criteria." %}</em>
+<form action="" method="get">
+    <div class="row">
+        <div class="col-12">
+            <a class="btn btn-primary" data-toggle="collapse" href="#collapseFilters" role="button">
+                Show filters
+            </a>
+        </div>
     </div>
-  </div>
+
+    <br/>
+
+    <div class="row">
+    <div class="col-12">
+        <div class="collapse" id="collapseFilters">
+            <div class="card card-body" style="padding:10px">
+                <div class="row">
+                    <div class="col-12">
+                        Show only policies with the following status:
+                    </div>
+                </div>
+                <br/>
+                <div class="row">
+                    {% for checkbox in filter.form.state %}
+                        <div class="col-xs-12 col-sm-4">
+                            <label class="switch">
+                                {{ checkbox.tag }}
+                                <span class="slider round"></span>
+                            </label>
+                            {{ checkbox.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <button class="btn btn-primary" type="submit">Apply filters</button>
+                        <a class="btn btn-primary" style="color:white" href="{{ request.path }}">Reset filters</a>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+</form>
+
+<hr/>
+
+{% for policy in filter.qs %}
+    {% include "fragments/policy/policy_card.html" %}
+    {% empty %}
+    <h3>No policies found.
+</h3>
 {% endfor %}
+
 <script>
 
-// Initialize Tooltips
-// XXX really necessary?
-(function (window)  {
-  if (window.$) {
-    $('[data-toggle="tooltip"]').tooltip();
-  }
-}(window));
+    // Initialize Tooltips
+    // XXX really necessary?
+    (function (window) {
+        if (window.$) {
+            $('[data-toggle="tooltip"]').tooltip();
+        }
+    }(window));
 </script>
 
+
+<!--   -->

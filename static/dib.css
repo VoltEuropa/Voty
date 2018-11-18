@@ -809,6 +809,15 @@ header .alert {
   color: #EB9316;
 }
 
+/* Badge Color: Volt
+    This badge can be used until we have styling for every status
+*/
+
+.badge-volt {
+  color: #60278e;
+  border-color: #60278e;
+}
+
 /* Badge Color: Preparation */
 
 .badge-prepare {

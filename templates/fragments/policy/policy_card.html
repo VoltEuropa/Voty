@@ -1,0 +1,196 @@
+<!-- This card is a work in progress. Many elements from the original initiative card are left out. -->
+{% load i18n %}
+{% load guard %}
+{% load mathfilters %}
+{% load fullurl %}
+<div id="init-card-{{policy.id}}" class="card {% guard is_supporting policy %}{% if is_supporting %}supported{% endif %}">
+	<div class="card-header">
+		<div class="container-fluid">
+			 <div class="row no-gutters">
+			 	<div class="col align-self-center">
+			 		<div class="d-flex flex-wrap">
+				 		<div class="flex-item">
+
+                            <span class="badge badge-volt">
+								{{ policy.state }}
+							</span>
+
+                        {% comment %}
+							{% ifequal policy.state 'p' %}
+							<span class="badge badge-prepare">
+								{% trans "In Preparation" %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'i' %}
+							<span class="badge badge-arrivals">
+
+								{% if perms.initproc.add_moderation %}
+									{% guard should_moderate_policy policy %}
+									{% if should_moderate_policy %}
+									💥💥 {% trans "Please validate" %} 💥💥
+									{% else %}
+									{% trans "Validation pending" %}
+									{% endif %}
+								{% else %}
+								{% trans "Validation pending" %}
+								{% endif %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 's' %}
+							<span class="badge badge-support">
+								{% trans "Needs Supporters" %} -
+								{% if policy.absolute_supporters < policy.quorum %}
+								  {{policy.quorum|sub:policy.absolute_supporters}} {% trans "missing" %} {% if policy.quorum|sub:policy.absolute_supporters == 1 %}{% trans "supporter" %}{% else %}{% trans "Supporters" %}{% endif %}
+							    {% else %}
+								  {% trans "Reached Quorum" %}
+							    {% endif %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'd' %}
+							<span class="badge badge-discussion">
+								{% trans "In Discussion" %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'e' %}
+							<span class="badge badge-edits">
+								{% trans "Final Review" %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'm' %}
+
+							<span class="badge badge-arrivals">
+
+								{% if perms.initproc.add_moderation %}
+									{% guard should_moderate_policy policy %}
+									{% if should_moderate_policy %}
+									💥💥 {% trans "Final Review required" %} 💥💥
+									{% else %}
+									{% trans "Final Review pending" %}
+									{% endif %}
+								{% else %}
+								{% trans "Final Review pending" %}
+								{% endif %}
+					      	</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'v' %}
+							<span class="badge badge-vote">
+								{% trans "Up for Vote" %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'a' %}
+							<span class="badge badge-accepted">
+								{% trans "Accepted" %}
+							</span>
+							{% endifequal %}
+
+							{% ifequal policy.state 'r' %}
+							<span class="badge badge-rejected">
+								{% trans "Rejected" %}
+							</span>
+							{% endifequal %}
+							{% endcomment %}
+						</div>
+
+                        {% comment %}
+						{% if policy.state != 'i' and policy.state != 'a' and policy.state != 'r' and policy.state != 'p' and policy.state != 'm' %}
+						<div class="flex-item mr-auto">
+							<span class="text-muted align-middle">
+								{% trans "Time remaining:" %} {{policy.end_of_this_phase | timeuntil}}
+							</span>
+						</div>
+						{% else %}
+						<!-- Dirty Positioning Fix â only temporary, find better solution or resolve with new design -->
+						<div class="flex-item mr-auto">
+						</div>
+						{% endif %}
+
+						{% if user.is_authenticated %}
+
+						<div class="flex-item">
+							{% if policy.state != 'p' and policy.state != 'i' %}
+							{% guard is_supporting policy %}
+							{% if is_supporting %}
+							<div class="participation-indicator">
+								<i class="material-icons check-circle fg-support" data-toggle="tooltip" title="{% if policy.state == 's' %}{% trans 'You support this Initiative' %}{% else %}{% trans 'You supported this Initiative' %}{% endif %}">check_circle</i>
+							</div>
+							{% else %}
+							<div class="participation-indicator">
+								<i class="material-icons check-circle fg-inactive" data-toggle="tooltip" title="{% if policy.state == 's' %}{% trans 'You are not supporting this Initiative yet' %}{% else %}{% trans 'You did not support this Initiative' %}{% endif %}">check_circle</i>
+							</div>
+							{% endif %}
+							{% endif %}
+
+							{% if policy.state == 'v' or policy.state == 'a' or policy.state == 'r' %}
+							{% guard my_vote policy %}
+							{% if my_vote %}
+  								{% if my_vote.in_favor %}
+								<div class="participation-indicator">
+									<i class="material-icons thumb-up" data-toggle="tooltip" title="{% if policy.state == 'v' %}{% trans 'You are voting for this Initiative' %}{% else %}{% trans 'You voted for this Initiative' %}{% endif %}">thumb_up</i>
+								</div>
+								{% elif my_vote.against %}
+								<div class="participation-indicator">
+									<i class="material-icons thumb-down" data-toggle="tooltip" title="{% if policy.state == 'v' %}{% trans 'You are voting against this Initiative' %}{% else %}{% trans 'You voted against this Initiative' %}{% endif %}">thumb_down</i>
+								</div>
+								{% elif my_vote.abstained %}
+								<div class="participation-indicator">
+									<i class="material-icons abstain" data-toggle="tooltip" title="{% if policy.state == 'v' %}{% trans 'You abstain from this Initiative' %}{% else %}{% trans 'You abstained from this Initiative' %}{% endif %}">panorama_fish_eye</i>
+								</div>
+								{% endif %}
+							{% else %}
+							<div class="participation-indicator">
+								<i class="material-icons thumbs-up-down fg-inactive" data-toggle="tooltip" title="{% if policy.state == 'v' %}{% trans 'You have not yet' %} {% else %}{% trans 'You have not' %} {% endif %}{% trans 'voted for this Initiative' %}">thumbs_up_down</i>
+							</div>
+							{% endif %}
+							{% endif %}
+						</div>
+						{% endif %}
+						{% endcomment %}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="card-block">
+    	<h4 class="card-title init-title">
+    		<a href="{% url 'policy_item' policy_id=policy.id %}">
+				{{policy.title}}
+			</a>
+		</h4>
+    	<p class="card-text">
+    		{{policy.subtitle}}
+    	</p>
+  	</div>
+  	<div class="card-footer">
+  		<div class="container-fluid">
+			 <div class="row no-gutters">
+                <div class="col text-muted align-self-center">
+                    {% trans "Published on" %} {{policy.created_at}}
+                </div>
+                {% comment %}
+			 	{% if policy.state != 'i' and policy.state != 'p' %}
+			 	<div class="col text-muted align-self-center">
+			 		{% trans "Published on" %} {{policy.went_public_at}}
+			 	</div>
+			 	{% else %}
+			 	<div class="col text-muted align-self-center">
+			 		{% trans "Not published yet" %}
+			 	</div>
+			 	{% endif %}
+	            {% endcomment %}
+
+			 	<div class="col text-right avatar align-self-center">
+			 		{% for ini in policy.initiators %}
+			          {% include "fragments/avatar.html" with size=40 user=ini.user %}
+			        {% endfor %}
+			 	</div>
+			</div>
+		</div>
+  	</div>
+</div>
