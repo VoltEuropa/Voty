@@ -493,6 +493,7 @@ def index(request):
     policies = request.guard.make_policy_query()
     count_inbox = len(policies)
     filters = PolicyFilter(request.GET, queryset=policies)
+    has_filters = 'q' in request.GET
 
     return render(
         request,
