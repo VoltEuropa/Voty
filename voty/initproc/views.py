@@ -1834,7 +1834,7 @@ def policy_vote(request, policy, *args, **kwargs):
         context=fake_context
       )
     }
-
+  }
 
 # ------------------------------ Policy Vote Reset ---------------------------
 @_non_ajax_redir('/')
