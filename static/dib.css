@@ -577,9 +577,6 @@ img.avatar {
   padding-right: 1rem;
 }
 
-strong {
-  font-weight: 500;
-}
 
 .text-muted.full {
   display: block;
@@ -792,34 +789,12 @@ header .alert {
   border-color: #01549B;
 }
 
-.bg-vote, .bg-vote:hover, .bg-vote:focus, .bg-vote:visited {
-  color: rgba(255, 255, 255, 1);
-  background-color: #AB4778;
-  border-color: #AB4778;
-}
-
-.bg-vote:hover {
-  background-color: #AE2568;
-}
-
 .fg-vote, .fg-vote:focus, .fg-vote:visited {
   color: #AB4778;
 }
 
 .fg-vote:hover {
   color: #AE2568;
-}
-
-.bg-voted, .bg-voted:hover, .bg-voted:focus, .bg-voted:visited {
-  color: rgba(255, 255, 255, 1);
-  background-color: rgba(100, 100, 100, 1);
-  border-color: rgba(100, 100, 100, 1);
-}
-
-.bg-abstain, .bg-abstain:hover, .bg-abstain:focus, .bg-abstain:visited {
-  color: rgba(255, 255, 255, 1);
-  background-color: rgba(100, 100, 100, 1);
-  border-color: rgba(100, 100, 100, 1);
 }
 
 .fg-abstain, .fg-abstain:hover, .fg-abstain:focus, .fg-abstain:visited {
@@ -1170,28 +1145,6 @@ label.deactivated {
 #voting .abstained {
   color: rgba(55, 58, 60, 1);
   font-size: inherit;
-}
-
-.your-vote strong {
- display: block;
- width: 4rem;
- padding-top: .5rem;
- padding-bottom: 1rem;
-}
-
-.your-vote .in-favor .material-icons, .your-vote .declined .material-icons {
-  font-size: 4rem;
-  line-height: 4rem;
-}
-
-.your-vote .abstained .material-icons {
-  font-size: 4rem;
-  line-height: 4rem;
-  width: 6rem;
-}
-
-.your-vote .abstained strong {
-  width: 6rem;
 }
 
 #voting .feedback {
@@ -1922,7 +1875,6 @@ a.btn span, a.btn i {
 .voty-argument .voty-argument-type-icon {
   font-size: 3rem;
   margin: 1rem auto;
-  color: rgba(37, 60, 135, 1);
 }
 .voty-argument {
   margin: 2em 0;
@@ -2076,7 +2028,48 @@ a.btn span, a.btn i {
   padding-top: .5em;
 }
 .voty-argument-thumb {
+  text-align: center;
+}
+.voty-argument .voty-argument-type-icon {
+  margin-left: -.5em;
+}
+.voty-argument-thumb {
   color: #014c8c;
+}
+/* ----------------------------- vote -------------------------------------- */
+.voty-your-vote {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 3em;
+  margin-top: 1.5em;
+}
+.voty-vote-feedback {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 3em;
+  margin-top: 1.5em;
+}
+.voty-vote-withdraw {
+  display: inline-block;
+  vertical-align: middle;
+}
+.voty-your-vote strong {
+ display: block;
+ width: 4rem;
+ padding-top: .5rem;
+ padding-bottom: 1rem;
+}
+.voty-your-vote .in-favor .material-icons, .vote-your-vote .declined .material-icons {
+  font-size: 4rem;
+  line-height: 4rem;
+}
+.voty-your-vote .abstained .material-icons {
+  font-size: 4rem;
+  line-height: 4rem;
+  width: 6rem;
+}
+.voty-your-vote .abstained strong {
+  width: 6rem;
 }
 .voty-vote-label:hover {
   cursor: pointer;
@@ -2085,6 +2078,30 @@ a.btn span, a.btn i {
   opacity: .5;
   pointer-events: none;
   cursor: default;
+}
+.voty-badge {
+  margin-left: 1em;
+}
+.voty-voted-box .col-auto {
+  display: inline-block;
+  vertical-align: top;
+}
+.voty-voted-box {
+  margin: 0 auto 1em;
+}
+.voty-voted-icon {
+  float: left;
+}
+.voty-voted-icon .material-icons {
+  width: 1em;
+  font-size: 3em;
+  line-height: 1em
+}
+#cta.voted .voty-voted-text {
+  font-size: 2em;
+  vertical-align: middle;
+  line-height: 1.5em;
+  margin: 0 .5em 0;
 }
 
 
@@ -2116,6 +2133,33 @@ a.btn span, a.btn i {
 .btn-primary:focus,
 .btn-primary:active {
   background-color: #612095;
+}
+.bg-vote, .bg-vote:hover, .bg-vote:focus, .bg-vote:visited {
+  color: #ffffff;
+  background-color: #612095;
+  border-color: #612095;
+}
+.bg-vote:hover {
+  background-color: #612095;
+}
+.voty-argument .voty-argument-type-icon, 
+.voty-argument-thumb {
+  color: #612095;
+}
+.voty-argument-new .btn {
+  color: #612095;
+}
+
+.bg-voted, .bg-voted:hover, .bg-voted:focus, .bg-voted:visited {
+  color: rgba(255, 255, 255, 1);
+  background-color: rgba(100, 100, 100, 1);
+  border-color: rgba(100, 100, 100, 1);
+}
+
+.bg-abstain, .bg-abstain:hover, .bg-abstain:focus, .bg-abstain:visited {
+  color: rgba(255, 255, 255, 1);
+  background-color: rgba(100, 100, 100, 1);
+  border-color: rgba(100, 100, 100, 1);
 }
 
 

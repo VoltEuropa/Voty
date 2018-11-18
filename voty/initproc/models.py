@@ -314,7 +314,10 @@ class Policy(PolicyBase):
       return (self.required_initiators and self.required_fields and self.required_evaluations)
 
     # seeking support requires supporters and time
-    if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
+    if self.state in [
+      settings.PLATFORM_POLICY_STATE_DICT.VALIDATED,
+      settings.PLATFORM_POLICY_STATE_DICT.VOTED
+    ]:
       return datetime.now() > self.end_of_this_phase()
       
     # discussion requires time
@@ -330,7 +333,7 @@ class Policy(PolicyBase):
     # nothing to do
     if self.state in [
       settings.PLATFORM_POLICY_STATE_DICT.DRAFT,
-      #settings.PLATFORM_POLICY_STATE_DICT.IN_VOTE,
+      settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED,
     ]:
       return True
 
@@ -363,6 +366,9 @@ class Policy(PolicyBase):
     if self.state == settings.PLATFORM_POLICY_STATE_DICT.VALIDATED:
       return self.supporting_policy.filter().count() >= self.quorum
 
+    if self.state == settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED:
+      return self.is_accepted()
+
     return False
 
   @cached_property
@@ -381,7 +387,7 @@ class Policy(PolicyBase):
   @property
   def show_vote(self):
     return self.state in [
-      settings.PLATFORM_POLICY_STATE_DICT.VOTED,
+      settings.PLATFORM_POLICY_STATE_DICT.VOTED
     ]
 
   @property
@@ -390,22 +396,23 @@ class Policy(PolicyBase):
       settings.PLATFORM_POLICY_STATE_DICT.STAGED,
       settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED,
       settings.PLATFORM_POLICY_STATE_DICT.REVIEWED,
-      #settings.PLATFORM_POLICY_STATE_DICT.ACCEPTED,
-      #settings.PLATFORM_POLICY_STATE_DICT.REJECTED,
-      #settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED
+      settings.PLATFORM_POLICY_STATE_DICT.VOTED,
+      settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED,
+      settings.PLATFORM_POLICY_STATE_DICT.PUBLISHED,
+      settings.PLATFORM_POLICY_STATE_DICT.CLOSED,
     ]
 
   @cached_property
   def yays(self):
-    return self.votes.filter(value=settings.VOTED.YES).count()
+    return self.policy_votes.filter(value=settings.VOTED.YES).count()
 
   @cached_property
   def nays(self):
-    return self.votes.filter(value=settings.VOTED.NO).count()
+    return self.policy_votes.filter(value=settings.VOTED.NO).count()
 
   @cached_property
   def abstains(self):
-    return self.votes.filter(value=settings.VOTED.ABSTAIN).count()
+    return self.policy_votes.filter(value=settings.VOTED.ABSTAIN).count()
 
   def is_accepted(self):
     if self.yays <= self.nays:
@@ -871,15 +878,16 @@ class Vote(models.Model):
   initiative = models.ForeignKey(Initiative, related_name="initiative_votes", null=True)
   policy = models.ForeignKey(Policy, related_name="policy_votes", null=True)
 
-  @cached_property
+  # caching this make inconsistent layouts when voting and retracting
+  @property
   def in_favor(self):
     return self.value == settings.VOTED.YES
 
-  @cached_property
+  @property
   def against(self):
     return self.value == settings.VOTED.NO
 
-  @cached_property
+  @property
   def abstained(self):
     return self.value == settings.VOTED.ABSTAIN
 

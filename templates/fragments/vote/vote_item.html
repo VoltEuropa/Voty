@@ -1,16 +1,16 @@
 {% load i18n %}
-<div class="col-12" id="voting">
-  {% if has_voted %}
-    <h3>{% trans "You have voted for this Policy" %}</h3>
-    <form data-ajax-submit="true" action="{% url 'policy_vote_reset' policy_id=policy.id slug=policy.slug %}" method="POST">
-      {% include "fragments/vote/vote_participation.html" with closed=0 %}
-      {% csrf_token %}
-      <button title="{% trans 'Withdraw Vote' %}" class="btn btn-warning" type="submit">
-        {% trans "Withdraw Vote" %}
-      </button>
-    </form>
+<div id="voting">
+  {% include "fragments/vote/vote_participation.html" %}
+  {% if vote %}
+    <div class="voty-vote-withdraw">
+      <form data-ajax-submit="true" action="{% url 'policy_vote_reset' policy_id=policy.id slug=policy.slug %}" method="POST">
+        {% csrf_token %}
+        <button title="{% trans 'Withdraw Vote' %}" class="btn btn-warning" type="submit">
+          {% trans "Withdraw Vote" %}
+        </button>
+      </form>
+    </div>
   {% else %}
-    <h3>{% trans "Vote for this Policy?" %}</h3>
     <form id="initial_vote" class="row" data-ajax-submit="true" action="{% url 'policy_vote' policy_id=policy.id slug=policy.slug %}" method="POST">
       {% csrf_token %}
       {% if policy.allows_abstention %}

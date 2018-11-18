@@ -123,6 +123,23 @@
               </div>
             {% endif %}
           {% endwith %}
+        {% elif request.guard.policy_conclude %}
+          <div class="row">
+            <div class="col-12">
+              <h2>Undemocratic Zone</h2>
+              <div class="voty-undemocratic-override-wrapper">
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_conclude' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Close Vote prematurely' %}" class="btn btn-danger" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Close Vote prematurely" %}</span>
+                    </button>
+                  </form>
+                </div>  
+              </div>
+            </div>
+          </div>
         {% endif %}
       {% endif %}
 
@@ -417,6 +434,46 @@
             {% endif %}
           {% endif %}
 
+          {% if request.guard.policy_conclude %}
+            {% if policy.ready_for_next_stage %}
+              <div class="align-right">
+                <form class="action-form" action="{% url 'policy_conclude' policy_id=policy.id %}" style="display:inline" method="POST">
+                  {% csrf_token %}
+                  <button title="{% trans 'Conclude Vote' %}" class="btn btn-success" type="submit">
+                    <i class="material-icons forward">forward</i>
+                    <span>{% trans "Conclude Vote" %}</span>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if request.guard.policy_publish %}
+            {% if policy.ready_for_next_stage %}
+              {% if policy.ready_to_proceed %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_publish' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Publish Policy' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Publish Policy" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% else %}
+                <div class="align-right">
+                  <form class="action-form" action="{% url 'policy_close' policy_id=policy.id %}" style="display:inline" method="POST">
+                    {% csrf_token %}
+                    <button title="{% trans 'Close Policy' %}" class="btn btn-success" type="submit">
+                      <i class="material-icons forward">forward</i>
+                      <span>{% trans "Close Policy" %}</span>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+          
         </div>
       </div>
     </div>
@@ -425,7 +482,7 @@
 
 {% block content %}
 
-  <!--- ### START SUPPORT ### -->
+  <!--- ### SUPPORT ### -->
 
   <div class="container-fluid initiators container-fluid-{{ policy.state }}">
     <div class="container">
@@ -537,6 +594,97 @@
     </div>
   </div>
 
+  <!--- ### VOTE RESULT ### -->
+  {% with "PLATFORM_POLICY_STALE_VOTE_LIST"|get_setting as stale_vote_list %}
+    {% if policy.state in stale_vote_list %}
+    <div id="cta" class="container-fluid cta voted">
+      <div class="container">
+        <div class="row">
+          <div class="col-12">
+            <h6 class="text-muted classification">{% trans "Vote Result" %}</h6>
+          </div>
+        </div>
+        {% if policy.policy_votes.count > 0 %}
+          {% if policy.allows_abstention %}
+            <div class="row">
+              <div class="col-12">
+                <p>{% trans "This Policy" %}{% if policy.yays > policy.nays %}<strong class="voty-badge badge-accepted">{% trans "was accepted" %}</strong>{% else %}<strong class="voty-badge badge-rejected">{% trans "was rejected" %}</strong>{% endif %}.</p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="voty-voted-box">
+                <div class="col-auto voty-voted-yes" data-animation="false" data-toggle="tooltip" title="{{policy.yays}} {% if policy.yays != 1 %}{% trans 'Yes-Votes' %}{% else %}{% trans 'Yes-Vote' %}{% endif %}">
+                  <span class="voty-voted-icon in-favor"><i class="material-icons">thumb_up</i></span>
+                  <span class="voty-voted-text in-favor">{{policy.yays}}</span>
+                </div>
+                <div class="col-auto voty-voted-abstain" data-animation="false" data-toggle="tooltip" title="{{policy.abstains}} {% if policy.abstains != 1 %}{% trans 'Abstentions' %}{% else %}{% trans 'Abstention' %}{% endif %}">
+                  <span class="voty-voted-icon abstained"><i class="material-icons">panorama_fish_eye</i></span>
+                  <span class="voty-voted-text abstained">{{policy.abstains}}</span>
+                </div>
+                <div class="col-auto voty-voted-no" data-animation="false" data-toggle="tooltip" title="{{policy.nays}} {% if policy.nays != 1 %}{% trans 'No-Votes' %}{% else %}{% trans 'No-Vote' %}{% endif %}">
+                  <span class="voty-voted-icon declined"><i class="material-icons">thumb_down</i></span>
+                  <span class="voty-voted-text declined">{{policy.nays}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12">
+                <div class="progress">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: {{ policy.yays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}%" aria-valuenow="{{ policy.yays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  <div class="progress-bar bg-abstain" role="progressbar" style="width: {{ policy.abstains|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}%" aria-valuenow="{{ policy.abstains|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: {{ policy.nays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}%" aria-valuenow="{{ policy.nays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+            </div>
+
+          {% else %}
+            <div class="row">
+              <div class="col-12" style="padding-top: 1rem">
+                <p>{% trans "This Policy" %} {% if policy.yays > policy.nays %}<strong class="voty-badge badge-accepted">{% trans "was accepted" %}</strong>{% else %}<strong class="voty-badge badge-rejected">{% trans "was rejected" %}</strong>{% endif %}.</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="voty-voted-box">
+                <div class="col-auto voty-voted-yes" data-animation="false" data-toggle="tooltip" title="{{policy.yays}} {% if policy.yays != 1 %}{% trans 'Yes-Votes' %}{% else %}{% trans 'Yes-Vote' %}{% endif %}">
+                  <span class="voty-voted-icon in-favor"><i class="material-icons">thumb_up</i></span>
+                  <span class="voty-voted-text in-favor">{{policy.yays}}</span>
+                </div>
+                <div class="col-auto" data-animation="false" data-toggle="tooltip" title="{{policy.nays}} {% if policy.nays != 1 %}{% trans 'No-Votes' %}{% else %}{% trans 'No-Vote' %}{% endif %}">
+                  <span class="voty-voted-icon declined"><i class="material-icons">thumb_down</i></span>
+                  <span class="voty-voted-text declined">{{policy.nays}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row" style="padding-top: 1.25rem; padding-bottom: 1.75rem">
+              <div class="col-12">
+                <div class="progress">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: {{ policy.yays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}%" aria-valuenow="{{ policy.yays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: {{ policy.nays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}%" aria-valuenow="{{ policy.nays|div:policy.policy_votes.count|mul:100|stringformat:".5s" }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="row" style="padding-top: 1rem">
+            <div class="col-12">
+              <span>{% trans "Nobody casted their vote for this Policy. This means the Initiative is " %}<strong class="badge-rejected">{% trans "rejected and closed" %}</strong>.</span>
+            </div>
+          </div>
+        {% endif %}
+        <div class="row" style="padding-top: 1rem">
+          <div class="col-12">
+            {% include "fragments/vote/vote_participation.html" with closed=1 %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endwith %}
+
   {% with "PLATFORM_POLICY_STATE_DICT.VALIDATED"|get_setting as validated %}
     {% if policy.state == validated %}
     <div id="cta" class="container-fluid cta">
@@ -615,15 +763,17 @@
     </div>
   </div>
 
-
   {% if policy.show_vote %}
-  <div id="vote" class="container-fluid cta">
-    <div class="container">
-        <div class="row no-gutters">
-          {% include "fragments/vote/vote_item.html" %}
+    <div id="vote" class="container-fluid cta">
+      <div class="container">
+          <div class="row no-gutters">
+            <div class="col-12">
+              <h2>{% trans "Vote" %}</h2>
+              {% include "fragments/vote/vote_item.html" %}
+            </div>
+          </div>
         </div>
-      </div>
-  </div>
+    </div>
   {% endif %}
 
   {% if policy.show_debate %}
