@@ -490,60 +490,6 @@ def policy_feedback(request, policy, *args, **kwargs):
 
 # ------------------------------ Landing Page ----------------------------------
 def index(request):
-    # filters = [f for f in request.GET.getlist("f")]
-    # if filters:
-    #   request.session['init_filters'] = filters
-    # else:
-    #   filters = request.session.get('init_filters', DEFAULT_FILTERS)
-
-    # bereiche = [f for f in request.GET.getlist('b')]
-    # if bereiche:
-    #   inits = inits.filter(bereich__in=bereiche)
-
-    # ids = [i for i in request.GET.getlist('id')]
-
-    # if ids:
-    #  inits = inits.filter(id__in=ids)
-
-    # elif request.GET.get('s', None):
-    #  searchstr = request.GET.get('s')
-
-    #  if len(searchstr) >= settings.MIN_SEARCH_LENGTH:
-    #    if connection.vendor == 'postgresql':
-    #      inits = inits.annotate(search=SearchVector('title', 'subtitle','summary',
-    #              'problem', 'forderung', 'kosten', 'fin_vorschlag', 'arbeitsweise', 'init_argument')
-    #          ).filter(search=searchstr)
-    #    else:
-    #      inits = inits.filter(Q(title__icontains=searchstr) | Q(subtitle__icontains=searchstr))
-
-    # inits = sorted(inits, key=lambda x: x.sort_index or timedelta(days=1000))
-
-    # now we filter for urgency
-    # if request.is_ajax():
-    #   return render_to_json({
-    #     'fragments': {
-    #       "#init-card-{}".format(pol.id): render_to_string(
-    #        "fragments/policy/policy_card.html",
-    #        context=dict(policy=pol),
-    #        request=request
-    #      ) for pol in policies
-    #    },
-    #    # 'inner-fragments': {
-    #    #   '#init-list': render_to_string(
-    #    #     "fragments/initiative/list.html",
-    #    #      context=dict(initiatives=inits),
-    #    #      request=request
-    #    #     )
-    #    #  },
-    #     # FIXME: ugly work-a-round as long as we use django-ajax
-    #     #        for rendering - we have to pass it as a dict
-    #     #        or it chokes on rendering :(
-    #     'policy_list': json.loads(JSONRenderer().render(
-    #        SimplePolicySerializer(policies, many=True).data,
-    #      ))
-    #  }
-    # )
-
     policies = request.guard.make_policy_query()
     count_inbox = len(policies)
     filters = PolicyFilter(request.GET, queryset=policies)

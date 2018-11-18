@@ -10,6 +10,12 @@
 			 	<div class="col align-self-center">
 			 		<div class="d-flex flex-wrap">
 				 		<div class="flex-item">
+
+                            <span class="badge badge-prepare">
+								{{ policy.state }}
+							</span>
+
+                        {% comment %}
 							{% ifequal policy.state 'p' %}
 							<span class="badge badge-prepare">
 								{% trans "In Preparation" %}
@@ -89,7 +95,10 @@
 								{% trans "Rejected" %}
 							</span>
 							{% endifequal %}
+							{% endcomment %}
 						</div>
+
+                        {% comment %}
 						{% if policy.state != 'i' and policy.state != 'a' and policy.state != 'r' and policy.state != 'p' and policy.state != 'm' %}
 						<div class="flex-item mr-auto">
 							<span class="text-muted align-middle">
@@ -142,6 +151,7 @@
 							{% endif %}
 						</div>
 						{% endif %}
+						{% endcomment %}
 					</div>
 				</div>
 			</div>
@@ -149,7 +159,7 @@
 	</div>
 	<div class="card-block">
     	<h4 class="card-title init-title">
-    		<a href="#">
+    		<a href="{% url 'policy_item' policy_id=policy.id %}">
 				{{policy.title}}
 			</a>
 		</h4>
@@ -160,6 +170,10 @@
   	<div class="card-footer">
   		<div class="container-fluid">
 			 <div class="row no-gutters">
+                <div class="col text-muted align-self-center">
+                    {% trans "Published on" %} {{policy.created_at}}
+                </div>
+                {% comment %}
 			 	{% if policy.state != 'i' and policy.state != 'p' %}
 			 	<div class="col text-muted align-self-center">
 			 		{% trans "Published on" %} {{policy.went_public_at}}
@@ -169,6 +183,8 @@
 			 		{% trans "Not published yet" %}
 			 	</div>
 			 	{% endif %}
+	            {% endcomment %}
+
 			 	<div class="col text-right avatar align-self-center">
 			 		{% for ini in policy.initiators %}
 			          {% include "fragments/avatar.html" with size=40 user=ini.user %}
