@@ -30,12 +30,13 @@ from .globals import STATES, VOTED, INITIATORS_COUNT, SPEED_PHASE_END, ABSTENTIO
 from django.db import models
 import reversion
 import pytz
+import collections
 
 # =============================== HELPERS ======================================
 
 # ------------------------ Build Class field dict .-----------------------------
 def _create_class_field_dict(field_dict):
-  response = {}
+  response = collections.OrderedDict({})
 
   # XXX refactor...
   for field_key, field_value in field_dict.items():
@@ -98,6 +99,7 @@ def _create_model(name, fields=None, app_label="", module="", options=None, admi
   return model
 
 # ---------------------------- Policy Proxy Class ------------------------------
+print(_create_class_field_dict(settings.PLATFORM_POLICY_BASE_CONFIG))
 # this creates an proxy base class which Policy will then inherit from. this 
 # allows to define the fields a policy should have in the init.ini file instead
 # of hardcoding them here
