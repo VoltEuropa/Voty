@@ -38,7 +38,7 @@ def _create_class_field_dict(field_dict):
   response = {}
 
   # XXX refactor...
-  for field_key, field_value in field_dict.items():
+  for field_key, field_value in sorted(field_dict.items()):
     field_type, field_param_list = field_value.split("|")
     config_list = []
 

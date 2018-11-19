@@ -13,7 +13,9 @@ import dj_database_url
 from datetime import datetime
 from types import SimpleNamespace
 from six.moves import configparser
+from collections import OrderedDict
 from django.utils.translation import ugettext_lazy as _
+import collections
 
 # ================================= HELPERS ====================================
 def _getCharDict():
@@ -158,16 +160,16 @@ SITE_ID = 1
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 
 DATABASES = {
-  "default": dj_database_url.config(default="sqlite://./db.sqlite3")
+  #"default": dj_database_url.config(default="sqlite://./db.sqlite3")
   #"default": dj_database_url.config(default="sqlite:////usr/local/demo/voty/db.sqlite3")
-   # 'default': {
-   #    'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-   #    'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
-   #    'USER': '',                      # Not used with sqlite3.
-   #    'PASSWORD': '',                  # Not used with sqlite3.
-   #    'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-   #    'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-   #  }
+   'default': {
+      'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+      'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
+      'USER': '',                      # Not used with sqlite3.
+      'PASSWORD': '',                  # Not used with sqlite3.
+      'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+      'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
 }
 
 
@@ -315,7 +317,7 @@ USE_DIVERSE_MODERATION_TEAM = config.get("settings", "USER_USE_DIVERSE_MODERATIO
 USE_ARGUMENT_COMMENTS = config.get("settings", "USER_CAN_COMMENT_ARGUMENT")
 
 # --------------------------- Policy (ex Initiative) ---------------------------
-PLATFORM_POLICY_BASE_CONFIG = dict(config.items("platform_policy_base_config"))
+PLATFORM_POLICY_BASE_CONFIG = collections.OrderedDict(config.items("platform_policy_base_config"))
 PLATFORM_POLICY_PERMISSION_VALUE_LIST = config._sections["platform_policy_permission_value_list"]
 PLATFORM_POLICY_PERMISSION_LIST = [(code_tuple[1], _strip(PLATFORM_POLICY_PERMISSION_VALUE_LIST[code_tuple[0]])) for code_tuple in config.items("platform_policy_permission_list")]
 PLATFORM_POLICY_STATE_VALUE_LIST = config._sections["platform_policy_state_value_list"]
