@@ -24,6 +24,8 @@
   {% for m in moderations %}
     {% include "fragments/moderation/moderation_item.html" with full=0 %}
   {% empty %}
-    <i id="no-moderations">{% if request.guard.has_moderated %}{% trans "You have already reviewed this Policy." %}{% else %}{% trans "No (new) reviews so far." %}{% endif %}</i>
+    <i id="no-moderations">
+    {% if request.guard.has_moderated %}{% trans "You have already reviewed this Policy." %}{% elif request.guard.reason %}{{ request.guard.reason }}{% else %}{% trans "No (new) reviews so far." %}{% endif %}
+    </i>
   {% endfor %}
 {% endif %}

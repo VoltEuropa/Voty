@@ -2,66 +2,73 @@
 {% load get_setting %}
 <div class="container">
   <div class="row no-gutters">
+    <h2>{% trans "Discussion" %}</h2>
     {% with "PLATFORM_POLICY_STATE_DICT.DISCUSSED"|get_setting as discussed %}
-    <div class="col-12">
-      <ul class="nav nav-tabs nav-fill" role="tablist">
-        {% if policy.state == discussed %}
-          {% if has_solved %}
-            {% include 'fragments/discussion/discussion_tab_header.html' with active=False me='debate' list=policy_arguments %}
-            {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='proposals' list=policy_proposals_active %}
-          {% else %}
-            {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='debate' list=policy_arguments %}
-            {% include 'fragments/discussion/discussion_tab_header.html' with active=False me='proposals' list=policy_proposals_active %}          
+      {% with "PLATFORM_POLICY_STALE_DISCUSSION_LIST"|get_setting as stale_discussion_list %}
+        <div class="col-12">
+          <ul class="nav nav-tabs nav-fill" role="tablist">
+            {% if policy.state == discussed %}
+              {% if has_solved %}
+                {% include 'fragments/discussion/discussion_tab_header.html' with active=False me='debate' list=policy_arguments %}
+                {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='proposals' list=policy_proposals_active %}
+              {% else %}
+                {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='debate' list=policy_arguments %}
+                {% include 'fragments/discussion/discussion_tab_header.html' with active=False me='proposals' list=policy_proposals_active %}          
+              {% endif %}
+            {% elif policy.state in stale_discussion_list %}
+              {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='debate' list=policy_arguments %}
+            {% else %}
+              {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='proposals' list=policy_proposals_active %}
+            {% endif %}
+          </ul>
+        </div>
+        <div class="col-12 tab-content">
+      
+          {% if policy.state == discussed or policy.state in stale_discussion_list %}
+            <div class="voty-debate tab-pane {% if not has_solved %}active{% endif %}" id="debate" role="tabpanel">
+              <div id="argument-list">
+                {% include 'fragments/discussion/discussion_argument_list.html' %}
+              </div>
+              {% if policy.state == discussed %}
+                {% if has_voiced_his_opinion %}
+                  <span class="voty-discussion-no-debate">{% trans "You have already added your opinion to the debate. Thank you." %}</span>
+                {% else %}
+                  <div id="argument-thanks" class="container-fluid push-alert fixed-top"></div>
+                  <div id="argument-new" class="container-fluid voty-argument-new">
+                    {% include "fragments/discussion/policy_thumbs.html" %}
+                  </div>
+                {% endif %}
+              {% endif %}
+            </div>
           {% endif %}
-        {% else %}
-          {% include 'fragments/discussion/discussion_tab_header.html' with active=True me='proposals' list=policy_proposals_active %}
-        {% endif %}
-      </ul>
-    </div>
-    <div class="col-12 tab-content">
-  
-      {% if policy.state == discussed %}
-        <div class="voty-debate tab-pane {% if not has_solved %}active{% endif %}" id="debate" role="tabpanel">
-          <div id="argument-list">
-            {% include 'fragments/discussion/discussion_argument_list.html' %}
-          </div>
-          {% if has_voiced_his_opinion %}
-            <span class="voty-discussion-no-debate">{% trans "You have already added your opinion to the debate. Thank you." %}</span>
-          {% else %}
-            <div id="argument-thanks" class="container-fluid push-alert fixed-top"></div>
-            <div id="argument-new" class="container-fluid">
-              {% include "fragments/discussion/policy_thumbs.html" %}
+          {% if not policy.state in stale_discussion_list %}
+            <div class="voty-issues tab-pane {% if policy.state == discussed %}{% if has_solved %}active{% endif %}{% else %}active{% endif %}" id="proposals" role="tabpanel">
+              <div id="proposal-list">
+                {% include 'fragments/discussion/discussion_proposal_list.html' %}
+              </div>
+              <div id="proposal-thanks" class="container-fluid push-alert fixed-top"></div>
+              {% if request.guard.policy_proposal_new %}
+                <div id="proposal-new" class="voty-new-proposal-wrapper">
+                  <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23proposal-new" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
+                </div>
+              {% endif %}
+              
+              {% if policy_proposals_stale|length > 0 %}
+                <br />
+                <h6 class="text-muted classification voty-muted-title-stale">
+                  {% trans "Closed Issues" %}
+                </h6>
+                <div class="voty-muted-header-fake-postfix" id="proposals-old">
+                  <a href="{% url 'policy_stale_proposals' policy_id=policy.id slug=policy.slug %}?fragment=%23proposals-old&amp;toggle=True" data-ajax="true" class="voty-muted-title-postfix">
+                   ({% trans "Browse list of closed issues" %}
+                    <span class="voty-muted-title-postix-badge"><span class="material-icons">remove_red_eye</span> {{ policy_proposals_stale|length }}</span>)
+                  </a>
+                </div>
+              {% endif %}
             </div>
           {% endif %}
         </div>
-      {% endif %}
-  
-      <div class="voty-issues tab-pane {% if policy.state == discussed %}{% if has_solved %}active{% endif %}{% else %}active{% endif %}" id="proposals" role="tabpanel">
-        <div id="proposal-list">
-          {% include 'fragments/discussion/discussion_proposal_list.html' %}
-        </div>
-        <div id="proposal-thanks" class="container-fluid push-alert fixed-top"></div>
-        {% if request.guard.policy_proposal_new %}
-          <div id="proposal-new" class="voty-new-proposal-wrapper">
-            <a data-ajax="true" href="{% url 'policy_proposal_new' policy_id=policy.id %}?fragment=%23proposal-new" class="btn btn-outline-primary">{% trans "Post a new Issue" %}</a>
-          </div>
-        {% endif %}
-        
-        {% if policy_proposals_stale|length > 0 %}
-          <br />
-          <h6 class="text-muted classification voty-muted-title-stale">
-            {% trans "Closed Issues" %}
-          </h6>
-          <div class="voty-muted-header-fake-postfix" id="proposals-old">
-            <a href="{% url 'policy_stale_proposals' policy_id=policy.id slug=policy.slug %}?fragment=%23proposals-old&amp;toggle=True" data-ajax="true" class="voty-muted-title-postfix">
-             ({% trans "Browse list of closed issues" %}
-              <span class="voty-muted-title-postix-badge"><span class="material-icons">remove_red_eye</span> {{ policy_proposals_stale|length }}</span>)
-            </a>
-          </div>
-        {% endif %}
-      </div>
-    </div>
+      {% endwith %}
     {% endwith %}
   </div>
 </div>
-

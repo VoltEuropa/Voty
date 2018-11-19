@@ -7,19 +7,24 @@
 <div class="progress participation">
   <div class="progress-bar bg-vote{%if closed %}d{% endif %}" role="progressbar" style="width: {% widthratio policy.policy_votes.count user_count 100 %}%;" aria-valuenow="{{ policy.policy_votes.count}}" aria-valuemin="0" aria-valuemax="{{user_count}}"></div>
 </div>
-{% if vote %}
-  <p>{% trans "You voted with:" %}</p>
-  <div class="your-vote">
-  {% if vote.in_favor %}
-    <span class="in-favor text-center"><i class="material-icons">thumb_up</i> <br /><strong>{% trans "In Favor" %}</strong></span>
-  {% elif vote.against %}
-    <span class="declined text-center"><i class="material-icons">thumb_down</i> <br /><strong>{% trans "Against" %}</strong></span>
+{% if user.is_authenticated %}
+  {% if has_voted %}
+    <div class="voty-vote-feedback">
+      <p>{% trans "You voted with:" %}</p>
+    </div>
+    <div class="voty-your-vote">
+      {# XXX on straight loads, vote-value is correct but the (cached) properties return wrong values #}
+      {% if vote.in_favor or vote.value == 1 %}
+        <span class="in-favor text-center"><i class="material-icons">thumb_up</i> <br /><strong>{% trans "In Favor" %}</strong></span>
+      {% elif vote.against or vote.value == 0 %}
+        <span class="declined text-center"><i class="material-icons">thumb_down</i> <br /><strong>{% trans "Against" %}</strong></span>
+      {% elif vote.abstained or vote.value == 2%}
+        <span class="abstained text-center"><i class="material-icons">panorama_fish_eye</i> <br /><strong>{% trans "Abstained" %}</strong></span>
+      {% endif %}
+    </div>
   {% else %}
-    <span class="abstained text-center"><i class="material-icons">panorama_fish_eye</i> <br /><strong>{% trans "Abstained" %}</strong></span>
-  {% endif %}
-  </div>
-{% else %}
-  {% if user.is_authenticated %}
+  <div class="voty-vote-feedback">
     <p>{% trans "You have not participated in this vote." %}</p>
+  </div>
   {% endif %}
 {% endif %}

@@ -171,6 +171,17 @@ class Guard:
 
     return True
 
+  # ----------------------------- vote on policy -------------------------------
+  def policy_vote(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    #if policy.policy_votes.filter(user=user.id).count():
+    #  return False
+    return True
+
   # ----------------- invite co-initiators/supporters to policy ----------------
   def policy_invite(self, policy=None):
     policy = policy or self.request.policy
@@ -368,6 +379,19 @@ class Guard:
     if policy.state == settings.PLATFORM_POLICY_STATE_DICT.DISCUSSED:
       return True
     return False
+
+  # -------------------------- publish policy ----------------------------------
+  def policy_publish(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.CONCLUDED:
+      return False
+    if not user.has_perm("initproc.policy_can_publish"):
+      return False
+    return True
   
   # ---------------------- validate/reject policy ------------------------------
   # checks if user technically CAN validate
@@ -541,7 +565,7 @@ class Guard:
     user = self.user
 
     if policy.state in settings.PLATFORM_POLICY_MODERATION_STATE_LIST:
-      if user.has_perm("initproc.policy_can_reject") or user.is_superuser:
+      if user.has_perm("initproc.policy_can_reject"):
         if policy.supporting_policy.filter(user=user, initiator=True):
           self.reason = _("Moderation not possible: Initiators can not moderate own Policy")
           return False
@@ -594,6 +618,19 @@ class Guard:
 
     return True
 
+  # ------------------------- finish policy (vote) -----------------------------
+  def policy_conclude(self, policy=None):
+    policy = policy or self.request.policy
+    user = self.user
+
+    if not user.is_authenticated:
+      return False
+    if not policy.state == settings.PLATFORM_POLICY_STATE_DICT.VOTED:
+      return False
+    if not user.has_perm("initproc.policy_can_override"):
+      return False
+    return True
+
   # ------------------------ release policy for vote --------------------------
   def policy_release(self, policy=None):
     policy = policy or self.request.policy
@@ -636,4 +673,7 @@ def add_guard(get_response):
     return response
 
   return middleware
+
+
+
 
