@@ -99,8 +99,7 @@ def _create_model(name, fields=None, app_label="", module="", options=None, admi
   return model
 
 # ---------------------------- Policy Proxy Class ------------------------------
-print(_create_class_field_dict(settings.PLATFORM_POLICY_BASE_CONFIG))
-# this creates an proxy base class which Policy will then inherit from. this 
+# this creates an proxy base class which Policy will then inherit from. this
 # allows to define the fields a policy should have in the init.ini file instead
 # of hardcoding them here
 PolicyBase = _create_model(
