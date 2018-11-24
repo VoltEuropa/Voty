@@ -76,6 +76,7 @@ INSTALLED_APPS = [
   "django_ajax",
   "reversion",
   "corsheaders",
+  "tagulous",
 
   # must be before admin ...
   "dal",
@@ -228,6 +229,13 @@ else:
   EMAIL_HOST_PASSWORD = os.environ.get("SMTP_PASSWORD", "password")
   EMAIL_PORT = int(os.environ.get("SMTP_PORT", 587))
 
+# Tagulous configuration
+SERIALIZATION_MODULES = {
+    'xml':    'tagulous.serializers.xml_serializer',
+    'json':   'tagulous.serializers.json',
+    'python': 'tagulous.serializers.python',
+    'yaml':   'tagulous.serializers.pyyaml',
+}
 
 from django.contrib import messages
 

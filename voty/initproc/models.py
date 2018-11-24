@@ -17,7 +17,7 @@ from django.conf import settings
 from django.utils import six
 from reversion.models import Version
 from functools import reduce
-
+import tagulous.models
 
 # initiative
 from pinax.notifications.models import send as init_notify
@@ -30,6 +30,7 @@ from .globals import STATES, VOTED, INITIATORS_COUNT, SPEED_PHASE_END, ABSTENTIO
 from django.db import models
 import reversion
 import pytz
+import ast
 import collections
 
 # =============================== HELPERS ======================================
@@ -53,8 +54,13 @@ def _create_class_field_dict(field_dict):
           value_value = True
         else:
           value_value = False
-      
+      elif value_type == "array":
+        value_value = ast.literal_eval(value_value)
+      elif value_type == 'string':
+        value_value = value_value #useless operation, but makes it explicit
+
       config_list.append([key, value_value])
+
     response[field_key] = getattr(models, field_type)(**dict(config_list))
 
   return response
@@ -170,6 +176,12 @@ class Commentable(models.Model):
   comments = GenericRelation(Comment, content_type_field='target_type', object_id_field='target_id')
 
 # -------------------------------- Policy --------------------------------------
+class Tag(tagulous.models.TagTreeModel):
+    class TagMeta:
+        space_delimiter = False
+        autocomplete_view = 'policy_tags_autocomplete'
+
+# -------------------------------- Policy --------------------------------------
 @reversion.register()
 class Policy(PolicyBase):
 
@@ -182,6 +194,8 @@ class Policy(PolicyBase):
     choices=settings.PLATFORM_POLICY_STATE_LIST,
     default=settings.PLATFORM_POLICY_STATE_DEFAULT
   )
+
+  tags = tagulous.models.TagField(Tag)
 
   variant_of = models.ForeignKey('self', blank=True, null=True, default=None, related_name="variants")
   supporters = models.ManyToManyField(User, through="Supporter")

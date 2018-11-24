@@ -12,9 +12,12 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from .models import Tag
 
 from dal import autocomplete
 from uuid import uuid4
+import tagulous.forms
+import tagulous.models
 
 from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative, Policy
 
@@ -64,6 +67,11 @@ class PolicyForm(forms.ModelForm):
   )
   topic = forms.ChoiceField(
     choices = sorted(settings.CATEGORIES.TOPIC_CHOICES, key=lambda x: x[1]),
+  )
+  tags = tagulous.forms.TagField(
+    tag_options=Policy.tags.tag_options + tagulous.models.TagOptions(
+      autocomplete_view='policy_tags_autocomplete'
+    ),
   )
 
 # --------------------------- InviteUsersForm ----------------------------------

@@ -9,12 +9,22 @@ from django.conf.urls import url
 from django.views import generic
 from django.utils.translation import ugettext as _
 from . import views
+from voty.initproc.models import Tag
+import tagulous.views
 
 urlpatterns = [
   url(r'^(?P<filename>(robots.txt)|(humans.txt))$', views.crawler, name='crawler'),
 
   # home/i18n
   url(r"^$", views.index, name="home"),
+
+  #autocomplete for tags on policy
+  url(
+    r'^api/tags/autocomplete$',
+    tagulous.views.autocomplete,
+    {'tag_model': Tag},
+    name='policy_tags_autocomplete',
+  ),
 
   # about (ueber) is not static
   url(r"^about/$", views.about, name="about"),
