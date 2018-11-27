@@ -7,13 +7,6 @@
       <h2>{{ policy_labels|get_attr:field_title }}</h2>
       {{ policy|get_attr:field_title|markdown }}
     {% endfor %}
-
-    <h2>Tags</h2>
-      {% if policy.tags %}
-        {{ policy.tags }}
-    {% else %}
-        No tags added yet.
-    {% endif %}
   </div>
 </div>
 

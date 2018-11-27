@@ -70,7 +70,7 @@ class PolicyForm(forms.ModelForm):
   )
   tags = tagulous.forms.TagField(
     tag_options=Policy.tags.tag_options + tagulous.models.TagOptions(
-      autocomplete_view='policy_tags_autocomplete'
+      autocomplete_view='policy_tags_autocomplete',
     ),
   )
 

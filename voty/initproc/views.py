@@ -318,6 +318,9 @@ def policy_edit(request, policy, *args, **kwargs):
         return policy_item(request, policy.id, *args, **kwargs)
 
     form = PolicyForm(request.POST or None, instance=policy)
+
+    print(type(policy.tags.all()))
+
     if request.method == 'POST':
         user = request.user
         if form.is_valid():
