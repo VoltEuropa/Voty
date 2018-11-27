@@ -53,8 +53,12 @@ def _create_class_field_dict(field_dict):
 class PolicyForm(forms.ModelForm):
 
   class Meta:
+    #NOTE: this is needed because I cannot manage to add tags to the init.ini file..
+    field_list = settings.PLATFORM_POLICY_BASE_CONFIG
+    field_list.update({'tags': 'Tag'})
+
     model = Policy
-    fields = settings.PLATFORM_POLICY_BASE_CONFIG
+    fields = field_list
     labels = settings.PLATFORM_POLICY_FIELD_LABELS
     help_texts = settings.PLATFORM_POLICY_FIELD_HELPER
 
@@ -68,10 +72,14 @@ class PolicyForm(forms.ModelForm):
   topic = forms.ChoiceField(
     choices = sorted(settings.CATEGORIES.TOPIC_CHOICES, key=lambda x: x[1]),
   )
+
   tags = tagulous.forms.TagField(
     tag_options=Policy.tags.tag_options + tagulous.models.TagOptions(
       autocomplete_view='policy_tags_autocomplete',
     ),
+    label='Tags',
+    help_text='',
+    required=False,
   )
 
 # --------------------------- InviteUsersForm ----------------------------------

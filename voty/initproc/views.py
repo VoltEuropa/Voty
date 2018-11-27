@@ -317,9 +317,9 @@ def policy_edit(request, policy, *args, **kwargs):
         messages.warning(request, _("Permission denied."))
         return policy_item(request, policy.id, *args, **kwargs)
 
-    form = PolicyForm(request.POST or None, instance=policy)
-
     print(type(policy.tags.all()))
+    form = PolicyForm(request.POST or None, instance=policy)
+#    form.tags.prepare_value(policy.tags)
 
     if request.method == 'POST':
         user = request.user
