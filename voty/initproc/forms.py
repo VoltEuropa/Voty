@@ -12,9 +12,12 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from .models import Tag
 
 from dal import autocomplete
 from uuid import uuid4
+import tagulous.forms
+import tagulous.models
 
 from .models import Pro, Contra, Like, Comment, Proposal, Moderation, Initiative, Policy
 
@@ -50,8 +53,12 @@ def _create_class_field_dict(field_dict):
 class PolicyForm(forms.ModelForm):
 
   class Meta:
+    #NOTE: this is needed because I cannot manage to add tags to the init.ini file..
+    field_list = settings.PLATFORM_POLICY_BASE_CONFIG
+    field_list.update({'tags': 'Tag'})
+
     model = Policy
-    fields = settings.PLATFORM_POLICY_BASE_CONFIG
+    fields = field_list
     labels = settings.PLATFORM_POLICY_FIELD_LABELS
     help_texts = settings.PLATFORM_POLICY_FIELD_HELPER
 
@@ -64,6 +71,15 @@ class PolicyForm(forms.ModelForm):
   )
   topic = forms.ChoiceField(
     choices = sorted(settings.CATEGORIES.TOPIC_CHOICES, key=lambda x: x[1]),
+  )
+
+  tags = tagulous.forms.TagField(
+    tag_options=Policy.tags.tag_options + tagulous.models.TagOptions(
+      autocomplete_view='policy_tags_autocomplete',
+    ),
+    label='Tags',
+    help_text='',
+    required=False,
   )
 
 # --------------------------- InviteUsersForm ----------------------------------

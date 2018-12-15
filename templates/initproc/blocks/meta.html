@@ -43,3 +43,15 @@
     {% endwith %}
   </div>
 </div>
+{% if policy.tags.all %}
+<hr/>
+<div class="row">
+  <div class="col-sm-12">
+  <h6 class="text-muted classification">{% trans "Tags" %}</h6>
+    {% for tag in policy.tags.all %}
+        <span class="badge badge-primary">{{ tag }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+

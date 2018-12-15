@@ -76,6 +76,7 @@ INSTALLED_APPS = [
   "django_ajax",
   "reversion",
   "corsheaders",
+  "tagulous",
 
   # must be before admin ...
   "dal",
@@ -160,16 +161,16 @@ SITE_ID = 1
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 
 DATABASES = {
-  #"default": dj_database_url.config(default="sqlite://./db.sqlite3")
+  "default": dj_database_url.config(default="sqlite://./db.sqlite3")
   #"default": dj_database_url.config(default="sqlite:////usr/local/demo/voty/db.sqlite3")
-   'default': {
-      'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-      'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
-      'USER': '',                      # Not used with sqlite3.
-      'PASSWORD': '',                  # Not used with sqlite3.
-      'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-      'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
+   # 'default': {
+   #    'ENGINE': 'django.db.backends.sqlite3',   # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+   #    'NAME': '/usr/local/demo/voty/db.sqlite3',                       # Or path to database file if using sqlite3.
+   #    'USER': '',                      # Not used with sqlite3.
+   #    'PASSWORD': '',                  # Not used with sqlite3.
+   #    'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+   #    'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+   #  }
 }
 
 
@@ -228,6 +229,13 @@ else:
   EMAIL_HOST_PASSWORD = os.environ.get("SMTP_PASSWORD", "password")
   EMAIL_PORT = int(os.environ.get("SMTP_PORT", 587))
 
+# Tagulous configuration
+SERIALIZATION_MODULES = {
+    'xml':    'tagulous.serializers.xml_serializer',
+    'json':   'tagulous.serializers.json',
+    'python': 'tagulous.serializers.python',
+    'yaml':   'tagulous.serializers.pyyaml',
+}
 
 from django.contrib import messages
 

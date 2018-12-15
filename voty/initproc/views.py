@@ -317,11 +317,18 @@ def policy_edit(request, policy, *args, **kwargs):
         messages.warning(request, _("Permission denied."))
         return policy_item(request, policy.id, *args, **kwargs)
 
+    print(type(policy.tags.all()))
     form = PolicyForm(request.POST or None, instance=policy)
+#    form.tags.prepare_value(policy.tags)
+
     if request.method == 'POST':
         user = request.user
         if form.is_valid():
+
+            print(form['tags'].value())
+
             with reversion.create_revision():
+                policy.tags = form['tags'].value()
                 policy.save()
                 reversion.set_user(user)
 
@@ -341,7 +348,7 @@ def policy_edit(request, policy, *args, **kwargs):
         else:
             messages.warning(request, _("Please correct the following problems:"))
 
-    return render(request, "initproc/policy_edit.html", context=dict(form=form, policy=policy))
+    return render(request, "initproc/policy_edit.html", context=dict(form=form, policy=policy, form_media=form.media))
 
 
 # ----------------------------- Policy New -------------------------------------
@@ -493,6 +500,7 @@ def policy_feedback(request, policy, *args, **kwargs):
 # ------------------------------ Landing Page ----------------------------------
 def index(request):
     policies = request.guard.make_policy_query()
+
     count_inbox = len(policies)
     filters = PolicyFilter(request.GET, queryset=policies)
     has_filters = 'q' in request.GET

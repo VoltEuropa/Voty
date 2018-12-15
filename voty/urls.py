@@ -15,19 +15,19 @@ from django.conf import settings
 
 urlpatterns = [
 
-  # required for multi-language
-  url(r"^i18n/", include("django.conf.urls.i18n")),
+    # required for multi-language
+    url(r"^i18n/", include("django.conf.urls.i18n")),
 
-  # required for resetting email
-  url('^', include('django.contrib.auth.urls')),
+    # required for resetting email
+    url('^', include('django.contrib.auth.urls')),
 ]
 urlpatterns += i18n_patterns(
-  url(r"", include("voty.initadmin.urls")),
-  url(r"^language$", TemplateView.as_view(template_name="account/language.html")),
-  url(r"^howto", TemplateView.as_view(template_name="static/howto.html")),
-  url(r"^about", TemplateView.as_view(template_name="static/about.html")),
-  url(r"^help", TemplateView.as_view(template_name="static/help.html")),
-  url(r"^register", TemplateView.as_view(template_name="static/register.html")),
-  url(r"", include("voty.initproc.urls")),
+    url(r"", include("voty.initadmin.urls")),
+    url(r"^language$", TemplateView.as_view(template_name="account/language.html")),
+    url(r"^howto", TemplateView.as_view(template_name="static/howto.html")),
+    url(r"^about", TemplateView.as_view(template_name="static/about.html")),
+    url(r"^help", TemplateView.as_view(template_name="static/help.html")),
+    url(r"^register", TemplateView.as_view(template_name="static/register.html")),
+    url(r"", include("voty.initproc.urls")),
 ) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT
-) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+           ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
